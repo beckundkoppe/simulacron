@@ -1,5 +1,9 @@
 # Simulacron
 
+<p align="center">
+   <img alt="" src="resources/banner.png" width="512" />
+</p>
+
 **Simulacron** is a LLM simulation framework designed for research applications.
 
 ## Features
