@@ -67,14 +67,13 @@ Select the desired backend. If unsure, press **Enter** to use the default.
 
 ## Running Simulacron
 
-Once the setup is complete:
+Once the setup is complete run Ollama:
 
-Run Ollama in one console:
 ```bash
 ollama serve
 ```
 
-In another console, inside simulacron folder, run:
+In another console, inside the simulacron folder, run:
 ```bash
 ./start
 ```
