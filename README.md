@@ -4,7 +4,7 @@
    <img alt="" src="resources/banner.png" width="512" />
 </p>
 
-**Simulacron** is a LLM simulation framework designed for research applications.
+**Simulacron** is a story engine that uses large language models to simulate interactive worlds and characters for research purposes.
 
 ## Features
 
