@@ -93,6 +93,9 @@ class LlamaAgent(Agent):
             print_output=False
         )
 
+        if not isinstance(reply, str):
+            reply = ""
+
         memory.add_message(Role.USER, message)
         memory.add_message(Role.ASSISTANT, reply)
         memory.debug_print(is_agent=True)
@@ -150,3 +153,85 @@ class LangchainAgent(Agent):
         memory.debug_print(is_agent=True)
 
         return reply
+    
+  # def run_tool_calls(self, prompt: str, tools: Sequence[Callable]) -> str:
+  #     """
+  #     Drive a prompt through the LLM and execute any tool calls it emits.
+  #     Each tool must provide a _tool_meta dict with keys "name" and "description".
+  #     """
+  #     
+  #     # Map tool name -> callable
+  #     tool_map: Dict[str, Callable] = {}
+  #     for t in tools:
+  #         if not hasattr(t, "_tool_meta"):
+  #             raise ValueError(f"Tool {t} is missing required _tool_meta attribute.")
+  #         tool_map[t._tool_meta["name"]] = t
+  #     
+  #     tool_llm = self._register_tools(tools)
+  #     
+  #     # First call to the model
+  #     result = tool_llm.invoke(prompt)
+  #     
+  #     max_rounds = 5          # hard safety limit
+  #     rounds = 0
+  #     previous_calls = None   # to detect repetition
+  #     while getattr(result, "tool_calls", None) and rounds < max_rounds:
+  #         print(result)
+  #         calls = result.tool_calls
+  #         if isinstance(calls, dict):    # normalise to list
+  #             calls = [calls]
+  #         # Stop if the model repeats the exact same calls
+  #         if calls == previous_calls:
+  #             prompt += (
+  #                 "\n[NOTICE] The same tool call was repeated. "
+  #                 "Please continue without calling tools again."
+  #             )
+  #             break
+  #         previous_calls = calls
+  #         responses = []        # textual outputs of the tools
+  #         feedback_parts = []   # structured feedback for the model
+  #         for call in calls:
+  #             # Extract tool name and arguments
+  #             if isinstance(call, dict):
+  #                 name = (
+  #                     call.get("name")
+  #                     or call.get("function", {}).get("name")
+  #                     or "unknown"
+  #                 )
+  #                 args: Dict[str, Any] = (
+  #                     call.get("args")
+  #                     or call.get("function", {}).get("arguments", {})
+  #                     or {}
+  #                 )
+  #             else:  # fallback if call is a ToolCall object
+  #                 name = getattr(call, "name", "unknown")
+  #                 args = getattr(call, "arguments", {})
+  #             # --- Filter args: keep only those parameters that exist in the function signature ---
+  #             if name in tool_map:
+  #                 sig = inspect.signature(tool_map[name])
+  #                 valid_params = set(sig.parameters.keys())
+  #                 filtered_args = {k: v for k, v in args.items() if k in valid_params}
+  #             else:
+  #                 filtered_args = {}
+  #             # Execute the tool and collect its output
+  #             if name in tool_map:
+  #                 try:
+  #                     out = tool_map[name](**filtered_args)
+  #                 except Exception as exc:
+  #                     out = f"[Tool {name} failed: {exc}]"
+  #             else:
+  #                 out = f"[Unknown tool: {name}]"
+  #             # -------------------------------------------------------------------------------
+  #             responses.append(str(out))
+  #             feedback_parts.append(
+  #                 f"[TOOL RESPONSE] Tool `{name}` executed successfully. Output:\n{out}"
+  #             )
+  #         # Build feedback message for the model
+  #         feedback = "\n".join(feedback_parts)
+  #         feedback += "\n[END OF TOOL RESPONSE] You may continue answering the user."
+  #         print(feedback)
+  #         # Append feedback to the running prompt and re-invoke the model
+  #         prompt = f"{prompt}\n{feedback}"
+  #         result = tool_llm.invoke(prompt)
+  #         rounds += 1
+  #     return result.content

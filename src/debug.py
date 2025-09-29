@@ -102,4 +102,3 @@ def pretty(*parts: str, spacing: int = 1) -> None:
     sep = "\n" * spacing
     print("")
     print(sep.join(part.strip("\n") for part in parts))
-    print("")
