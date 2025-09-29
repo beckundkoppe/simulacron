@@ -59,7 +59,8 @@ This launches the main simulation executable.
 ```
 simulacron/
 ├─ data/        # Model and embedding files
-├─ docs/        # Documentation
+├─ doc/         # Documentation
+├─ ressource/   # Icon and Assets
 ├─ script/      # Helper scripts
 ├─ src/         # Core source code
 └─ setup.sh     # Run once for setup
