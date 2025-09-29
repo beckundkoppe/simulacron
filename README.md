@@ -13,9 +13,26 @@
 
 ## Requirements
 
-* Python 3.13.7
+* Python >=3.13.7
+* Ollama >=0.12.1
 
 ## Build & Installation
+
+On Arch-Linux to install Ollama run:
+
+```bash
+# CPU-only
+paru -S ollama
+
+# For NVIDIA GPU acceleration (CUDA)
+paru -S ollama ollama-cuda
+```
+
+Optional - To install Cuda run:
+
+```bash
+paru -S cuda
+```
 
 Clone the repository:
 
@@ -50,8 +67,14 @@ Select the desired backend. If unsure, press **Enter** to use the default.
 
 ## Running Simulacron
 
-Once the build is complete:
+Once the setup is complete:
 
+Run Ollama in one console:
+```bash
+ollama serve
+```
+
+In another console, inside simulacron folder, run:
 ```bash
 ./start
 ```
