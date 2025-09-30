@@ -6,7 +6,7 @@ from llama_cpp import Llama
 from langchain_community.chat_models import ChatOpenAI
 from langchain_ollama import ChatOllama
 
-import debug
+from debug.settings import VERBOSE_BACKEND
 from llm.memory.memory import Memory, Role
 from llm.memory.simple import SimpleMemory
 from llm.prepare import prepare_model_source
@@ -60,6 +60,7 @@ class LlamaCppRunner(Runner):
             n_ctx=Runner._n_ctx,
             n_threads=Runner._n_threads,
             max_tokens=Runner._max_tokens,
+            verbose=VERBOSE_BACKEND,
         )
 
         self.backend = Backend.LLAMACPP
@@ -116,7 +117,7 @@ class LangchainLocalRunner(LangchainRunner):
         """
         model_path:  local path of .GGUF file
         """ 
-        self.llm = ChatOllama(model=model)
+        self.llm = ChatOllama(model=model, verbose=VERBOSE_BACKEND)
         self.backend = Backend.OLLAMA
 
 class LangchainRemoteRunner(LangchainRunner):

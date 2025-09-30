@@ -1,4 +1,5 @@
 from enum import Enum
+import json
 import re
 import textwrap
 from typing import Optional
@@ -102,3 +103,6 @@ def pretty(*parts: str, spacing: int = 1) -> None:
     sep = "\n" * spacing
     print("")
     print(sep.join(part.strip("\n") for part in parts))
+
+def json_dump(object) -> None:
+    print(json.dumps(object.__dict__, indent=2, ensure_ascii=False))
