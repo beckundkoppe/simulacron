@@ -215,7 +215,10 @@ class LangchainAgent(Agent):
         memory.debug_print(is_agent=True)
 
         return reply
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
     
   # def run_tool_calls(self, prompt: str, tools: Sequence[Callable]) -> str:
   #     """
