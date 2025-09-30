@@ -15,13 +15,10 @@ class Role(Enum):
     SYSTEM      = "system"
     USER        = "user"
     ASSISTANT   = "assistant"
+    TOOL        = "tool"
 
     def to_string(self, backend: Backend) -> tuple[str, str, str]:
         return self.value, "", ""
-        if backend is Backend.LLAMACPP and self is Role.SYSTEM:
-            return "user", "[system: ", "]"
-        else:
-            return self.value, "", ""
 
 class Memory(ABC):
     def __init__(self) -> None:
@@ -79,7 +76,7 @@ class Memory(ABC):
         """
         Pretty-print the current conversation history with colorised bullets.
         """
-        from debug import pretty, bullet, debug_separator, Color
+        from debug.console import pretty, bullet, debug_separator, Color
 
         color = Color.BLUE
 

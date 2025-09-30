@@ -1,0 +1,3 @@
+VERBOSE_LLM = True
+
+VERBOSE_BACKEND = False

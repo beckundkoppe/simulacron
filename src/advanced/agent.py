@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional, Sequence
+from dataclasses import dataclass
+import inspect
+import json
+from typing import Any, Callable, Dict, Optional, Sequence
 
 from ollama import Tool
 from langchain_community.chat_models import ChatOpenAI
@@ -11,10 +14,11 @@ from llama_cpp_agent.providers.llama_cpp_python import LlamaCppPythonProvider
 from llama_cpp_agent.llm_output_settings import LlmStructuredOutputSettings
 from llama_cpp_agent.chat_history.basic_chat_history import BasicChatHistory, BasicChatHistoryStrategy, Roles
 
+from debug.settings import VERBOSE_LLM
 from llm.memory.memory import Memory, MemoryType, Role
 from llm.memory.simple import SimpleMemory
 from llm.runner import LangchainRunner, LlamaCppRunner, Runner
-import debug
+import debug.console as console
 
 class Agent(ABC):
     @abstractmethod
@@ -41,6 +45,7 @@ class LlamaAgent(Agent):
         self.agent = LlamaCppAgent(self.provider)
         self._output_settings = None
         self.memory = memory
+        self.tools: Sequence[Callable] = None
 
     def register_tools(self, tools: Sequence[Callable]) -> None:
      """Register the given functions as LLM tools."""
@@ -109,9 +114,10 @@ class LangchainAgent(Agent):
         self._llm = runner.llm
         self.memory = memory
 
-    def register_tools(self, runner: Runner, tools: Sequence[Callable]) -> None:
-        if(isinstance(self.llm, ChatOpenAI)):
-            self._tools = [
+    def register_tools(self, tools: Sequence[Callable]) -> None:
+        self._tools = tools
+        if(isinstance(self._llm, ChatOpenAI)):
+            general_tools = [
                 # requires _tool_meta from explicit @tool decoration
                 Tool.from_function(
                     t,
@@ -120,7 +126,7 @@ class LangchainAgent(Agent):
                 )
                 for t in tools
             ]
-            self.llm = runner.llm.bind_tools(self._tools)
+            self._llm = self.runner._llm.bind_tools(general_tools)
         else:
             openai_tools: list[dict] = []
             for t in tools:
@@ -139,20 +145,80 @@ class LangchainAgent(Agent):
                     }
                 })
             
-            self._llm = runner._llm.bind_tools(openai_tools)
+            self._llm = self.runner.llm.bind_tools(openai_tools)
 
     def invoke(self, message: str) -> str:
+        @dataclass
+        class ToolCall:
+            name: str
+            args: Dict[str, Any]
+            id: str
+            type: str
+            @classmethod
+            def from_raw(cls, raw) -> "ToolCall":
+                """Accept either a JSON string or a dict and return a ToolCall."""
+                if isinstance(raw, str):
+                    data = json.loads(raw)      # JSON string → dict
+                elif isinstance(raw, dict):
+                    data = raw                  # already dict
+                else:
+                    raise TypeError(f"Unsupported type for raw: {type(raw)}")
+                return cls(**data)
+        
+        def _execute_toolcall(tool_call: ToolCall) -> str:
+            tool_map: Dict[str, Callable] = {}
+            for t in self._tools:
+                if not hasattr(t, "_tool_meta"):
+                    raise ValueError(f"Tool {t} is missing required _tool_meta attribute.")
+                tool_map[t._tool_meta["name"]] = t
+
+            name = tool_call.name
+            args = tool_call.args
+
+            if name in tool_map:
+                sig = inspect.signature(tool_map[name])
+                valid_params = set(sig.parameters.keys())
+                filtered_args = {k: v for k, v in args.items() if k in valid_params}
+            else:
+                filtered_args = {}
+
+            if name in tool_map:
+                try:
+                    out = tool_map[name](**filtered_args)
+                except Exception as exc:
+                    out = f"[Tool {name} failed: {exc}]"
+            else:
+                out = f"[Unknown tool: {name}]"
+
+            print(out)
+
+
+        #-------------------------
+
         if self.memory is None:
             memory = SimpleMemory()
         else:
             memory = self.memory
 
         memory.add_message(Role.USER, message)
-        reply = self._llm.invoke(memory.get_history(self.runner.backend)).content
+
+        result = self._llm.invoke(memory.get_history(self.runner.backend))
+        if VERBOSE_LLM: console.json_dump(result)
+        reply = result.content
+
+        for raw in result.tool_calls:
+            tc = ToolCall.from_raw(raw)
+            # not needed here - tool results are included manually
+            ret = _execute_toolcall(tc)
+
         memory.add_message(Role.ASSISTANT, reply)
         memory.debug_print(is_agent=True)
 
         return reply
+<<<<<<< HEAD
+
+=======
+>>>>>>> main
     
   # def run_tool_calls(self, prompt: str, tools: Sequence[Callable]) -> str:
   #     """
