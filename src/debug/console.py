@@ -102,11 +102,7 @@ def pretty(*parts: str, spacing: int = 1) -> None:
     """
     sep = "\n" * spacing
     print("")
-<<<<<<< HEAD:src/debug/console.py
     print(sep.join(part.strip("\n") for part in parts))
 
 def json_dump(object) -> None:
     print(json.dumps(object.__dict__, indent=2, ensure_ascii=False))
-=======
-    print(sep.join(part.strip("\n") for part in parts))
->>>>>>> main:src/debug.py
