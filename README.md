@@ -4,7 +4,7 @@
    <img alt="" src="resources/banner.png" width="512" />
 </p>
 
-**Simulacron** is a LLM simulation framework designed for research applications.
+**Simulacron** is a story engine that uses large language models to simulate interactive worlds and characters for research purposes.
 
 ## Features
 
@@ -67,14 +67,13 @@ Select the desired backend. If unsure, press **Enter** to use the default.
 
 ## Running Simulacron
 
-Once the setup is complete:
+Once the setup is complete run Ollama:
 
-Run Ollama in one console:
 ```bash
 ollama serve
 ```
 
-In another console, inside simulacron folder, run:
+In another console, inside the simulacron folder, run:
 ```bash
 ./start
 ```
