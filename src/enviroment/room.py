@@ -4,12 +4,47 @@ from typing import Set, Tuple
 from uuid import UUID
 
 import config as config
-from world.world import World
 
 class PositionType(Enum):
     ROOMLESS    = auto(),
     CHESSBOARD  = auto(),
     RELATIVE  = auto(),
+
+class Room:
+    def __init__(
+        self,
+        name: str | None,
+        postype: PositionType = PositionType[config.POSITION_TYPE],
+        extend_x: float = 4.0,
+        extend_y: float = 4.0,
+        material: str | None = None,
+        description: str | None = None,
+        uniqueness: float = 0.5,
+        light_level: float = 0.5,
+        ambient_noise: float = 0.5,
+        ambient_smell: float = 0.5
+    ) -> None:
+        assert isinstance(name, str) and name.strip(), "name must be a non-empty string"
+        self.name = name
+        self.postype = postype
+        self.extend_x = float(extend_x)
+        self.extend_y = float(extend_y)
+        self.material = material
+        self.description = description
+        self.uniqueness = float(uniqueness)
+        self.light = float(light_level)
+        self.ambient_noise = float(ambient_noise)
+        self.ambient_smell = float(ambient_smell)
+        self.entities: Set[UUID] = set()
+
+    # ---------- factory methods ----------
+    @classmethod
+    def chamber(cls, name: str, **kwargs) -> "Room":
+        return cls(name, extend_x=4.0, extend_y=4.0, **kwargs)
+
+    @classmethod
+    def corridor(cls, length: float, name: str, **kwargs) -> "Room":
+        return cls(name, extend_x=length, extend_y=2.0, **kwargs)
 
 class Position:
     def __init__(self, type: PositionType | None = None) -> None:
@@ -67,42 +102,3 @@ class Position:
             return self.toChessboard()
         else:
             return f"({self.x},{self.y})"
-
-
-class Room:
-    def __init__(
-        self,
-        name: str | None,
-        postype: PositionType = PositionType[config.POSITION_TYPE],
-        extend_x: float = 4.0,
-        extend_y: float = 4.0,
-        material: str | None = None,
-        description: str | None = None,
-        uniqueness: float = 0.5,
-        light_level: float = 0.5,
-        ambient_noise: float = 0.5,
-        ambient_smell: float = 0.5
-    ) -> None:
-        assert isinstance(name, str) and name.strip(), "name must be a non-empty string"
-        self.name = name
-        self.postype = postype
-        self.extend_x = float(extend_x)
-        self.extend_y = float(extend_y)
-        self.material = material
-        self.description = description
-        self.uniqueness = float(uniqueness)
-        self.light = float(light_level)
-        self.ambient_noise = float(ambient_noise)
-        self.ambient_smell = float(ambient_smell)
-        self.entities: Set[UUID] = set()
-
-    
-
-    # ---------- factory methods ----------
-    @classmethod
-    def chamber(cls, name: str, **kwargs) -> "Room":
-        return cls(name, extend_x=4.0, extend_y=4.0, **kwargs)
-
-    @classmethod
-    def corridor(cls, length: float, name: str, **kwargs) -> "Room":
-        return cls(name, extend_x=length, extend_y=2.0, **kwargs)
