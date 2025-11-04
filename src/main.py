@@ -4,7 +4,7 @@ from advanced.agent import Agent
 import debug.console as console
 from llm.cache import Cache
 from advanced.tool import tool
-from llm.memory.simple import SimpleMemory
+from llm.memory.memory import Memory
 from llm.model import Model
 from llm.runner import Role, Runner
 
@@ -33,6 +33,8 @@ def perform_body_action(action: str) -> None:
     )
 
 def main():
+    benchmark.full_run()
+
     cache = Cache()
 
     # prepare models (so that output is not flooded when LlamaCpp initialises)

@@ -49,6 +49,7 @@ class ModelKind(Enum):
 @dataclass
 class ModelSpec:
     name: str
+    tag: str
     location: Location
     backend: Backend
     agent_backend: AgentBackend
@@ -60,114 +61,55 @@ class Model(Enum):
     # Local models
     # ----------------------------------------------------------
     class Local(Enum):
+
         class LlamaCpp(Enum):
-            INSTRUCT_MISTRAL_7B = ModelSpec(
-                name="Mistral-7B-Q4-Instruct",
-                location=Location.LOCAL,
-                backend=Backend.LLAMACPP,
-                agent_backend=AgentBackend.LLAMACPPAGENT,
-                kind=ModelKind.INSTRUCT,
-                source=SourceLink(
-                    url="https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-                    path="data/model/mistral_7b_instruct.gguf"
-                ),
-            )
-
-            TOOL_QWEN3_4B = ModelSpec(
-                name="Qwen3-4B-Toolcalling",
-                location=Location.LOCAL,
-                backend=Backend.LLAMACPP,
-                agent_backend=AgentBackend.LLAMACPPAGENT,
-                kind=ModelKind.TOOL,
-                source=SourceHuggingface(
-                    repo_id="Manojb/Qwen3-4B-toolcalling-gguf-codex",
-                    filename="Qwen3-4B-Function-Calling-Pro.gguf",
-                    local_dir="data/model/"
-                    #https://huggingface.co/Manojb/Qwen3-4B-toolcalling-gguf-codex
-                ),
-            )
-
-            HYBRID_LLAMA3_GROQ_8B_Q8 = ModelSpec(
-                name="Llama3-Groq-8B-Q8-Toolcalling",
+            HYBRID_DEEPSEEK_QWEN_7B = ModelSpec(
+                name="Deepseek-R1-distill-qwen-7B-Q8_0",
+                tag="deepseek_qwen_7b",
                 location=Location.LOCAL,
                 backend=Backend.LLAMACPP,
                 agent_backend=AgentBackend.LLAMACPPAGENT,
                 kind=ModelKind.HYBRID,
                 source=SourceHuggingface(
-                    repo_id="rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF",
-                    filename="llama-3-groq-8b-tool-use-q8_0.gguf",
+                    repo_id="bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+                    filename="DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf",
                     local_dir="data/model/"
-                    #https://huggingface.co/rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF
+                    #https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF/blob/main/DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf
                 ),
             )
 
-            HYBRID_QWEN3_14B_BF16 = ModelSpec(
-                name="Qwen3-14B-Thinking",
+            HYBRID_PHI4_MINI_3_8B = ModelSpec(
+                name="Phi-4-mini-reasoning-3.8B",
+                tag="phi4_mini_3.8b",
                 location=Location.LOCAL,
                 backend=Backend.LLAMACPP,
                 agent_backend=AgentBackend.LLAMACPPAGENT,
-                source=SourceHuggingface(
-                    repo_id="unsloth/Qwen3-14B-GGUF",
-                    filename="Qwen3-14B-BF16.gguf",
-                    local_dir="data/model/"
-                    #https://huggingface.co/unsloth/Qwen3-14B-GGUF
-                ),
                 kind=ModelKind.HYBRID,
-            )
-
-            HYBRID_QWEN3_14B_Q6 = ModelSpec(
-                name="Qwen3-14B-Q6-Thinking",
-                location=Location.LOCAL,
-                backend=Backend.LLAMACPP,
-                agent_backend=AgentBackend.LLAMACPPAGENT,
                 source=SourceHuggingface(
-                    repo_id="unsloth/Qwen3-14B-GGUF",
-                    filename="Qwen3-14B-Q6_K.gguf",
+                    repo_id="unsloth/Phi-4-mini-reasoning-GGUF",
+                    filename="Phi-4-mini-reasoning-BF16.gguf",
                     local_dir="data/model/"
-                    #https://huggingface.co/unsloth/Qwen3-14B-GGUF
+                    #https://huggingface.co/unsloth/Phi-4-mini-reasoning-GGUF
                 ),
-                kind=ModelKind.HYBRID,
             )
 
         class Ollama(Enum):
-            HYBRID_LLAMA3_2_3B = ModelSpec(
-                name="Llama3.2-3B",
+            HYBRID_LLAMA3_1_NEMOTRON_8B = ModelSpec(
+                name="Llama3.1-nemotron-8B",
+                tag="llama_nemotron_8b",
                 location=Location.LOCAL,
                 backend=Backend.OLLAMA,
                 agent_backend=AgentBackend.LANGCHAIN,
                 kind=ModelKind.HYBRID,
                 source=SourceOllama(
-                    model_id="llama3.2:3b",
-                    #https://ollama.com/library/llama3.2
-                ),
-            )
-
-            INSTRUCT_DEEPSEEK_R1_8B = ModelSpec(
-                name="Deepseek-r1-8B",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.INSTRUCT,
-                source=SourceOllama(
-                    model_id="deepseek-r1:8b",
-                    #https://ollama.com/library/llama3.2
-                ),
-            )
-
-            INSTRUCT_GEMMA3_4B = ModelSpec(
-                name="Gemma3-4B",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.INSTRUCT,
-                source=SourceOllama(
-                    model_id="gemma3:4b",
-                    #https://ollama.com/library/llama3.2
+                    model_id="Randomblock1/nemotron-nano:8b",
+                    #https://https://ollama.com/Randomblock1/nemotron-nano
                 ),
             )
 
             HYBRID_GPT_OSS_20B = ModelSpec(
-                name="Llama3.2-3B",
+                name="GPT-OSS-20B",
+                tag="gpt_oss_20b",
                 location=Location.LOCAL,
                 backend=Backend.OLLAMA,
                 agent_backend=AgentBackend.LANGCHAIN,
@@ -182,20 +124,35 @@ class Model(Enum):
     # Remote models
     # ----------------------------------------------------------
     class Remote(Enum):
-            INSTRUCT_MISTRAL_7B = ModelSpec(
-                name="Mistral-7B-Instruct",
+            GPT_OSS_20B = ModelSpec(
+                name="GPT-OSS-20B",
+                tag="gpt_oss_20b",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
-                agent_backend=AgentBackend.LLAMACPPAGENT,
-                kind=ModelKind.INSTRUCT,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
                 source=SourceRemote(
-                    endpoint_url="http://my-llamacpp-server:8080/v1",
-                    model_id="mistral-7b-instruct",
+                    endpoint_url="",
+                    model_id="",
                 ),
             )
-    
+
+            PHI4_PLUS = ModelSpec(
+                name="Phi-4-reasoning-plus-14B" ,
+                tag="phi4_plus_14b",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="",
+                    model_id="",
+                ),
+            )
+
             GPT4 = ModelSpec(
-                name="OpenAI GPT-4",
+                name="OpenAI-GPT-4",
+                tag="gpt4",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
                 agent_backend=AgentBackend.LANGCHAIN,
@@ -206,17 +163,31 @@ class Model(Enum):
                 ),
             )
 
+            GPT5 = ModelSpec(
+                name="OpenAI-GPT-5",
+                tag="gpt5",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="https://api.openai.com/v1",
+                    model_id="gpt-5",
+                ),
+            )
+
     class Embedding(Enum):
-        NOMIC_V1_5_Q8 = ModelSpec(
-                name="nomic-embed-text-v1.5",
+        QWEN3_8B = ModelSpec(
+                name="Qwen3-Embedding-8B",
+                tag="",
                 location=Location.LOCAL,
                 backend=Backend.OTHER,
                 agent_backend=AgentBackend.OTHER,
                 kind=ModelKind.EMBEDDING,
                 source=SourceHuggingface(
-                    repo_id="nomic-ai/nomic-embed-text-v1.5-GGUF",
-                    filename="nomic-embed-text-v1.5.Q8_0.gguf",
+                    repo_id="onathanMiddleton/Qwen3-Embedding-8B-GGUF",
+                    filename="Qwen3-Embedding-8B-BF16.gguf",
                     local_dir="data/embeddings/"
-                    #https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF
+                    #https://huggingface.co/JonathanMiddleton/Qwen3-Embedding-8B-GGUF
                 ),
             )

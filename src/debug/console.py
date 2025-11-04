@@ -25,7 +25,6 @@ def print_colored(text: str, color: Color = Color.RED) -> None:
     """
     Print text in given color to the console using ANSI escape codes.
     """
-    # Defensive: ensure color is a Color enum instance
     if not isinstance(color, Color):
         raise ValueError("color must be a Color enum value")
     print(f"{color.value}{text}{Color.RESET.value}")

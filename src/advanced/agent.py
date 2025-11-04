@@ -6,9 +6,6 @@ from typing import Any, Callable, Dict, Optional, Sequence
 
 from ollama import Tool
 from langchain_community.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
-from langchain.schema.runnable import RunnablePassthrough
-from langchain.prompts import ChatPromptTemplate
 from llama_cpp_agent.llm_agent import LlamaCppAgent
 from llama_cpp_agent.providers.llama_cpp_python import LlamaCppPythonProvider
 from llama_cpp_agent.llm_output_settings import LlmStructuredOutputSettings
@@ -64,7 +61,7 @@ class LlamaAgent(Agent):
 
     def invoke(self, message: str) -> str:
         if self.memory is None:
-            memory = SimpleMemory()
+            memory = Memory()
         else:
             memory = self.memory
 
@@ -196,7 +193,7 @@ class LangchainAgent(Agent):
         #-------------------------
 
         if self.memory is None:
-            memory = SimpleMemory()
+            memory = Memory()
         else:
             memory = self.memory
 

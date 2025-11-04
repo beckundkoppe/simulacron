@@ -8,7 +8,6 @@ from langchain_ollama import ChatOllama
 
 from debug.settings import VERBOSE_BACKEND
 from llm.memory.memory import Memory, Role
-from llm.memory.simple import SimpleMemory
 from llm.prepare import prepare_model_source
 from llm.model import AgentBackend, Backend, Model, SourceFile, SourceHuggingface, SourceLink, SourceOllama, SourceRemote
 
@@ -67,7 +66,7 @@ class LlamaCppRunner(Runner):
     
     def invoke(self, message: str, role: Role = Role.USER, memory: Optional[Memory] = None) -> str:
         if memory is None:
-            memory = SimpleMemory()
+            memory = Memory()
         memory.add_message(role, message)
         reply = self._llm.create_chat_completion(memory.get_history(self.backend))["choices"][0]["message"]["content"]
         memory.add_message(Role.ASSISTANT, reply)
@@ -80,7 +79,7 @@ class LlamaCppRunner(Runner):
 class LangchainRunner(Runner):
     def invoke(self, message: str, role: Role = Role.USER, memory: Optional[Memory] = None) -> str:
         if memory is None:
-            memory = SimpleMemory()
+            memory = Memory()
         memory.add_message(role, message)
         reply = self.llm.invoke(memory.get_history(self.backend)).content
         memory.add_message(Role.ASSISTANT, reply)
