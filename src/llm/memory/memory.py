@@ -18,10 +18,10 @@ class Role(Enum):
 
     def to_string(self, backend: Backend) -> tuple[str, str, str]:
         return self.value, "", ""
-        if backend is Backend.LLAMACPP and self is Role.SYSTEM:
-            return "user", "[system: ", "]"
-        else:
-            return self.value, "", ""
+        #if backend is Backend.LLAMACPP and self is Role.SYSTEM:
+        #    return "user", "[system: ", "]"
+        #else:
+        #    return self.value, "", ""
 
 class Memory(ABC):
     def __init__(self) -> None:
@@ -30,14 +30,12 @@ class Memory(ABC):
     def __str__(self) -> str:
         return json.dumps(self.get_history(Backend.OTHER), ensure_ascii=False, indent=2)
 
-    @abstractmethod
     def add_message(self, role: Role, message: str) -> None:
-        """
-        Add a new message to the memory.
-        role: typically "user" or "assistant"
-        message: plain text (could contain markdown or ANSI)
-        """
-        raise NotImplementedError
+        """Append a new message to the conversation history."""
+        assert isinstance(role, Role), "role must be a Role enum"
+        if not isinstance(message, str):
+            raise TypeError(f"Memory expects plain text messages, got {type(message).__name__}")
+        self._history.append((role, message))
 
     @abstractmethod
     def summarize(self, max_tokens: Optional[int] = None) -> str:
@@ -47,21 +45,27 @@ class Memory(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def save(self, path: str) -> None:
-        """
-        Persist the memory to disk or any other storage backend.
-        """
-        raise NotImplementedError
+        """Persist the memory to a JSON file."""
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(
+                [(role.name, msg) for role, msg in self._history],
+                f,
+                ensure_ascii=False,
+                indent=2
+            )
 
-    @abstractmethod
     def load(self, path: str) -> None:
-        """
-        Load the memory from disk or any other storage backend.
-        """
-        raise NotImplementedError
+        """Load the memory from a JSON file."""
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        self._history = [(Role[name], msg) for name, msg in data]
     
     def get_history(self, backend: Backend) -> List[dict[str, str]]:
+        """
+        Export the history in the format required by the target backend,
+        preserving all ANSI colors or markdown.
+        """
         messages: List[dict[str, str]] = []
         for role, msg in self._history:
             role_str, front, end = role.to_string(backend)
@@ -79,7 +83,7 @@ class Memory(ABC):
         """
         Pretty-print the current conversation history with colorised bullets.
         """
-        from debug import pretty, bullet, debug_separator, Color
+        from config import pretty, bullet, debug_separator, Color
 
         color = Color.BLUE
 

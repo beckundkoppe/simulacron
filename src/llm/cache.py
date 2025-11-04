@@ -1,6 +1,6 @@
 from llm.model import Model
 from llm.runner import Runner
-import debug
+import debug.settings as settings
 
 class Cache():
     def __init__(self) -> None:
@@ -9,7 +9,7 @@ class Cache():
     def get(self, model: Model) -> Runner:
         if model not in self._runners:
             self._runners[model] = Runner.build(model)
-            debug.pretty(
-                debug.banner(f"[LLM STARTED] {model!s}", color=debug.Color.GREEN),
+            settings.pretty(
+                settings.banner(f"[LLM STARTED] {model!s}", color=settings.Color.GREEN),
             )
         return self._runners[model]

@@ -1,0 +1,5 @@
+# config.py
+
+PARTIAL_DISCOVERY = False
+
+POSITION_TYPE = "ROOMLESS"
