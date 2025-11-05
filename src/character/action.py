@@ -9,6 +9,7 @@ class ActionType(Enum):
     CLOSE   = "close",
     USE     = "use",
 
-@tool
+#@tool
 def perform_action(action: str, object: str) -> str:
+    
     pass

@@ -4,11 +4,10 @@ from datetime import datetime
 from typing import Dict, TypedDict
 
 from llama_cpp import List
-from benchmark import configuration
 from benchmark.result import Result
 from llm.model import Model
 
-from configuration import Configuration
+from benchmark.configuration import Configuration, get_sets
 
 AVG_SINGLE_RUN_SECONDS = 120.0
 
@@ -16,7 +15,7 @@ REPEAT_COUNT = 3
 
 def full_run() -> Dict[str, Dict[str, Result]]:
     all_results: Dict[str, Dict[str, Result]] = {}
-    config_sets = configuration.get_sets()
+    config_sets = get_sets()
 
     # ---- Gesamt-Laufzeitschätzung vorbereiten ----
     total_runs = 0

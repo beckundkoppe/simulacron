@@ -17,8 +17,6 @@ class Result:
     failed_actions: int
 
     time_s: float
-    
-    time_s_sum: float
 
     def average(results: List["Result"]) -> "Result":
         """
@@ -30,9 +28,7 @@ class Result:
 
         def mean(field: str) -> float:
             return sum(getattr(r, field) for r in results) / n
-        
-        def xsum(field: str) -> float:
-            return sum(getattr(r, field) for r in results)
+
 
         return Result(
             sr_short_horizon=mean("sr_short_horizon"),
@@ -44,5 +40,4 @@ class Result:
             actions_total=int(mean("actions_total")),
             failed_actions=int(mean("failed_actions")),
             time_s=int(mean("time_s")),
-            time_s_sum=int(xsum("time_s_sum")),
         )

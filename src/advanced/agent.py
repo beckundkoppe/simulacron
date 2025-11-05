@@ -13,7 +13,6 @@ from llama_cpp_agent.chat_history.basic_chat_history import BasicChatHistory, Ba
 
 from debug.settings import VERBOSE_LLM
 from llm.memory.memory import Memory, MemoryType, Role
-from llm.memory.simple import SimpleMemory
 from llm.runner import LangchainRunner, LlamaCppRunner, Runner
 import debug.console as console
 

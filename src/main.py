@@ -1,7 +1,12 @@
 # test_main.py
 
 from advanced.agent import Agent
+from benchmark import benchmark
+from benchmark.level import buildLevel_Potato
 import debug.console as console
+from enviroment.entity import Entity
+from enviroment.interaction import Depth, Interaction, ObserverPerception, PerceptionEnviroment
+from enviroment.world import World
 from llm.cache import Cache
 from advanced.tool import tool
 from llm.memory.memory import Memory
@@ -33,7 +38,7 @@ def perform_body_action(action: str) -> None:
     )
 
 def main():
-    benchmark.full_run()
+    #benchmark.full_run()
 
     cache = Cache()
 
@@ -57,17 +62,26 @@ def main():
     ##agent.invoke("What did i say my name was?")
 ##
     ####### Toolcalling Example
-##
-    imaginator_mem = SimpleMemory()
-    imaginator_mem.add_message(Role.SYSTEM, "You are an advanced, creative AI and always provide suggestions.")
-    imaginator = Agent.build(cache.get(Model.Local.LlamaCpp.HYBRID_LLAMA3_GROQ_8B_Q8), memory=imaginator_mem)
-    answer = imaginator.invoke("The is Human in a Room. The Human has no memory. The Human have to escape and survive! Wich are the next few Actions you would advice the human to perform? You cant communicate with the yuman, just think!")
 
-    realisator_mem = SimpleMemory()
-    imaginator_mem.add_message(Role.SYSTEM, "You use body action tools to realise the suggestions of a human brain. Toolcalls only! You can not communicate with the human but only realise its plans. Dont let the human talk with whith its self")
-    realisator = Agent.build(cache.get(Model.Local.LlamaCpp.HYBRID_LLAMA3_GROQ_8B_Q8), memory=imaginator_mem)
-    realisator.register_tools([body_say, perform_body_action])
-    realisator.invoke("PLANS:" + answer)
+    buildLevel_Potato()
+
+    person = ObserverPerception(name="mr-X")
+
+    for r in World.rooms:
+        room = World.get_room(r)
+        print(room.perceive(person, Depth.OMNISCIENT))
+
+
+    #imaginator_mem = Memory()
+    #imaginator_mem.add_message(Role.SYSTEM, "You are an advanced, creative AI and always provide suggestions.")
+    #imaginator = Agent.build(cache.get(Model.Local.LlamaCpp.HYBRID_PHI4_MINI_3_8B), memory=imaginator_mem)
+    #answer = imaginator.invoke("The is Human in a Room. The Human has no memory. The Human have to escape and survive! Wich are the next few Actions you would advice the human to perform? You cant communicate with the yuman, just think!")
+#
+    #realisator_mem = Memory()
+    #imaginator_mem.add_message(Role.SYSTEM, "You use body action tools to realise the suggestions of a human brain. Toolcalls only! You can not communicate with the human but only realise its plans. Dont let the human talk with whith its self")
+    #realisator = Agent.build(cache.get(Model.Local.LlamaCpp.HYBRID_PHI4_MINI_3_8B), memory=imaginator_mem)
+    #realisator.register_tools([body_say, perform_body_action])
+    #realisator.invoke("PLANS:" + answer)
 
 if __name__ == "__main__":
     main()

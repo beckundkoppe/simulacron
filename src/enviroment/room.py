@@ -3,18 +3,15 @@ from enum import Enum, auto
 from typing import Set, Tuple
 from uuid import UUID
 
-import config as config
 
-class PositionType(Enum):
-    ROOMLESS    = auto(),
-    CHESSBOARD  = auto(),
-    RELATIVE  = auto(),
+from config import PositionType
+from enviroment.interaction import Depth, Interaction, ObserverPerception, PerceptionEnviroment
+from enviroment.world import World
 
 class Room:
     def __init__(
         self,
         name: str | None,
-        postype: PositionType = PositionType[config.POSITION_TYPE],
         extend_x: float = 4.0,
         extend_y: float = 4.0,
         material: str | None = None,
@@ -26,7 +23,7 @@ class Room:
     ) -> None:
         assert isinstance(name, str) and name.strip(), "name must be a non-empty string"
         self.name = name
-        self.postype = postype
+        self.postype = PositionType
         self.extend_x = float(extend_x)
         self.extend_y = float(extend_y)
         self.material = material
@@ -37,20 +34,47 @@ class Room:
         self.ambient_smell = float(ambient_smell)
         self.entities: Set[UUID] = set()
 
+        self.uuid: UUID | None = None
+        World.add_room(self)
+
+    def perceive(self, observer: ObserverPerception, depth: Depth):
+        o: str = ""
+        for x in self.entities:
+            entity = World.get_entity(x)
+
+            env = PerceptionEnviroment(
+                distance_m=0.5,
+                ambient_smell=0.2,
+                interactions=[Interaction.INSPECT, Interaction.FEEL]
+            )
+
+            o += str(entity.on_perceive(observer, env, depth)) + ", "
+
+        return o
+
+
+    def isPosInRoom(self, pos: Position) -> bool:
+        if 0 <= pos.x < self.extend_x and 0 <= pos.y < self.extend_y:
+            return True
+        else:
+            return False
+
     # ---------- factory methods ----------
     @classmethod
-    def chamber(cls, name: str, **kwargs) -> "Room":
-        return cls(name, extend_x=4.0, extend_y=4.0, **kwargs)
+    def chamber(cls, name: str = "chamber") -> "Room":
+        return cls(name, extend_x=1.0, extend_y=3.0)
 
     @classmethod
-    def corridor(cls, length: float, name: str, **kwargs) -> "Room":
-        return cls(name, extend_x=length, extend_y=2.0, **kwargs)
+    def corridor(cls, length: float, name: str = "corridor") -> "Room":
+        return cls(name, extend_x=length, extend_y=2.0)
 
 class Position:
-    def __init__(self, type: PositionType | None = None) -> None:
-        self.x: float = 0.0  # 0.0 = file a, 7.0 = file h
-        self.y: float = 0.0  # 0.0 = rank 8, 7.0 = rank 1
+    def __init__(self, x: float = 0.0, y: float = 0.0, type: PositionType | None = None) -> None:
+        self.x: float = x  # 0.0 = file a, 7.0 = file h
+        self.y: float = y  # 0.0 = rank 8, 7.0 = rank 1
         self.type = type
+
+    
 
     def fromChessboard(self, field: str) -> "Position":
         if len(field) != 2:

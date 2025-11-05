@@ -5,13 +5,13 @@ import math
 from typing import Dict
 import random
 
-import config as config
+from character.action import ActionType
+from config import PerceptionType
+from config import CONFIG
+import config
+from debug.settings import DEBUG_PERCEPTION_FILTER, DEBUG_PERCEPTION_ENABLED
 import util
 
-class PerceptionType(Enum):
-    FULL    = auto(),
-    DISTANCE  = auto(),
-    SENSE   = auto(),
 
 DEPTH_BLOCK = -1
 DEPTH_STEP = 10
@@ -28,8 +28,8 @@ class Depth(Enum):
     OMNISCIENT  = FULL + 2   # literally all information: drills down into every leaf of the tree and can not be blocked
 
     def reduced(self, steps: int = DEPTH_STEP) -> "Depth":
-        if self is Depth.DEBUG:
-            return Depth.DEBUG
+        if self is Depth.OMNISCIENT:
+            return Depth.OMNISCIENT
         if steps == DEPTH_BLOCK:
             return Depth.NONE
         if self is Depth.REVEAL:
@@ -40,8 +40,8 @@ class Depth(Enum):
         return Depth(floored)
 
     def increased(self, steps: int = DEPTH_STEP) -> "Depth":
-        if self is Depth.DEBUG:
-            return Depth.DEBUG
+        if self is Depth.OMNISCIENT:
+            return Depth.OMNISCIENT
         if self is Depth.REVEAL:
             return Depth.REVEAL
         
@@ -50,7 +50,6 @@ class Depth(Enum):
         return Depth(ceiled)
 
     def obfuscate_number(self, n: int) -> str:
-        assert n >= 0, "negative not allowed"
         assert self is not Depth.NONE, "NONE should not expose numbers"
 
         if n == 0:
@@ -107,6 +106,10 @@ class SensoryChannel(Enum):
     TASTE = auto()
 
 class Interaction(Enum):
+    # -- no perception ---
+    OPEN = auto()
+    CLOSE = auto()
+
     # --- passive ---
     SURVEY = auto()         # broad, passive intake of the strongest stimuli
 
@@ -131,8 +134,6 @@ class Interaction(Enum):
     LIFT = auto()
     TILT = auto()
     SHAKE = auto()
-    OPEN = auto()
-    CLOSE = auto()
     PEEK = auto()           # quick look through gap/lid
 
     def channel_effort(self, channel: SensoryChannel) -> float:
@@ -539,19 +540,37 @@ class Datum:
 
     def perceive(
         self,
-        active: bool,
         observer: "ObserverPerception",
         env: "PerceptionEnviroment",
         level: Depth,
     ) -> None:
-        if active or self.is_perceived(observer, env, level):
+        discovery = CONFIG.perception
+
+        if (
+            (discovery == PerceptionType.DISTANCE and self.is_perceived_simple(observer, env, level))
+            or (discovery == PerceptionType.SENSE and self.is_perceived(observer, env, level))
+            or (discovery == PerceptionType.FULL)
+        ):
             self.entity.info[self.key] = self.value
+        else:
+            self.entity.info["object"] = "unknown"
+
+    def is_perceived_simple(
+        self,
+        observer: "ObserverPerception",
+        env: "PerceptionEnviroment",
+        level: Depth,
+    ) -> bool:
+        if env.distance_m <= 2.5:
+            return True
+        else:
+            return False
 
     def is_perceived(
-    self,
-    observer: "ObserverPerception",
-    env: "PerceptionEnviroment",
-    level: Depth,
+        self,
+        observer: "ObserverPerception",
+        env: "PerceptionEnviroment",
+        level: Depth,
     ) -> bool:
         """
         Return True if this datum is perceived by `observer` in `env`.
@@ -683,13 +702,13 @@ class Datum:
 
     
     def _match_debug_filter(self, observer: ObserverPerception) -> bool:
-            if not getattr(config, "DEBUG_PERCEPTION_ENABLED", True):
+            if DEBUG_PERCEPTION_ENABLED is False:
                 return False
 
-            if not config.DEBUG_PERCEPTION_FILTER:
+            if not DEBUG_PERCEPTION_FILTER:
                 return True
 
-            for e_name, o_name, d_key in config.DEBUG_PERCEPTION_FILTER:
+            for e_name, o_name, d_key in DEBUG_PERCEPTION_FILTER:
                 if ((e_name == "*" or e_name == self.entity.readable_id)
                     and (o_name == "*" or o_name == observer.name)
                     and (d_key   == "*" or d_key   == self.key)):

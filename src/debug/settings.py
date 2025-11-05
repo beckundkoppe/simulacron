@@ -1,7 +1,7 @@
 # debug.py
 # Global debug debuguration
 
-DEBUG_PRECEPTION_ENABLED = True
+DEBUG_PERCEPTION_ENABLED = True
 
 # Each entry is a tuple: (readable_id, person_name, datum_key)
 # Use "*" as wildcard for a field you don't want to filter by.

@@ -34,14 +34,6 @@ class Memory(ABC):
             raise TypeError(f"Memory expects plain text messages, got {type(message).__name__}")
         self._history.append((role, message))
 
-    @abstractmethod
-    def summarize(self, max_tokens: Optional[int] = None) -> str:
-        """
-        Optional: return a concise summary of the conversation.
-        max_tokens: hint for the desired size of the summary.
-        """
-        raise NotImplementedError
-
     def save(self, path: str) -> None:
         """Persist the memory to a JSON file."""
         with open(path, "w", encoding="utf-8") as f:

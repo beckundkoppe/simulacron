@@ -1,22 +1,10 @@
 from dataclasses import dataclass
 from typing import Dict, List, TypedDict
 
-from advanced.plan import PlanType
-from enviroment.perception import PerceptionType
-from enviroment.room import PositionType
+from config import Configuration, PerceptionType, PlanType, PositionType
 from llm.model import Model
 
 BASE_TEMP = 0.0
-
-@dataclass(frozen=True)
-class Configuration:
-    perception: PerceptionType
-    position_type: PositionType
-    imagine_feature: bool
-    learning_feature: bool
-    planning_feature: PlanType
-    temperature: float
-    name: str
 
 def baseline() -> List[Configuration]:
     return [
