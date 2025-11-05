@@ -25,10 +25,10 @@ def buildLevel_Potato(actor: Entity = None):
     key = Entity("key", Position(3.0, 1.0))
     key.enter(main)
     
-    table = Entity("table", Position(0.0, 3.0))
+    table = ContainerEntity("table", Position(0.0, 3.0))
     table.enter(main)
     
-    doorMain = ConnectorEntity("door", Position(3.0,3.0))
+    doorMain = ConnectorEntity("door", Position(4.0,4.0))
     doorMain.enter(main)
 
     doorChamber = ConnectorEntity("door", Position(0.0,1.0))

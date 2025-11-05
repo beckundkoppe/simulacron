@@ -1,8 +1,11 @@
+import ast
 from enum import Enum
 import json
 import re
 import textwrap
 from typing import Optional
+
+from debug.settings import DEBUG_LIMITED
 
 ansi_re = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -68,6 +71,16 @@ def title(message: str, underline: str = "=", color: Color | None = None) -> str
     return _apply_color(text, color)
 
 
+def bullet_multi(message: str, bullet: str = "•", color: Color | None = None) -> str:
+    """
+    Bullet line. Any newline characters in `message` are removed silently.
+    """
+    # Replace all types of newline characters with a single space
+    # Collapse multiple consecutive spaces to one
+
+    text = f"{bullet} {message}"
+    return _apply_color(text, color)
+
 def bullet(message: str, bullet: str = "•", color: Color | None = None) -> str:
     """
     Bullet line. Any newline characters in `message` are removed silently.
@@ -110,3 +123,32 @@ def json_dump(obj) -> None:
         # try to get object's dict representation
         data = getattr(obj, "__dict__", str(obj))
     print(json.dumps(data, indent=2, ensure_ascii=False))
+
+def dump_limited(obj, indent=0, max_depth=2, level=0):
+    # dict
+    if isinstance(obj, dict):
+        # ab max_depth: kompakt in eine Zeile
+        if level >= max_depth:
+            return json.dumps(obj, separators=(',', ': '))
+
+        ind = ' ' * indent
+        child_ind = ' ' * (indent + 4)
+        parts = []
+        for k, v in obj.items():
+            v_str = dump_limited(v, indent + 4, max_depth, level + 1)
+            parts.append(f'{child_ind}{json.dumps(k)}: {v_str}')
+        return '{\n' + ',\n'.join(parts) + '\n' + ind + '}'
+
+    # list
+    elif isinstance(obj, list):
+        if level >= max_depth:
+            return json.dumps(obj, separators=(',', ': '))
+        ind = ' ' * indent
+        child_ind = ' ' * (indent + 4)
+        parts = [f'{child_ind}{dump_limited(v, indent + 4, max_depth, level + 1)}'
+                 for v in obj]
+        return '[\n' + ',\n'.join(parts) + '\n' + ind + ']'
+
+    # primitive Werte
+    else:
+        return json.dumps(obj)

@@ -3,12 +3,12 @@ from typing import List
 from uuid import UUID
 
 import config as config
-from enviroment.room import Position
+from enviroment.room import Position, Room
 from enviroment.world import World
 from enviroment.interaction import CompositeDatum, Datum, DatumOperator, Depth, Interaction, PerceptionEnviroment, ObserverPerception, SensoryChannel
 
 class Entity:
-    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, perception: ObserverPerception | None = None) -> None:
+    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0) -> None:
         assert isinstance(name, str) and name.strip(), "name must be a non-empty string"
         self.name = name
         self.pos = pos
@@ -17,7 +17,6 @@ class Entity:
         self.description = description
         self.uniqueness = uniqueness
         self.prominence = prominence
-        self.perception = perception
 
         self.room: UUID | None = None
 
@@ -25,8 +24,9 @@ class Entity:
         self.readable_id: str | None = None
         World.add_entity(self)
 
-                  #:Room 
-    def enter(self, room):
+    
+
+    def enter(self, room: "Entity"):
         if self.room is None:
             newRoom = World.get_room(room.uuid)
             assert newRoom.isPosInRoom(self.pos), f"Position: ({self.pos.x, self.pos.y}) from {self.name} does not fit in Room: {newRoom.name} ({newRoom.extend_x,newRoom.extend_y})"
@@ -167,9 +167,9 @@ class Entity:
 
 
 class ContainerEntity(Entity):
-    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, perception: ObserverPerception | None = None,
+    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0,
                  is_open: bool = True, is_locked: bool = False, visibility_open: float = 1.0, visibility_closed: float = 0.0) -> None:
-        super().__init__(name, pos, material, description, uniqueness, prominence, perception)
+        super().__init__(name, pos, material, description, uniqueness, prominence)
 
         self.is_open = is_open
         self.is_locked = is_locked
@@ -285,8 +285,8 @@ class ContainerEntity(Entity):
 
 
 class ConnectorEntity(Entity):
-    def __init__(self, name, pos, material = None, description = None, uniqueness = 0.5, prominence = 1, perception: ObserverPerception | None = None):
-        super().__init__(name, pos, material, description, uniqueness, prominence, perception)
+    def __init__(self, name, pos, material = None, description = None, uniqueness = 0.5, prominence = 1):
+        super().__init__(name, pos, material, description, uniqueness, prominence)
         self.otherDoor : ConnectorEntity = None
 
     def connect(self, entity: "ConnectorEntity"):
@@ -303,8 +303,63 @@ class ConnectorEntity(Entity):
         user_entity.enter(connectionRoom)
 
 
+class AgentEntity(Entity):
+    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, perception: ObserverPerception | None = None):
+        super().__init__(name, pos, material, description, uniqueness, prominence)
+        self.perception = perception
+        self.inventory: List[UUID] = []
 
+    def take(self, item_id: UUID):
+        item = World.get_entity(item_id)
+        item.leave()
+        item.pos = None
+        self.inventory.append(item_id)
 
+    def drop(self, item_id: UUID):
+        item: Entity = World.get_entity(item_id)
+        own_room: Room = World.get_room(self.room)
+        item.pos = self.pos
+        item.enter(own_room)
+        self.inventory.remove(item_id)
 
+    def take_from(self, item_id, container_id):
+        item = World.get_entity(item_id)
+        container: ContainerEntity = World.get_entity(container_id)
+        container.remove_child_uuid_if_exists(item_id)
+        self.inventory.append(item_id)
+
+    def drop_into(self, item_id, container_id):
+        item = World.get_entity(item_id)
+        container: ContainerEntity = World.get_entity(container_id)
+        container.add_child(item)
+        self.inventory.remove(item_id)
+
+    def move_to_object(self, object: UUID):
+        object_room = World.get_entity(object).room
+        assert self.room == object_room, "object is not in same room"
+        self.move_to_position(World.get_entity(object).pos)
+        
+        
+    def move_to_position(self, pos):
+        room: Room = World.get_room(self.room)
+        assert room.isPosInRoom(pos), f"Pos (x:{pos.x},y:{pos.y}) does not fit in room: {room.name}"
+        self.pos = pos
+        
+    def use_connector(self, connector_uuid: UUID):
+        entity = World.get_entity(self.uuid)
+        connector = World.get_entity(connector_uuid)
+        connector.enter_connect(entity)
+
+    def get_inventory(self):
+        o = []
+        for item in self.inventory:
+            entity = World.get_entity(item)
+            data = {}
+            data["name"] = entity.name
+            data["id"] = entity.readable_id
+            o.append(data)
+        return o
+
+        
 
         

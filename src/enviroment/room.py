@@ -66,7 +66,7 @@ class Room:
 
 
     def isPosInRoom(self, pos: Position) -> bool:
-        if 0 <= pos.x < self.extend_x and 0 <= pos.y < self.extend_y:
+        if 0 <= pos.x <= self.extend_x and 0 <= pos.y <= self.extend_y:
             return True
         else:
             return False

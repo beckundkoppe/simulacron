@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import ast
 from dataclasses import dataclass
 import inspect
 import json
@@ -69,6 +70,8 @@ class LlamaAgent(Agent):
             k=4096,
             llm_provider=self.provider
         )
+        
+        print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(message))!s}", color=console.Color.CYAN))
 
         for m in memory.get_history(self.runner.backend):
             role_str = m["role"].lower()
@@ -97,9 +100,10 @@ class LlamaAgent(Agent):
         if not isinstance(reply, str):
             reply = ""
 
+        console.pretty(console.bullet(f"[assistant] {reply}", color=console.Color.YELLOW))
+
         memory.add_message(Role.USER, message)
         memory.add_message(Role.ASSISTANT, reply)
-        memory.debug_print(is_agent=True)
 
         return reply
 
@@ -151,14 +155,28 @@ class LangchainAgent(Agent):
             id: str
             type: str
             @classmethod
-            def from_raw(cls, raw) -> "ToolCall":
+            def from_raw(cls, raw, heuristic) -> "ToolCall":
                 """Accept either a JSON string or a dict and return a ToolCall."""
-                if isinstance(raw, str):
-                    data = json.loads(raw)      # JSON string → dict
-                elif isinstance(raw, dict):
-                    data = raw                  # already dict
+                    
+                if(heuristic):
+                    data = {}
+                    data["name"] = raw["name"]
+                    data["id"] = ""
+                    data["type"] = "tool_call"
+
+                    if("args" in raw):
+                        data["args"] = raw["args"]
+                    elif("arguments" in raw):
+                        data["args"] = raw["arguments"]
+                    elif("parameters" in raw):
+                        data["args"] = raw["parameters"]
+                    else:
+                        console.pretty(
+                            console.bullet(f"LLM IS FUCKING STUPID (wrong key for args): {data}", color=console.Color.RED),
+                        )
                 else:
-                    raise TypeError(f"Unsupported type for raw: {type(raw)}")
+                    data = raw
+
                 return cls(**data)
         
         def _execute_toolcall(tool_call: ToolCall) -> str:
@@ -170,6 +188,8 @@ class LangchainAgent(Agent):
 
             name = tool_call.name
             args = tool_call.args
+
+            print(f"[TOOLCALL] {name}, args: {args}")
 
             if name in tool_map:
                 sig = inspect.signature(tool_map[name])
@@ -198,19 +218,45 @@ class LangchainAgent(Agent):
 
         memory.add_message(Role.USER, message)
 
+        print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(message))!s}", color=console.Color.CYAN))
+
         result = self._llm.invoke(memory.get_history(self.runner.backend))
         if VERBOSE_BACKEND: console.json_dump(result)
+
         reply = result.content
 
+        if not isinstance(reply, str):
+            reply = ""
+
+        console.pretty(console.bullet(f"[assistant] {reply}", color=console.Color.YELLOW))
+
+        valid_toolcall = False
         for raw in result.tool_calls:
-            tc = ToolCall.from_raw(raw)
-            # not needed here - tool results are included manually
+            tc = ToolCall.from_raw(raw, False)
             ret = _execute_toolcall(tc)
+            valid_toolcall = True
+
+        if(not valid_toolcall):
+            try:
+                data = ast.literal_eval(reply)
+            except:
+                try:
+                    data = json.loads(reply)
+                except:
+                    data = None
+
+            if data is not None:
+                tc = ToolCall.from_raw(data, True)
+                ret = _execute_toolcall(tc)
 
         memory.add_message(Role.ASSISTANT, reply)
-        memory.debug_print(is_agent=True)
 
         return reply
+    
+
+
+
+
     
   # def run_tool_calls(self, prompt: str, tools: Sequence[Callable]) -> str:
   #     """
