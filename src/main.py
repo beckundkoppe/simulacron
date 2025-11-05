@@ -3,85 +3,76 @@
 from advanced.agent import Agent
 from benchmark import benchmark
 from benchmark.level import buildLevel_Potato
+from character import action
+from character.action import move_to_position, use_door
 import debug.console as console
 from enviroment.entity import Entity
-from enviroment.interaction import Depth, Interaction, ObserverPerception, PerceptionEnviroment
+from enviroment.entity_controller import EntityController
+from enviroment.interaction import Depth, ObserverPerception, PerceptionEnviroment
+from enviroment.room import Position, Room
 from enviroment.world import World
 from llm.cache import Cache
-from advanced.tool import tool
 from llm.memory.memory import Memory
 from llm.model import Model
-from llm.runner import Role, Runner
+from llm.runner import Role
 
-import inspect
+def observe_all():
+    for ent in World.entities:
+        entity = World.get_entity(ent)
+        if entity.perception is None:
+            continue
+        
+        if entity.room is None:
+            continue
+        
+        room = World.get_room(entity.room)
 
-@tool
-def body_say(msg: str) -> None:
-    """The human says something something loud.
+        observations = observe(room, entity)
+        console.json_dump(observations)
 
-    Args:
-        msg (str): The message text to output.
-    """
-    console.pretty(
-        console.bullet(f"[TOOLCALL] {inspect.currentframe().f_code.co_name}: {msg}", color=console.Color.YELLOW),
-    )
+def observe(room: Room, observer: Entity) -> str:
+    data = {}
+    data["you_are_in_room"] = {
+        "name": room.name,
+        "your_pos": {
+            "x": observer.pos.x,
+            "y": observer.pos.y,
+        },
+        "room_size": {
+            "extend_x": room.extend_x,
+            "extend_y": room.extend_y,
+        }
+    }
+    data["your_observation"] = room.perceive(observer.uuid, Depth.OMNISCIENT)
+    return str(data)
 
-@tool
-def perform_body_action(action: str) -> None:
-    """Perform a physical action with the human body.
-
-    Args:
-        action (str): The description of the ction to perform.
-    """
-    console.pretty(
-        console.bullet(f"[TOOLCALL] {inspect.currentframe().f_code.co_name}: {action}", color=console.Color.YELLOW),
-    )
-
+def agent_step(agent: Agent, tron_entity: Entity):
+    room = World.get_room(tron_entity.room)
+    agent.register_tools([move_to_position, use_door])
+    agent.invoke(observe(room, tron_entity))
+    
 def main():
-    #benchmark.full_run()
-
     cache = Cache()
+    cache.get(Model.Local.LlamaCpp.HYBRID_PHI4_MINI_3_8B)
 
-    # prepare models (so that output is not flooded when LlamaCpp initialises)
-    ##cache.get(Model.Local.Ollama.INSTRUCT_GEMMA3_4B)
-    ##cache.get(Model.Local.Ollama.HYBRID_LLAMA3_2_3B)
-##
-    ####### Runner Example
-##
-    ##runner_memory = SimpleMemory()
-    ##runner = cache.get(Model.Local.Ollama.INSTRUCT_GEMMA3_4B)
-    ##runner.invoke("hello, im felix", role=Role.USER, memory=runner_memory)
-    ##runner.invoke("What did i say my name was?", role=Role.USER, memory=runner_memory)
-##
-    ####### Agent Example
-##
-    ##agent_memory = SimpleMemory()
-    ##agent_memory.add_message(Role.SYSTEM, "You are german and dont understand any other language. Dont provide any translations.")
-    ##agent = Agent.build(cache.get(Model.Local.Ollama.INSTRUCT_GEMMA3_4B), memory=agent_memory)
-    ##agent.invoke("hello, iam Felix")
-    ##agent.invoke("What did i say my name was?")
-##
-    ####### Toolcalling Example
+    agent_mem = Memory()
+    agent_mem.add_message(Role.SYSTEM,       
+    """
+    Use tools only
+    """)
 
-    buildLevel_Potato()
+    agent = Agent.build(cache.get(Model.Local.LlamaCpp.HYBRID_PHI4_MINI_3_8B), memory=agent_mem)
+    
+    perception = ObserverPerception()
+    tron = Entity("tron", Position(0.0, 0.0), perception=perception)
+    level = buildLevel_Potato(tron)
 
-    person = ObserverPerception(name="mr-X")
+    action.CONTROL = EntityController(tron)
 
-    for r in World.rooms:
-        room = World.get_room(r)
-        print(room.perceive(person, Depth.OMNISCIENT))
-
-
-    #imaginator_mem = Memory()
-    #imaginator_mem.add_message(Role.SYSTEM, "You are an advanced, creative AI and always provide suggestions.")
-    #imaginator = Agent.build(cache.get(Model.Local.LlamaCpp.HYBRID_PHI4_MINI_3_8B), memory=imaginator_mem)
-    #answer = imaginator.invoke("The is Human in a Room. The Human has no memory. The Human have to escape and survive! Wich are the next few Actions you would advice the human to perform? You cant communicate with the yuman, just think!")
-#
-    #realisator_mem = Memory()
-    #imaginator_mem.add_message(Role.SYSTEM, "You use body action tools to realise the suggestions of a human brain. Toolcalls only! You can not communicate with the human but only realise its plans. Dont let the human talk with whith its self")
-    #realisator = Agent.build(cache.get(Model.Local.LlamaCpp.HYBRID_PHI4_MINI_3_8B), memory=imaginator_mem)
-    #realisator.register_tools([body_say, perform_body_action])
-    #realisator.invoke("PLANS:" + answer)
+    while(True):
+        agent_step(agent, tron)
+        #agent.update()
+        #level.update()
 
 if __name__ == "__main__":
     main()

@@ -101,3 +101,34 @@ class Memory(ABC):
         lines.append(debug_separator(color=color))
 
         pretty(*lines)
+
+    def debug_print_recent(self, is_agent: bool = False, name: Optional[str] = None) -> None:
+        """
+        Pretty-print the two most recent conversation messages with colorised bullets.
+        """
+        from debug.console import pretty, bullet, debug_separator, Color
+
+        color = Color.RED if is_agent else Color.BLUE
+        lines: list[str] = [debug_separator(color=color)]
+
+        # take only the two most recent messages
+        for role, msg in self._history[-2:]:
+            if role is Role.USER:
+                lines.append(
+                    bullet(f"{msg!s}", bullet="[user]      ", color=Color.CYAN)
+                )
+            elif role is Role.ASSISTANT:
+                lines.append(
+                    bullet(f"{msg!s}", bullet="[assistant] ", color=Color.YELLOW)
+                )
+            elif role is Role.SYSTEM:
+                lines.append(
+                    bullet(f"{msg!s}", bullet="[system]    ", color=Color.MAGENTA)
+                )
+            else:
+                lines.append(
+                    bullet(f"{msg!s}", bullet=f"[{role.name.lower()}] ", color=Color.WHITE)
+                )
+
+        lines.append(debug_separator(color=color))
+        pretty(*lines)

@@ -8,7 +8,7 @@ from enviroment.world import World
 from enviroment.interaction import CompositeDatum, Datum, DatumOperator, Depth, Interaction, PerceptionEnviroment, ObserverPerception, SensoryChannel
 
 class Entity:
-    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0) -> None:
+    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, perception: ObserverPerception | None = None) -> None:
         assert isinstance(name, str) and name.strip(), "name must be a non-empty string"
         self.name = name
         self.pos = pos
@@ -17,29 +17,32 @@ class Entity:
         self.description = description
         self.uniqueness = uniqueness
         self.prominence = prominence
+        self.perception = perception
+
         self.room: UUID | None = None
 
         self.uuid: UUID | None = None
         self.readable_id: str | None = None
         World.add_entity(self)
 
+                  #:Room 
     def enter(self, room):
-
         if self.room is None:
             newRoom = World.get_room(room.uuid)
             assert newRoom.isPosInRoom(self.pos), f"Position: ({self.pos.x, self.pos.y}) from {self.name} does not fit in Room: {newRoom.name} ({newRoom.extend_x,newRoom.extend_y})"
-                
+            
             newRoom.entities.add(self.uuid)
-            self.room = room 
+            self.room = room.uuid 
         else:
             print(f"can not enter room {room}: {self.readable_id} is already in a room")
 
-    #def leave(self):
-    #    if self.room is not None:
-    #        self.room.entities.remove(self.uuid)
-    #        self.room = None
-    #    else:
-    #        print(f"can not leave room: {self.readable_id} is in no room")
+    def leave(self):
+        if self.room is not None:
+            room = World.get_room(self.room)
+            room.entities.remove(self.uuid)
+            self.room = None
+        else:
+            print(f"can not leave room: {self.readable_id} is in no room")
 
     def on_interact(
         self,
@@ -106,11 +109,13 @@ class Entity:
         for d in datums:
             d.perceive(observer, env, depth)
 
-        if(not condition()): 
+        self.is_any_perceived = self.info.get("name") is not None
+
+        if(self.is_any_perceived and not condition()): 
             self.info["id"] = "not uniquely identifiable at a glance"
 
-        if(self.info.get("name" is not None) or self.info.get("object" is not None)):
-            self.entity.info["position"] = self.pos.toString()
+        if self.room is not None:
+            self.info["position"] = self.pos.map(self.room).toString()
 
         return self.info
     
@@ -130,6 +135,9 @@ class Entity:
             0.0 = very generic object (hard),
             1.0 = highly distinctive (easy).
         """
+
+        if config.CONFIG is not config.PerceptionType.SENSE:
+            return True
 
         for action in env.interactions:
             v = min(
@@ -159,9 +167,9 @@ class Entity:
 
 
 class ContainerEntity(Entity):
-    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0,
+    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, perception: ObserverPerception | None = None,
                  is_open: bool = True, is_locked: bool = False, visibility_open: float = 1.0, visibility_closed: float = 0.0) -> None:
-        super().__init__(name, pos, material, description, uniqueness, prominence)
+        super().__init__(name, pos, material, description, uniqueness, prominence, perception)
 
         self.is_open = is_open
         self.is_locked = is_locked
@@ -224,7 +232,7 @@ class ContainerEntity(Entity):
     ) -> dict[str, object]:
         info = super().on_perceive(observer, env, depth)
 
-        if(self.info.get("name" is None)):
+        if(not self.is_any_perceived):
             return info
 
         # container state
@@ -277,13 +285,23 @@ class ContainerEntity(Entity):
 
 
 class ConnectorEntity(Entity):
-    def __init__(self, name, pos, roomTo, material = None, description = None, uniqueness = 0.5, prominence = 1):
-        super().__init__(name, pos, material, description, uniqueness, prominence)
-        self.roomTo : UUID = roomTo
+    def __init__(self, name, pos, material = None, description = None, uniqueness = 0.5, prominence = 1, perception: ObserverPerception | None = None):
+        super().__init__(name, pos, material, description, uniqueness, prominence, perception)
+        self.otherDoor : ConnectorEntity = None
 
-    def connect(self, entity: Entity):
-        assert entity.room != self.roomTo, "Entity is already in Room: " + self.roomTo.name
-        entity.enter(self.roomTo)
+    def connect(self, entity: "ConnectorEntity"):
+        self.otherDoor = entity
+
+    def enter_connect(self, user_entity: Entity):
+        assert self.otherDoor is not None, f"connectionDoor is None in {self.name}"
+
+        currentRoom = World.get_room(user_entity.room)
+        connectionRoom = World.get_room(self.otherDoor.room)
+        assert currentRoom != connectionRoom, f"Entity: {user_entity.name} is already in Room: {connectionRoom.name}"
+        user_entity.leave()
+        user_entity.pos = self.otherDoor.pos
+        user_entity.enter(connectionRoom)
+
 
 
 

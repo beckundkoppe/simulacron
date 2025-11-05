@@ -16,9 +16,11 @@ class LevelSpec:
     kind: LevelType
     
 
-def buildLevel_Potato():
+def buildLevel_Potato(actor: Entity = None):
     main = Room("main", 4, 4)
     chamber = Room.chamber()
+
+    actor.enter(main)
 
     key = Entity("key", Position(3.0, 1.0))
     key.enter(main)
@@ -26,8 +28,15 @@ def buildLevel_Potato():
     table = Entity("table", Position(0.0, 3.0))
     table.enter(main)
     
-    doorMain = ConnectorEntity("doorMain", Position(3.0,3.0), chamber)
+    doorMain = ConnectorEntity("door", Position(3.0,3.0))
     doorMain.enter(main)
+
+    doorChamber = ConnectorEntity("door", Position(0.0,1.0))
+    doorChamber.enter(chamber)
+
+
+    doorMain.connect(doorChamber)
+    doorChamber.connect(doorMain)
 
     potato = Entity("potato")
     diamond = Entity("diamond")
@@ -46,6 +55,10 @@ def buildLevel_Potato():
     shelf2.enter(chamber)
     shelf2.add_child(box)
 
+#x - - -
+#- - - k
+#- - - -
+#t - - d
 
 
 

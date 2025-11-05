@@ -418,14 +418,12 @@ class ObserverPerception:
     """
     def __init__(
         self,
-        name: str,
         hearing_sensitivity_db: float = 20.0,  # dB SPL threshold for normal hearing
         vision_acuity: float = 1.0,            # 1.0 = normal eyesight
         smell_sensitivity: float = 1.0,        # 1.0 = normal sense of smell
         fatigue: float = 0.0,                  # 0..1 (1 = very tired)
         attention: float = 1.0                 # 0..1 (1 = fully attentive)
     ) -> None:
-        self.name = name
         self.hearing_sensitivity_db = hearing_sensitivity_db
         self.vision_acuity = vision_acuity
         self.smell_sensitivity = smell_sensitivity
@@ -561,7 +559,7 @@ class Datum:
         env: "PerceptionEnviroment",
         level: Depth,
     ) -> bool:
-        if env.distance_m <= 2.5:
+        if env.distance_m <= config.DISTANCE:
             return True
         else:
             return False

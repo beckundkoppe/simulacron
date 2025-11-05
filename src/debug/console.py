@@ -103,5 +103,10 @@ def pretty(*parts: str, spacing: int = 1) -> None:
     print("")
     print(sep.join(part.strip("\n") for part in parts))
 
-def json_dump(object) -> None:
-    print(json.dumps(object.__dict__, indent=2, ensure_ascii=False))
+def json_dump(obj) -> None:
+    if isinstance(obj, dict):
+        data = obj
+    else:
+        # try to get object's dict representation
+        data = getattr(obj, "__dict__", str(obj))
+    print(json.dumps(data, indent=2, ensure_ascii=False))

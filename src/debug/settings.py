@@ -8,6 +8,5 @@ DEBUG_PERCEPTION_ENABLED = True
 DEBUG_PERCEPTION_FILTER: set[tuple[str, str, str]] = set()
 
 DEBUG_PERCEPTION_FILTER.add(("*", "*", "material"))
-VERBOSE_LLM = True
 
 VERBOSE_BACKEND = False

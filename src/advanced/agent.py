@@ -11,7 +11,7 @@ from llama_cpp_agent.providers.llama_cpp_python import LlamaCppPythonProvider
 from llama_cpp_agent.llm_output_settings import LlmStructuredOutputSettings
 from llama_cpp_agent.chat_history.basic_chat_history import BasicChatHistory, BasicChatHistoryStrategy, Roles
 
-from debug.settings import VERBOSE_LLM
+from debug.settings import VERBOSE_BACKEND
 from llm.memory.memory import Memory, MemoryType, Role
 from llm.runner import LangchainRunner, LlamaCppRunner, Runner
 import debug.console as console
@@ -199,7 +199,7 @@ class LangchainAgent(Agent):
         memory.add_message(Role.USER, message)
 
         result = self._llm.invoke(memory.get_history(self.runner.backend))
-        if VERBOSE_LLM: console.json_dump(result)
+        if VERBOSE_BACKEND: console.json_dump(result)
         reply = result.content
 
         for raw in result.tool_calls:
