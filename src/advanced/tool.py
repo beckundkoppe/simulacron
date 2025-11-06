@@ -6,7 +6,7 @@ from llm.model import AgentBackend
 from llm.runner import LangchainRunner, LlamaCppRunner, Runner
 
 from functools import wraps
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from inspect import signature
 
 def tool(func):

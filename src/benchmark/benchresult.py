@@ -50,6 +50,7 @@ class RunResult:
     model_name: str
     config_name: str
     level_name: str
+    level_optimal_steps: int
 
     toolcall_count: int = 0
     observation_count: int = 0
@@ -77,6 +78,7 @@ class RunResult:
             model_name=base.model_name,
             config_name=base.config_name,
             level_name=base.level_name,
+            level_optimal_steps=base.level_optimal_steps,
             toolcall_count=mean("toolcall_count"),
             observation_count=mean("observation_count"),
             softerror_count=mean("softerror_count"),
@@ -87,33 +89,70 @@ class RunResult:
     
     def toString(self, color: bool = True) -> str:
         """
-        Gibt einen schön formatierten ASCII-Block für die Konsolenausgabe zurück.
+        Formatiertes ASCII-Panel mit exakt ausgerichteten Spalten und dynamischer Breite.
         """
+        import re
+
+        # ANSI-Farben
         if color:
-            green = "\033[92m"
-            red = "\033[91m"
-            yellow = "\033[93m"
-            blue = "\033[94m"
-            cyan = "\033[96m"
-            reset = "\033[0m"
+            GREEN = "\033[92m"
+            RED = "\033[91m"
+            YELLOW = "\033[93m"
+            BLUE = "\033[94m"
+            CYAN = "\033[96m"
+            RESET = "\033[0m"
         else:
-            green = red = yellow = blue = cyan = reset = ""
+            GREEN = RED = YELLOW = BLUE = CYAN = RESET = ""
 
-        success_color = green if self.success >= 0.8 else yellow if self.success >= 0.5 else red
+        success_color = GREEN if self.success >= 0.8 else YELLOW if self.success >= 0.5 else RED
 
-        line = f"{cyan}┌{'─'*48}┐{reset}"
-        bottom = f"{cyan}└{'─'*48}┘{reset}"
+        # linke und rechte Spaltenbreite (anpassen, falls du längere Namen hast)
+        left_width = 18
+        right_width = 18
 
-        return (
-            f"{line}\n"
-            f"{cyan}│{reset} {blue}Model:{reset} {self.model_name:<38} {cyan}│{reset}\n"
-            f"{cyan}│{reset} {blue}Level:{reset} {self.level_name:<38} {cyan}│{reset}\n"
-            f"{cyan}│{reset} {'-'*46} {cyan}│{reset}\n"
-            f"{cyan}│{reset} Toolcalls: {self.toolcall_count:<5}  "
-            f"Observations: {self.observation_count:<5} {cyan}│{reset}\n"
-            f"{cyan}│{reset} SoftErrors: {self.softerror_count:<4}  "
-            f"HardErrors: {self.harderror_count:<5} {cyan}│{reset}\n"
-            f"{cyan}│{reset} {success_color}Success:{reset} {self.success*100:>6.1f}%  "
-            f"Time: {self.time_s:>8.2f}s {cyan}│{reset}\n"
-            f"{bottom}"
-        )
+        def fmt_pair_fixed(left_label, left_val, right_label, right_val, right_start=20):
+            left = f"{left_label}: {left_val}"
+            right = f"{right_label}: {right_val}"
+            # linke Spalte normal, rechte Spalte beginnt immer bei right_start
+            spaces = right_start - len(left)
+            if spaces < 1:
+                spaces = 1
+            return f"{left}{' ' * spaces}{right}"
+
+        lines = [
+            f"{BLUE}Model:{RESET} {self.model_name}",
+            f"{BLUE}Level:{RESET} {self.level_name}",
+            f"{BLUE}Optimal Steps:{RESET} {self.level_optimal_steps}",
+            #"-" * 40,
+            fmt_pair_fixed("Toolcalls", f"{self.toolcall_count:.1f}", "Steps", f"{self.observation_count:.1f}"),
+            fmt_pair_fixed("SoftErrors", f"{self.softerror_count:.1f}", "HardErrors", f"{int(self.harderror_count)}"),
+            fmt_pair_fixed("Success", f"{self.success*100:.1f}%", "Time", f"{self.time_s:.2f}s")
+        ]
+
+        # Hilfsfunktion, um ANSI-Codes beim Längenmessen zu ignorieren
+        def strip_ansi(s: str) -> str:
+            return re.sub(r'\x1b\[[0-9;]*m', '', s)
+
+
+        #inner_width = max(len(l) for l in lines)
+        inner_width = max(len(strip_ansi(l)) for l in lines) + 2
+
+        top_down_split_index = 3
+        lines.insert(top_down_split_index, "-"*(inner_width-2))
+
+        top = f"{CYAN}┌{'─' * inner_width}┐{RESET}"
+        bottom = f"{CYAN}└{'─' * inner_width}┘{RESET}"
+
+        #def pad_line(s: str) -> str:
+        #    return f"{CYAN}│{RESET} {s} {CYAN}│{RESET}"
+        def pad_line(s: str) -> str:
+            raw_len = len(strip_ansi(s))
+            pad = inner_width - raw_len
+            return f"{CYAN}│{RESET} {s}{' ' * (pad - 1)}{CYAN}│{RESET}"
+
+        out = [top] + [pad_line(l) for l in lines] + [bottom]
+        return "\n".join(out)
+    
+
+
+    

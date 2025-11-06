@@ -33,7 +33,7 @@ class Dispatcher:
         for i in range(run.reruns):
             print(f"Rerun: {i+1}")
             World.clear()
-            result = RunResult(run.model.value.tag, run.configuration.name, run.level.name)
+            result = RunResult(run.model.value.tag, run.configuration.name, run.level.name, run.level.optimal_steps)
             current.RESULT = result
 
             start_time = time.time()
