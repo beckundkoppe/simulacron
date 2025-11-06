@@ -78,7 +78,7 @@ class Model(Enum):
                 ),
             )
 
-            HYBRID_PHI4_MINI_REASONING_3_8B = ModelSpec(
+            THINK_PHI4_MINI_3_8B = ModelSpec(
                 name="Phi-4-mini-reasoning-3.8B",
                 tag="phi4_mini_reasoning_3.8b",
                 location=Location.LOCAL,
@@ -94,18 +94,98 @@ class Model(Enum):
             )
 
         class Ollama(Enum):
-            HYBRID_LLAMA3_1_NEMOTRON_8B = ModelSpec(
-                name="Llama3.1-nemotron-8B",
-                tag="llama_nemotron_8b",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.HYBRID,
-                source=SourceOllama(
-                    model_id="Randomblock1/nemotron-nano:8b",
-                    #https://https://ollama.com/Randomblock1/nemotron-nano
-                ),
-            )
+            class Qwen3(Enum):
+                CODER_30B = ModelSpec(
+                    name="Qwen3-Coder-30B",
+                    tag="qwen3_coder_30b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="qwen3-coder:30b",
+                        #https://ollama.com/library/qwen3
+                    ),
+                )
+
+                VANILLA_30B = ModelSpec(
+                    name="Qwen3-30B",
+                    tag="qwen3_30b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="qwen3:30b",
+                        #https://ollama.com/library/qwen3
+                    ),
+                )
+
+                VANILLA_14B = ModelSpec(
+                    name="Qwen3-14B",
+                    tag="qwen3_14b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="qwen3:14b",
+                        #https://ollama.com/library/qwen3
+                    ),
+                )
+
+                VANILLA_8B = ModelSpec(
+                    name="Qwen3-8B",
+                    tag="qwen3_8b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="qwen3:8b",
+                        #https://ollama.com/library/qwen3
+                    ),
+                )
+
+                VANILLA_4B = ModelSpec(
+                    name="Qwen3-4B",
+                    tag="qwen3_4b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="qwen3:4b",
+                        #https://ollama.com/library/qwen3
+                    ),
+                )
+
+                INSTRUCT_30B = ModelSpec(
+                    name="Qwen3-Instruct-30B",
+                    tag="qwen3_instruct_30b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="qwen3:30b-instruct",
+                        #https://ollama.com/library/qwen3/tags
+                    ),
+                )
+
+            class Llama(Enum):
+                NEMOTRON_8B = ModelSpec(
+                    name="Llama3.1-nemotron-8B",
+                    tag="llama_nemotron_8b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="Randomblock1/nemotron-nano:8b",
+                        #https://https://ollama.com/Randomblock1/nemotron-nano
+                    ),
+                )
 
             HYBRID_PHI4_MINI_3_8B = ModelSpec(
                 name="Phi-4-mini-3.8B",
@@ -137,6 +217,7 @@ class Model(Enum):
     # Remote models
     # ----------------------------------------------------------
     class Remote(Enum):
+            # institut
             GPT_OSS_20B = ModelSpec(
                 name="GPT-OSS-20B",
                 tag="gpt_oss_20b",
@@ -150,6 +231,7 @@ class Model(Enum):
                 ),
             )
 
+            # institut
             PHI4_PLUS = ModelSpec(
                 name="Phi-4-reasoning-plus-14B" ,
                 tag="phi4_plus_14b",

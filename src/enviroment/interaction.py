@@ -5,7 +5,6 @@ import math
 from typing import Dict
 import random
 
-from character.action import ActionType
 from config import PerceptionType
 from config import CONFIG
 import config

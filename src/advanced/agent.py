@@ -53,7 +53,7 @@ class Agent(ABC):
                 color = console.Color.RED.value
                 self.memory.add_message(Role.USER, msg)  
             if isinstance(result, Success):
-                msg = "[ACTION SUCCESS] " + result.what
+                msg = "[ACTION] " + result.what
                 color = console.Color.YELLOW.value
                 self.memory.add_message(Role.USER, msg)
 
@@ -134,7 +134,7 @@ class LlamaAgent(Agent):
             message=message,
             chat_history=history,
             structured_output_settings=self._output_settings,
-            print_output=False
+            print_output=VERBOSE_BACKEND
         )
 
         if not isinstance(reply, str):
