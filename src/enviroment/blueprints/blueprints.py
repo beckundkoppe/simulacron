@@ -1,4 +1,4 @@
-from enviroment.entity import ContainerEntity, Entity
+from enviroment.entity import AdvancedContainerEntity, ContainerEntity, Entity
 from enviroment.position import Position
 
 class Table(ContainerEntity):
@@ -11,10 +11,7 @@ class Table(ContainerEntity):
             description=description,
             uniqueness=0.6,
             prominence=0.8,
-            is_open=True,
-            is_locked=False,
-            visibility_open=1.0,
-            visibility_closed=1.0,
+            visibility=1.0,
         )
 
 
@@ -28,14 +25,11 @@ class Shelf(ContainerEntity):
             description=description,
             uniqueness=0.5,
             prominence=0.9,
-            is_open=True,
-            is_locked=False,
-            visibility_open=1.0,
-            visibility_closed=1.0,
+            visibility=0.9,
         )
 
 
-class Chest(ContainerEntity):
+class Chest(AdvancedContainerEntity):
     """Generic storage chest."""
     def __init__(self, pos: Position | None = None, material: str | None = None, description: str | None = None):
         super().__init__(
@@ -47,12 +41,26 @@ class Chest(ContainerEntity):
             prominence=0.8,
             is_open=False,
             is_locked=False,
-            visibility_open=0.8,
+            visibility=0.8,
             visibility_closed=0.0,
         )
 
+class Box(ContainerEntity):
+    """Generic storage box."""
+    def __init__(self, pos: Position | None = None, material: str | None = None, description: str | None = None):
+        super().__init__(
+            name="chest",
+            pos=pos,
+            material=material,
+            description=description,
+            uniqueness=0.5,
+            prominence=0.8,
+            visibility=0.7,
+        )
 
-class Cabinet(ContainerEntity):
+
+
+class Cabinet(AdvancedContainerEntity):
     """Generic cabinet with doors."""
     def __init__(self, pos: Position | None = None, material: str | None = None, description: str | None = None):
         super().__init__(
@@ -64,7 +72,7 @@ class Cabinet(ContainerEntity):
             prominence=0.9,
             is_open=False,
             is_locked=False,
-            visibility_open=0.9,
+            visibility=0.9,
             visibility_closed=0.0,
         )
 
@@ -115,7 +123,7 @@ class MetalShelf(Shelf):
 
 # --- CHESTS ---
 
-class PaperBox(Chest):
+class PaperBox(Box):
     """A lightweight cardboard box, easy to open and inspect."""
     def __init__(self, pos: Position | None = None):
         super().__init__(

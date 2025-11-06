@@ -6,7 +6,7 @@ from enviroment.world import World
 import game
 import config
 from config import Configuration
-from enviroment.level import Level
+from enviroment.levels.level import Level
 from llm.model import Model
 
 @dataclass(frozen=True)

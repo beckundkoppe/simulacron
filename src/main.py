@@ -5,7 +5,7 @@
 from benchmark.benchresult import RunResult
 from benchmark.dispatcher import Dispatcher, Run
 from config import Configuration, PerceptionType, PlanType, PositionType
-from enviroment.level import Level, Levels
+from enviroment.levels.level import Levels
 import game
 from llm.cache import Cache
 from llm.model import Model
@@ -33,7 +33,7 @@ def main():
     result: RunResult = dispatcher.run_single(Run(
         config,
         Model.Local.Ollama.Qwen3.VANILLA_14B,
-        Levels.POTATO.value,
+        Levels.POTATO_HARD.value,
         1,
         2.0
         )

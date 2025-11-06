@@ -167,17 +167,12 @@ class Entity:
             if v >= vision_req and (h >= second_req or t >= 0.3 * (1.0 - 0.5 * self.uniqueness)): return True
 
         return False
-
-
+    
 class ContainerEntity(Entity):
-    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, is_collectible: bool = False,
-                 is_open: bool = True, is_locked: bool = False, visibility_open: float = 1.0, visibility_closed: float = 0.0) -> None:
+    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, is_collectible: bool = False, visibility: float = 0.8) -> None:
         super().__init__(name, pos, material, description, uniqueness, prominence, is_collectible)
 
-        self.is_open = is_open
-        self.is_locked = is_locked
-        self.visibility_open = visibility_open
-        self.visibility_closed = visibility_closed
+        self.visibility = visibility
         self.children: List[UUID] = []
 
     def _would_form_cycle(self, candidate: "ContainerEntity") -> bool:
@@ -222,6 +217,61 @@ class ContainerEntity(Entity):
             if World.get_entity(c).hasChild(uuid):
                 return True
         return False
+
+    def on_interact(
+        self,
+        observer: ObserverPerception,
+        env: PerceptionEnviroment,
+        depth: Depth,
+    ) -> dict[str, object]:
+
+        return self.on_perceive(self, observer, env, depth)
+        
+    def on_perceive(
+        self,
+        observer: ObserverPerception,
+        env: PerceptionEnviroment,
+        depth: Depth,
+    ) -> dict[str, object]:
+        info = super().on_perceive(observer, env, depth)
+
+        if(not self.is_any_perceived):
+            return info
+
+        count = len(self.children)
+
+        if depth.value <= Depth.MINIMAL.value:
+            info["contents_count"] = "unknown"
+            return info
+
+        reduced_detail = depth.reduced(self.visibility)
+        count_str = Depth.obfuscate_number(reduced_detail, count)
+
+        if count == 0:
+            info["contents_count"] = "empty"
+        elif count == 1:
+            info["contents_count"] = f"contains {count_str}"
+        else:
+            info["contents_count"] = f"contains {count_str} items"
+
+        if depth.value >= Depth.NORMAL.value and self.children:
+            child_detail = reduced_detail.reduced(1)
+            info["contents"] = [
+                World.get_entity(cid).on_perceive(observer, env, child_detail)
+                for cid in self.children
+                if World.get_entity(cid)
+            ]
+
+        return info
+
+class AdvancedContainerEntity(ContainerEntity):
+    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, is_collectible: bool = False,
+                 is_open: bool = True, is_locked: bool = False, visibility: float = 1.0, visibility_closed: float = 0.0) -> None:
+        super().__init__(name, pos, material, description, uniqueness, prominence, is_collectible, visibility)
+
+        self.is_open = is_open
+        self.is_locked = is_locked
+        self.visibility_closed = visibility_closed
 
     def on_interact(
         self,
@@ -276,7 +326,7 @@ class ContainerEntity(Entity):
             return info
 
         # --- OPEN ---
-        reduced_detail = depth.reduced(self.visibility_open)
+        reduced_detail = depth.reduced(self.visibility)
         count_str = Depth.obfuscate_number(reduced_detail, count)
 
         if count == 0:

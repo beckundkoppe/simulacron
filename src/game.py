@@ -3,7 +3,7 @@ from advanced.agent import Agent
 from advanced.tool import tool
 from enviroment import current
 from enviroment.exception import HardException, SoftException
-from enviroment.level import Level, LevelSpec
+from enviroment.levels.level import Level, LevelSpec
 from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
 from debug import console
 from enviroment.entity import AgentEntity, ContainerEntity
