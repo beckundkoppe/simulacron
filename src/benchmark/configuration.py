@@ -95,7 +95,7 @@ MODELS_ALL = [
         #lokal
         Model.Local.Ollama.HYBRID_LLAMA3_1_NEMOTRON_8B,
         Model.Local.LlamaCpp.HYBRID_DEEPSEEK_QWEN_7B,
-        Model.Local.LlamaCpp.HYBRID_PHI4_MINI_3_8B,
+        Model.Local.LlamaCpp.HYBRID_PHI4_MINI_REASONING_3_8B,
 
         #institut
         Model.Remote.PHI4_PLUS,

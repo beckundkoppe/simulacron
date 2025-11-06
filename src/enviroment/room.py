@@ -63,8 +63,16 @@ class Room:
 
         return perceptions
 
+    def isUuidIRoom(self, uuid) -> bool:
+        if uuid in self.entities:
+            return True
 
-
+        for ent in self.entities:
+            if World.get_entity(ent).hasChild(uuid):
+                return True
+            
+        return False
+    
     def isPosInRoom(self, pos: Position) -> bool:
         if 0 <= pos.x <= self.extend_x and 0 <= pos.y <= self.extend_y:
             return True

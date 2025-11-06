@@ -78,9 +78,9 @@ class Model(Enum):
                 ),
             )
 
-            HYBRID_PHI4_MINI_3_8B = ModelSpec(
+            HYBRID_PHI4_MINI_REASONING_3_8B = ModelSpec(
                 name="Phi-4-mini-reasoning-3.8B",
-                tag="phi4_mini_3.8b",
+                tag="phi4_mini_reasoning_3.8b",
                 location=Location.LOCAL,
                 backend=Backend.LLAMACPP,
                 agent_backend=AgentBackend.LLAMACPPAGENT,
@@ -104,6 +104,19 @@ class Model(Enum):
                 source=SourceOllama(
                     model_id="Randomblock1/nemotron-nano:8b",
                     #https://https://ollama.com/Randomblock1/nemotron-nano
+                ),
+            )
+
+            HYBRID_PHI4_MINI_3_8B = ModelSpec(
+                name="Phi-4-mini-3.8B",
+                tag="phi4_mini_3.8b",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceOllama(
+                    model_id="phi4-mini",
+                    #https://ollama.com/library/phi4-mini
                 ),
             )
 

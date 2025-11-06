@@ -12,8 +12,11 @@ from llama_cpp_agent.providers.llama_cpp_python import LlamaCppPythonProvider
 from llama_cpp_agent.llm_output_settings import LlmStructuredOutputSettings
 from llama_cpp_agent.chat_history.basic_chat_history import BasicChatHistory, BasicChatHistoryStrategy, Roles
 
+
+from character import current
+from character.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
 from debug.settings import VERBOSE_BACKEND
-from llm.memory.memory import Memory, MemoryType, Role
+from llm.memory.memory import Memory, Role
 from llm.runner import LangchainRunner, LlamaCppRunner, Runner
 import debug.console as console
 
@@ -24,15 +27,52 @@ class Agent(ABC):
     @abstractmethod
     def register_tools(self, tools: Sequence[Callable]) -> None: ...
 
-    def build(runner: Runner, memory: Optional[Memory] = None):
+    def build(runner: Runner, entity, memory: Optional[Memory] = None):
         if isinstance(runner, LlamaCppRunner):
             agent = LlamaAgent(runner, memory)
         elif isinstance(runner, LangchainRunner):
             agent = LangchainAgent(runner, memory)
         else:
             raise ValueError("Unsupported configuration")
-        
+
+        agent.entity = entity
+
         return agent
+    
+    def log(self, role: Role):
+        pass
+
+    def process_results(self):
+        for result in Resultbuffer.buffer:
+            if isinstance(result, FormalError):
+                msg = "[FORMAL ERROR] " + result.what
+                color = console.Color.RED.value
+                self.memory.add_message(Role.SYSTEM, msg)
+            if isinstance(result, ActionNotPossible):
+                msg = "[ACTION FAILURE] " + result.what
+                color = console.Color.RED.value
+                self.memory.add_message(Role.USER, msg)  
+            if isinstance(result, Success):
+                msg = "[ACTION SUCCESS] " + result.what
+                color = console.Color.YELLOW.value
+                self.memory.add_message(Role.USER, msg)
+
+            console.pretty(
+                console.bullet(f"[toolcall]\t{msg}", color),
+            )
+        Resultbuffer.buffer.clear()
+
+    def entity_step(self, tools, observations) -> str:
+        current.AGENT = self
+    
+        self.register_tools(tools)
+        reply = self.invoke(observations)
+
+        self.process_results()
+
+        current.AGENT = None
+
+        return reply
     
 class LlamaAgent(Agent):
     def __init__(self, runner: Runner, memory: Optional[Memory] = None):
@@ -202,9 +242,9 @@ class LangchainAgent(Agent):
                 try:
                     out = tool_map[name](**filtered_args)
                 except Exception as exc:
-                    out = f"[Tool {name} failed: {exc}]"
+                    out = f"[FAILURE] toolcall {name} failed: {exc}"
             else:
-                out = f"[Unknown tool: {name}]"
+                out = f"[FAILURE] unknown tool: {name}"
 
             print(out)
 

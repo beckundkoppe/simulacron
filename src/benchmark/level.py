@@ -22,7 +22,7 @@ def buildLevel_Potato(actor: Entity = None):
 
     actor.enter(main)
 
-    key = Entity("key", Position(3.0, 1.0))
+    key = Entity("key", Position(3.0, 1.0), is_collectible=True)
     key.enter(main)
     
     table = ContainerEntity("table", Position(0.0, 3.0))
@@ -38,8 +38,8 @@ def buildLevel_Potato(actor: Entity = None):
     doorMain.connect(doorChamber)
     doorChamber.connect(doorMain)
 
-    potato = Entity("potato")
-    diamond = Entity("diamond")
+    potato = Entity("potato", is_collectible=True)
+    diamond = Entity("diamond", is_collectible=True)
 
     chest = ContainerEntity("chest")
     chest.add_child(potato)
