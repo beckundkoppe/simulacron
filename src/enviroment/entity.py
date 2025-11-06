@@ -450,6 +450,9 @@ class AgentEntity(Entity):
         entity = World.get_entity(self.uuid)
         connector = World.get_entity(connector_uuid)
 
+        if(not(isinstance(connector,ConnectorEntity))):
+            raise SoftException(f"{connector.readable_id} can't be used as a door")
+
         if(self.room != connector.room):
             raise HardException(f"connector: {connector.readable_id} is not in your room")
 

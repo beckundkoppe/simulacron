@@ -229,7 +229,7 @@ class LangchainAgent(Agent):
             name = tool_call.name
             args = tool_call.args
 
-            print(f"[TOOLCALL] {name}, args: {args}")
+            #print(f"[TOOLCALL] {name}, args: {args}")
 
             if name in tool_map:
                 sig = inspect.signature(tool_map[name])
@@ -239,14 +239,9 @@ class LangchainAgent(Agent):
                 filtered_args = {}
 
             if name in tool_map:
-                try:
-                    out = tool_map[name](**filtered_args)
-                except Exception as exc:
-                    out = f"[FAILURE] toolcall {name} failed: {exc}"
+                    tool_map[name](**filtered_args)                    
             else:
-                out = f"[FAILURE] unknown tool: {name}"
-
-            print(out)
+                raise Exception
 
 
         #-------------------------
@@ -272,9 +267,14 @@ class LangchainAgent(Agent):
 
         valid_toolcall = False
         for raw in result.tool_calls:
-            tc = ToolCall.from_raw(raw, False)
-            ret = _execute_toolcall(tc)
-            valid_toolcall = True
+            try:
+                tc = ToolCall.from_raw(raw, False)
+                ret = _execute_toolcall(tc)
+                valid_toolcall = True
+            except:
+                FormalError(f"toolcall failed: {raw}")
+                current.RESULT.harderror_count += 1
+
 
         if(not valid_toolcall):
             try:
@@ -286,8 +286,13 @@ class LangchainAgent(Agent):
                     data = None
 
             if data is not None:
-                tc = ToolCall.from_raw(data, True)
-                ret = _execute_toolcall(tc)
+                try:
+                    tc = ToolCall.from_raw(data, True)
+                    ret = _execute_toolcall(tc)
+                except:
+                    FormalError(f"toolcall failed: {data}")
+                    current.RESULT.harderror_count += 1
+
 
         memory.add_message(Role.ASSISTANT, reply)
 

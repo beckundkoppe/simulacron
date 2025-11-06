@@ -41,9 +41,11 @@ class Dispatcher:
             end_time = time.time()
             result.time_s = end_time - start_time
 
+            print(result.softerror_count)
+            print(result.harderror_count)
             results.append(result)
             current.RESULT = None
-
+        
         return RunResult.average(results)
 
     def run_all(self):

@@ -52,10 +52,10 @@ class RunResult:
     level_name: str
     level_optimal_steps: int
 
-    toolcall_count: int = 0
-    observation_count: int = 0
-    softerror_count: int = 0
-    harderror_count: int = 0
+    toolcall_count: float = 0
+    observation_count: float = 0
+    softerror_count: float = 0
+    harderror_count: float = 0
     
     success: float = 0
 
@@ -65,6 +65,7 @@ class RunResult:
         """
         Computes the field-wise average for a list of BenchResultLite instances.
         """
+
         n = len(results)
         if n == 0:
             raise ValueError("No results to average.")
@@ -73,7 +74,6 @@ class RunResult:
             return sum(getattr(r, field) for r in results) / n
         
         base = results[0]
-
         return RunResult(
             model_name=base.model_name,
             config_name=base.config_name,
@@ -82,9 +82,9 @@ class RunResult:
             toolcall_count=mean("toolcall_count"),
             observation_count=mean("observation_count"),
             softerror_count=mean("softerror_count"),
-            harderror_count=int(mean("harderror_count")),
-            success=int(mean("success")),
-            time_s=int(mean("time_s")),
+            harderror_count=(mean("harderror_count")),
+            success=(mean("success")),
+            time_s=(mean("time_s")),
         )
     
     def toString(self, color: bool = True) -> str:
@@ -110,11 +110,15 @@ class RunResult:
         left_width = 18
         right_width = 18
 
+        # Hilfsfunktion, um ANSI-Codes beim Längenmessen zu ignorieren
+        def strip_ansi(s: str) -> str:
+            return re.sub(r'\x1b\[[0-9;]*m', '', s)
+
         def fmt_pair_fixed(left_label, left_val, right_label, right_val, right_start=20):
             left = f"{left_label}: {left_val}"
             right = f"{right_label}: {right_val}"
             # linke Spalte normal, rechte Spalte beginnt immer bei right_start
-            spaces = right_start - len(left)
+            spaces = right_start - len(strip_ansi(left))
             if spaces < 1:
                 spaces = 1
             return f"{left}{' ' * spaces}{right}"
@@ -126,19 +130,14 @@ class RunResult:
             #"-" * 40,
             fmt_pair_fixed("Toolcalls", f"{self.toolcall_count:.1f}", "Steps", f"{self.observation_count:.1f}"),
             fmt_pair_fixed("SoftErrors", f"{self.softerror_count:.1f}", "HardErrors", f"{int(self.harderror_count)}"),
-            fmt_pair_fixed("Success", f"{self.success*100:.1f}%", "Time", f"{self.time_s:.2f}s")
+            fmt_pair_fixed(f"{success_color}Success", f"{self.success*100:.1f}%{RESET}", "Time", f"{self.time_s:.2f}s")
         ]
 
-        # Hilfsfunktion, um ANSI-Codes beim Längenmessen zu ignorieren
-        def strip_ansi(s: str) -> str:
-            return re.sub(r'\x1b\[[0-9;]*m', '', s)
-
-
-        #inner_width = max(len(l) for l in lines)
+        
         inner_width = max(len(strip_ansi(l)) for l in lines) + 2
 
         top_down_split_index = 3
-        lines.insert(top_down_split_index, "-"*(inner_width-2))
+        lines.insert(top_down_split_index, "-"*(inner_width-2))#
 
         top = f"{CYAN}┌{'─' * inner_width}┐{RESET}"
         bottom = f"{CYAN}└{'─' * inner_width}┘{RESET}"

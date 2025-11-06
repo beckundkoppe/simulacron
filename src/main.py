@@ -30,11 +30,13 @@ def main():
 
     dispatcher = Dispatcher(cache)
     config = Configuration(PerceptionType.FULL, PositionType.RELATIVE, True, True, PlanType.REPLAN, 0.0, "test")
+
+    print(result.toString())
     result: RunResult = dispatcher.run_single(Run(
         config,
-        Model.Local.Ollama.Qwen3.VANILLA_14B,
+        Model.Local.Ollama.Llama.NEMOTRON_8B,
         Levels.POTATO_HARD.value,
-        1,
+        10,
         2.0
         )
     )
