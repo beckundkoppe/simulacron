@@ -63,7 +63,7 @@ class Model(Enum):
     class Local(Enum):
 
         class LlamaCpp(Enum):
-            HYBRID_DEEPSEEK_QWEN_7B = ModelSpec(
+            DEEPSEEK_QWEN_7B = ModelSpec(
                 name="Deepseek-R1-distill-qwen-7B-Q8_0",
                 tag="deepseek_qwen_7b",
                 location=Location.LOCAL,
@@ -78,7 +78,22 @@ class Model(Enum):
                 ),
             )
 
-            THINK_PHI4_MINI_3_8B = ModelSpec(
+            LLAMA3_GROQ_8B_Q8 = ModelSpec(
+                name="Llama3-Groq-8B-Q8-Toolcalling",
+                tag="llama3_groq_8b_q8",
+                location=Location.LOCAL,
+                backend=Backend.LLAMACPP,
+                agent_backend=AgentBackend.LLAMACPPAGENT,
+                kind=ModelKind.HYBRID,
+                source=SourceHuggingface(
+                    repo_id="rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF",
+                    filename="llama-3-groq-8b-tool-use-q8_0.gguf",
+                    local_dir="data/model/"
+                    #https://huggingface.co/rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF
+                ),
+            )
+
+            PHI4_MINI_THINK_3_8B = ModelSpec(
                 name="Phi-4-mini-reasoning-3.8B",
                 tag="phi4_mini_reasoning_3.8b",
                 location=Location.LOCAL,
@@ -176,7 +191,7 @@ class Model(Enum):
             class Llama(Enum):
                 NEMOTRON_8B = ModelSpec(
                     name="Llama3.1-nemotron-8B",
-                    tag="llama_nemotron_8b",
+                    tag="llama3.1_nemotron_8b",
                     location=Location.LOCAL,
                     backend=Backend.OLLAMA,
                     agent_backend=AgentBackend.LANGCHAIN,
@@ -187,7 +202,7 @@ class Model(Enum):
                     ),
                 )
 
-            HYBRID_PHI4_MINI_3_8B = ModelSpec(
+            PHI4_MINI_3_8B = ModelSpec(
                 name="Phi-4-mini-3.8B",
                 tag="phi4_mini_3.8b",
                 location=Location.LOCAL,
@@ -200,7 +215,7 @@ class Model(Enum):
                 ),
             )
 
-            HYBRID_GPT_OSS_20B = ModelSpec(
+            GPT_OSS_20B = ModelSpec(
                 name="GPT-OSS-20B",
                 tag="gpt_oss_20b",
                 location=Location.LOCAL,
@@ -245,6 +260,7 @@ class Model(Enum):
                 ),
             )
 
+            # openai
             GPT4 = ModelSpec(
                 name="OpenAI-GPT-4",
                 tag="gpt4",
@@ -258,6 +274,7 @@ class Model(Enum):
                 ),
             )
 
+            # openai
             GPT5 = ModelSpec(
                 name="OpenAI-GPT-5",
                 tag="gpt5",

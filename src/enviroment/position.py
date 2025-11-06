@@ -1,5 +1,6 @@
 import math
-from config import CONFIG, PositionType
+from config import PositionType
+import config
 
 class Position:
     def __init__(self, x: float = 0.0, y: float = 0.0, type: PositionType | None = None) -> None:
@@ -37,9 +38,9 @@ class Position:
         if not (self.type is None):
             raise ValueError("position cant only be mapped once")
 
-        if CONFIG.position_type == PositionType.ROOMLESS:
+        if config.CONFIG.position_type == PositionType.ROOMLESS:
             return Position(0.0, 0.0, type=PositionType.ROOMLESS)  
-        elif CONFIG.position_type == PositionType.CHESSBOARD:
+        elif config.CONFIG.position_type == PositionType.CHESSBOARD:
             # Map room → 8x8 chessboard (0..7)
             chess_x = (self.x / room.extend_x) * 8.0
             chess_y = (self.y / room.extend_y) * 8.0

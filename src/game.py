@@ -1,10 +1,10 @@
 import json
 from advanced.agent import Agent
 from advanced.tool import tool
-from benchmark.level import buildLevel_Potato
-from character import current
-from character.exception import HardException, SoftException
-from character.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
+from enviroment import current
+from enviroment.exception import HardException, SoftException
+from enviroment.level import Level, LevelSpec
+from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
 from debug import console
 from enviroment.entity import AgentEntity, ContainerEntity
 from enviroment.interaction import Depth, ObserverPerception
@@ -114,10 +114,13 @@ def trycatch(action, success_message):
     try:
         action()
         Success(success_message)
+        current.RESULT.toolcall_count += 1
     except SoftException as s:
         ActionNotPossible(str(s))
+        current.RESULT.softerror_count += 1
     except HardException as h:
         FormalError(str(h))
+        current.RESULT.harderror_count += 1
 
 def check_id(readable_id: str) -> str:
     uuid = None
@@ -189,47 +192,37 @@ def drop_to(item_id: str, to_id: str) -> str:
 
     return ""
 
-def run(cache, model):
-    agent_mem = Memory()
-    agent_mem.add_message(Role.SYSTEM,       
-    """
-    Goal: Find a potato, take it and place it on the table. GIVE the next toolcall - nothing more
-    """
-    )
-    agent_mem.debug_print()
+def run_level(cache, model, level: Level, optimal_steps_multilier: float):
 
-    perception = ObserverPerception()
-    tron = AgentEntity("tron", perception, pos=Position(0.0, 0.0))
-    level = buildLevel_Potato(tron)
+    spec: LevelSpec = level.build()
 
-    agent = Agent.build(cache.get(model), entity=tron, memory=agent_mem)
+    console.pretty(console.banner(level.name, char="+", color=console.Color.BLUE))
 
-    while(True):
-        room = World.get_room(agent.entity.room)
+    agents = []
 
-        observation = observe(room, agent.entity)
-        agent.entity_step([move_to_position, use_door, take_from, drop_to], observation)
+    for eg in spec.agent_entities:
+        entity, prompt = eg
 
-        if(check_win()):
+        agent_mem = Memory()
+        agent_mem.add_message(Role.SYSTEM, prompt)
+        console.pretty(console.bullet(entity.name + "\t[PROMPT:] " + prompt, color=console.Color.BLUE))
+        agent = Agent.build(cache.get(model), entity=entity, memory=agent_mem)
+
+        agents.append(agent)
+
+
+    for i in range(int(level.optimal_steps * optimal_steps_multilier)):
+        for agent in agents:
+            print(f"Observation: {i+1}")
+            room = World.get_room(agent.entity.room)
+            observation = observe(room, agent.entity)
+            agent.entity_step([move_to_position, use_door, take_from, drop_to], observation)
+            current.RESULT.observation_count += 1
+
+        if(spec.is_success()):
             print("Finished")
-            break
-
-        #input()
-        #agent.update()
-        #level.update()
-
-def check_win() -> bool:
-    potato = None
-    table: ContainerEntity = None
-
-    for uuid in World.entities:
-        ent = World.get_entity(uuid)
-        if(ent.name == "potato"):
-            potato = ent
-        if(ent.name == "table"):
-            table = ent
+            current.RESULT.success = 1
+            return
+        
+    current.RESULT.success = 0    
     
-    assert potato != None, "No potato"
-    assert table != None, "No table"
-    
-    return potato.uuid in table.children

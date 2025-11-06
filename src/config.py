@@ -27,6 +27,6 @@ class Configuration:
     temperature: float
     name: str
     
-CONFIG = Configuration(PerceptionType.DISTANCE, PositionType.RELATIVE, True, True, PlanType.REPLAN, 0.0, "models-full")
+CONFIG = None
 
 DISTANCE = 4.0

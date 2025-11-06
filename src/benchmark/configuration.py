@@ -93,10 +93,18 @@ MODELS_REDUCED = [
 
 MODELS_ALL = [
         #lokal
-        Model.Local.Ollama.Llama.NEMOTRON_8B,
-        Model.Local.LlamaCpp.HYBRID_DEEPSEEK_QWEN_7B,
-        Model.Local.LlamaCpp.THINK_PHI4_MINI_3_8B,
+        Model.Local.LlamaCpp.DEEPSEEK_QWEN_7B,
+        Model.Local.LlamaCpp.PHI4_MINI_THINK_3_8B,
 
+        Model.Local.Ollama.Qwen3.CODER_30B,
+        Model.Local.Ollama.Qwen3.VANILLA_30B,
+        Model.Local.Ollama.Qwen3.VANILLA_14B,
+        Model.Local.Ollama.Qwen3.VANILLA_8B,
+        Model.Local.Ollama.Qwen3.VANILLA_4B,
+        Model.Local.Ollama.Qwen3.INSTRUCT_30B,
+
+        Model.Local.Ollama.Llama.NEMOTRON_8B,
+        
         #institut
         Model.Remote.PHI4_PLUS,
         Model.Remote.GPT_OSS_20B,

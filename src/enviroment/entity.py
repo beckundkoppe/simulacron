@@ -2,7 +2,7 @@
 from typing import List
 from uuid import UUID
 
-from character.exception import HardException, SoftException
+from enviroment.exception import HardException, SoftException
 import config as config
 from enviroment.room import Position, Room
 from enviroment.world import World

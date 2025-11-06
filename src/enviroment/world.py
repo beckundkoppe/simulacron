@@ -52,3 +52,9 @@ class World:
     @staticmethod
     def get_room(uuid: UUID) -> Optional["Room"]:
         return World.rooms.get(uuid)
+    
+    @staticmethod
+    def clear():
+        World.entities.clear()
+        World.rooms.clear()
+        World._id_counter = 0

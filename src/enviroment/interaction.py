@@ -6,7 +6,6 @@ from typing import Dict
 import random
 
 from config import PerceptionType
-from config import CONFIG
 import config
 from debug.settings import DEBUG_PERCEPTION_FILTER, DEBUG_PERCEPTION_ENABLED
 import util
@@ -541,7 +540,7 @@ class Datum:
         env: "PerceptionEnviroment",
         level: Depth,
     ) -> None:
-        discovery = CONFIG.perception
+        discovery = config.CONFIG.perception
 
         if (
             (discovery == PerceptionType.DISTANCE and self.is_perceived_simple(observer, env, level))

@@ -13,8 +13,8 @@ from llama_cpp_agent.llm_output_settings import LlmStructuredOutputSettings
 from llama_cpp_agent.chat_history.basic_chat_history import BasicChatHistory, BasicChatHistoryStrategy, Roles
 
 
-from character import current
-from character.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
+from enviroment import current
+from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
 from debug.settings import VERBOSE_BACKEND
 from llm.memory.memory import Memory, Role
 from llm.runner import LangchainRunner, LlamaCppRunner, Runner
