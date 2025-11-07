@@ -68,21 +68,21 @@ class Agent(ABC):
 
             console_lines = [
                 console.bullet(
-                    f"[toolcall]\t{prefix} {result.console_message}",
+                    f"[toolcall] {prefix} {result.console_message}",
                     color=color,
                 )
             ]
             if result.hint:
                 console_lines.append(
                     console.bullet(
-                        f"[toolcall]\tHint: {result.hint}",
+                        f"\nHint: {result.hint}",
                         color=console.Color.BLUE,
                     )
                 )
             if result.context:
                 console_lines.append(
                     console.bullet_multi(
-                        f"[toolcall]\tContext: {console.dump_limited(result.context, max_depth=1)}",
+                        f"\nContext: {console.dump_limited(result.context, max_depth=1)}",
                         color=console.Color.BLUE,
                     )
                 )

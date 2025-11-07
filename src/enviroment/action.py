@@ -16,4 +16,4 @@ class ActionType(str, Enum):
 @dataclass
 class ActionTry:
     type: ActionType
-    item_1: "Entity" | None = None
+    item_1: "Entity" = None
