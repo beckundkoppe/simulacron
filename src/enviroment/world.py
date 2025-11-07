@@ -1,58 +1,38 @@
 from __future__ import annotations
-from typing import Dict, Optional
-
-import uuid
-from uuid import UUID
+from typing import Set
 
 
 class World:
-    entities: Dict[UUID, "Entity"] = {}
-    rooms: Dict[UUID, "Room"] = {}
+    entities: Set["Entity"] = set()
+    rooms: Set["Room"] = set()
     _id_counter: int = 0
 
     @staticmethod
-    def add_entity(entity: "Entity") -> UUID:
-        if entity.uuid is not None:
+    def add_entity(entity: "Entity") -> None:
+        if entity in World.entities:
             raise ValueError("Entity already belongs to a world")
-
         World._id_counter += 1
-        new_uuid = uuid.uuid4()
-        entity.uuid = new_uuid
         entity.readable_id = f"{entity.name}_{World._id_counter}"
 
-        World.entities[new_uuid] = entity
-        return new_uuid
+        World.entities.add(entity)
 
     @staticmethod
-    def remove_entity(uuid: UUID) -> None:
-        entity = World.entities.pop(uuid, None)
-        if entity:
-            entity.world = None
+    def remove_entity(entity: "Entity") -> None:
+        World.entities.discard(entity)
 
     @staticmethod
-    def get_entity(uuid: UUID) -> Optional["Entity"]:
-        return World.entities.get(uuid)
-
-    @staticmethod
-    def add_room(room: "Room") -> UUID:
+    def add_room(room: "Room") -> None:
+        if room in World.rooms:
+            raise ValueError("Room already belongs to a world")
         World._id_counter += 1
-        new_uuid = uuid.uuid4()
-        room.uuid = new_uuid
         room.readable_id = f"{room.name}_{World._id_counter}"
 
-        World.rooms[new_uuid] = room
-        return new_uuid
+        World.rooms.add(room)
 
     @staticmethod
-    def remove_room(uuid: UUID) -> None:
-        room = World.rooms.pop(uuid, None)
-        if room:
-            room.world = None
+    def remove_room(room: "Room") -> None:
+        World.rooms.discard(room)
 
-    @staticmethod
-    def get_room(uuid: UUID) -> Optional["Room"]:
-        return World.rooms.get(uuid)
-    
     @staticmethod
     def clear():
         World.entities.clear()

@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Callable, Iterable, TYPE_CHECKING
-from uuid import UUID
 
 from enviroment.action import ActionTry, ActionType
 from enviroment.exception import SoftException
-from enviroment.world import World
 
 if TYPE_CHECKING:
     from enviroment.entity import Entity
@@ -111,15 +109,15 @@ class LockableCapability(Capability):
         owner: Entity,
         *,
         initially_locked: bool = False,
-        allowed_keys: Iterable[UUID] | None = None,
+        allowed_keys: Iterable["Entity"] | None = None,
     ) -> None:
         super().__init__(owner)
         self.is_locked = initially_locked
-        self._allowed_keys: set[UUID] = set(allowed_keys or [])
+        self._allowed_keys: set["Entity"] = set(allowed_keys or [])
 
-    def allow_key(self, key_uuid: UUID) -> None:
-        if key_uuid is not None:
-            self._allowed_keys.add(key_uuid)
+    def allow_key(self, key: "Entity") -> None:
+        if key is not None:
+            self._allowed_keys.add(key)
 
     def _has_key(self, action: ActionTry) -> bool:
         return action.item_1 in self._allowed_keys
@@ -129,10 +127,7 @@ class LockableCapability(Capability):
             if not self.is_locked:
                 return "already unlocked"
             if not self._has_key(action):
-                key_id = None
-                if action.item_1:
-                    key_entity = World.get_entity(action.item_1)
-                    key_id = key_entity.readable_id if key_entity else str(action.item_1)
+                key_id = getattr(action.item_1, "readable_id", None)
                 raise SoftException(
                     "That key does not fit the lock.",
                     console_message=(
@@ -152,10 +147,7 @@ class LockableCapability(Capability):
             if self.is_locked:
                 return "already locked"
             if not self._has_key(action):
-                key_id = None
-                if action.item_1:
-                    key_entity = World.get_entity(action.item_1)
-                    key_id = key_entity.readable_id if key_entity else str(action.item_1)
+                key_id = getattr(action.item_1, "readable_id", None)
                 raise SoftException(
                     "That key cannot lock this object.",
                     console_message=(

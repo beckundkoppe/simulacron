@@ -1,7 +1,10 @@
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
-from uuid import UUID
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from enviroment.entity import Entity
 
 class ActionType(str, Enum):
     OPEN = "open"
@@ -12,5 +15,5 @@ class ActionType(str, Enum):
 
 @dataclass
 class ActionTry:
-    type: ActionType 
-    item_1: UUID = None
+    type: ActionType
+    item_1: "Entity" | None = None
