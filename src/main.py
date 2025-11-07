@@ -31,27 +31,17 @@ def main():
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        Model.Local.Ollama.GPT_OSS_20B,
+        Model.Local.Ollama.Qwen3.CODER_30B,
         Levels.POTATO_HARD.value,
         10,
         3.0
         )
     )
     
-
-    result2: RunResult = dispatcher.run_single(Run(
-        config,
-        Model.Local.Ollama.GPT_OSS_20B,
-        Levels.POTATO_HARD.value,
-        10,
-        3.0
-        )
-    )
-    print("Reruns: 5")
+    print("Reruns: 10")
     print(result1.toString())
-
-    print("Reruns: 5")
-    print(result2.toString())
+   
+    #Only use toolcalls. For toolcalls, use the following syntax: {"name": "<tool_name>", "args": {"<arg_key>": "<arg_value>"}}
 
 
 

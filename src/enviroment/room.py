@@ -65,20 +65,32 @@ class Room:
         return perceptions
 
     def contains_entity(self, entity: "Entity") -> bool:
-        if entity in self.entities:
-            return True
-
-        for ent in self.entities:
-            if ent.hasChild(entity):
-                return True
-            
-        return False
+        return self.get_entity(entity) is not None
+        #if entity in self.entities:
+        #    return True
+#
+        #for ent in self.entities:
+        #    if ent.hasChild(entity):
+        #        return True
+        #    
+        #return False
     
     def isPosInRoom(self, pos: Position) -> bool:
         if 0 <= pos.x <= self.extend_x and 0 <= pos.y <= self.extend_y:
             return True
         else:
             return False
+        
+    def get_entity(self, entity: "Entity") -> "Entity":
+        if entity in self.entities:
+            return entity
+
+        for ent in self.entities:
+            if ent.hasChild(entity):
+                return ent
+            
+        return None
+
 
     # ---------- factory methods ----------
     @classmethod

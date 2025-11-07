@@ -307,7 +307,7 @@ class LangchainAgent(Agent):
                 ret = _execute_toolcall(tc)
                 valid_toolcall = True
             except Exception as e:
-                FormalError(f"toolcall failed: {str(e)}\n{raw}")
+                FormalError(f"toolcall failed: {str(e)}\n{raw}" + """For toolcalls, use the following syntax: {"name": "<tool_name>", "args": {"<arg_key>": "<arg_value>"}}""")
                 current.RESULT.harderror_count += 1
 
 
@@ -325,7 +325,7 @@ class LangchainAgent(Agent):
                     tc = ToolCall.from_raw(data, True)
                     ret = _execute_toolcall(tc)
                 except Exception as e:
-                    FormalError(f"toolcall failed: {str(e)}\n{data}")
+                    FormalError(f"toolcall failed: {str(e)}\n{data}"+"""For toolcalls, use the following syntax: {"name": "<tool_name>", "args": {"<arg_key>": "<arg_value>"}}""")
                     current.RESULT.harderror_count += 1
 
 

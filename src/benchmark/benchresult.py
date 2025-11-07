@@ -151,7 +151,3 @@ class RunResult:
 
         out = [top] + [pad_line(l) for l in lines] + [bottom]
         return "\n".join(out)
-    
-
-
-    

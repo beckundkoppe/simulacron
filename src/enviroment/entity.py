@@ -36,6 +36,7 @@ class Entity:
 
         World.add_entity(self)
 
+
     # -- capability plumbing -------------------------------------------------
     def add_capability(self, capability: Capability) -> None:
         if capability.owner is not self:
@@ -50,6 +51,53 @@ class Entity:
             if isinstance(capability, capability_type):
                 return capability
         return None
+
+    def _interaction_max_distance(self) -> float:
+        # Prefer a per-object override; fall back to global config or 1.5.
+        return getattr(self, "interaction_distance",
+                       getattr(config, "MAX_INTERACTION_DISTANCE", 1.5))
+
+    def _distance_to_actor(self, actor_entity: "Entity") -> float | None:
+        # Returns Euclidean distance if both positions exist, else None.
+        ownPos = actor_entity.room.get_entity(self).pos
+
+        if actor_entity is None or ownPos is None or actor_entity.pos is None:
+            return None
+        dx = (ownPos.x - actor_entity.pos.x)
+        dy = (ownPos.y - actor_entity.pos.y)
+        return (dx * dx + dy * dy) ** 0.5
+
+    def _ensure_in_range(self, actor_entity: "Entity") -> None:
+        # Enforce max interaction radius.
+        dist = self._distance_to_actor(actor_entity)
+        if dist is None:
+            raise SoftException(
+                "Interaction distance cannot be determined.",
+                console_message=(
+                    f"Either '{getattr(actor_entity, 'readable_id', 'unknown')}' or "
+                    f"'{self.readable_id}' has no position set."
+                ),
+                hint="Ensure both entities have valid positions before interacting.",
+                context={
+                    "actor": getattr(actor_entity, "readable_id", None),
+                    "target": self.readable_id,
+                },
+            )
+        if dist > self._interaction_max_distance():
+            raise SoftException(
+                f"{self.readable_id} is too far away to interact.",
+                console_message=(
+                    f"Range check failed: distance={dist:.3f}, "
+                    f"limit={self._interaction_max_distance():.3f}."
+                ),
+                hint="Move closer to the object before interacting.",
+                context={
+                    "actor": getattr(actor_entity, "readable_id", None),
+                    "target": self.readable_id,
+                    "distance": dist,
+                    "limit": self._interaction_max_distance(),
+                },
+            )
 
     def _ensure_same_room(self, actor_entity: "Entity") -> None:
         actor_room = actor_entity.room if actor_entity else None
@@ -101,6 +149,7 @@ class Entity:
         action: ActionTry
     ) -> str:
         self._ensure_same_room(actor_entity)
+        self._ensure_in_range(actor_entity)
 
         for capability in self._capabilities:
             if capability.supports(action.type):
@@ -423,6 +472,7 @@ class ConnectorEntity(Entity):
     ) -> str:
 
         self._ensure_same_room(actor_entity)
+        self._ensure_in_range(actor_entity)
 
         if(action.type == ActionType.OPEN or action.type == ActionType.CLOSE):
             raise SoftException(
@@ -431,7 +481,7 @@ class ConnectorEntity(Entity):
                     f"Connector '{self.readable_id}' received '{action.type.value}' from "
                     f"'{getattr(actor_entity, 'readable_id', 'unknown')}'."
                 ),
-                hint="Invoke interact_with_object(..., operator=\"USE\") to traverse connectors.",
+                hint="Invoke interact_with_object(..., operator=\"GO_THROUGH\") to traverse connectors.",
                 context={
                     "connector": self.readable_id,
                     "operator": action.type.value,
@@ -440,7 +490,7 @@ class ConnectorEntity(Entity):
 
         if(action.type == ActionType.UNLOCK):
             if(not self.is_locked):
-                return "already unlocked"
+                return "already unlocked" #war hier <----
             if(action.item_1 in self.keys):
                 self.is_locked = False
                 return "unlocked"

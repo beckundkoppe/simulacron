@@ -30,95 +30,11 @@ def observe(room: Room, observer: AgentEntity) -> str:
     data["your_inventory"] = observer.get_inventory()
     data["your_observation"] = room.perceive(observer, Depth.OMNISCIENT)
     return json.dumps(data)
-    class Agent:
-        def __init__(self, entity):
-            self.entity = entity
-        
-        def process_results(self):
-            for result in Resultbuffer.buffer:
-                if isinstance(result, FormalError):
-                    prefix = "[FORMAL ERROR]"
-                    color = console.Color.RED
-                elif isinstance(result, ActionNotPossible):
-                    prefix = "[ACTION FAILURE]"
-                    color = console.Color.RED
-                elif isinstance(result, Success):
-                    prefix = "[ACTION]"
-                    color = console.Color.YELLOW
-                else:
-                    continue
-
-                console_lines = [
-                    console.bullet(
-                        f"[toolcall]\t{prefix} {result.console_message}",
-                        color=color,
-                    )
-                ]
-
-                if result.hint:
-                    console_lines.append(
-                        console.bullet(
-                            f"[toolcall]\tHint: {result.hint}",
-                            color=console.Color.BLUE,
-                        )
-                    )
-                if result.context:
-                    console_lines.append(
-                        console.bullet_multi(
-                            f"[toolcall]\tContext: {console.dump_limited(result.context, max_depth=1)}",
-                            color=console.Color.BLUE,
-                        )
-                    )
-
-                console.pretty(*console_lines, spacing=0)
-            Resultbuffer.buffer.clear()
-            
-
-    perception = ObserverPerception()
-    tron = AgentEntity("tron", perception, pos=Position(0.0, 0.0))
-    buildLevel_Potato(tron)
-
-    agent = Agent(tron)
-    current.AGENT = agent
-
-    room = tron.room
-
-    observation = observe(tron.room, tron)
-    print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
-
-    move_to_position("2.0","2.0")
-    agent.process_results()
-
-    use_door("door_6")
-    agent.process_results()
-
-    observation = observe(tron.room, tron)
-    print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
-
-
-    take_from("potato_8", "chest_10")
-    agent.process_results()
-
-    observation = observe(tron.room, tron)
-    print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
-
-    use_door("door_7")
-    agent.process_results()
-
-    observation = observe(tron.room, tron)
-    print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
-
-    drop_to("potato_8", "table_5")
-    agent.process_results()
-    move_to_position("1.0", "1.0")
-    agent.process_results()
-    observation = observe(tron.room, tron)
-    print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
 
 def trycatch(action, success_msg):
     try:
         msg = ""
-        message = action()
+        message = action() #message is None <--------
         if message is None:
             msg = success_msg
         else:
@@ -243,8 +159,6 @@ def interact_with_object(object_id: str, operator: str) -> str:
     """
 
     def helper():
-        action: ActionTry = None
-    
         if(operator == "OPEN"):
             action = ActionTry(ActionType.OPEN)
         elif (operator == "CLOSE"):
@@ -254,7 +168,7 @@ def interact_with_object(object_id: str, operator: str) -> str:
         else:
             raise HardException("unknown operator for this action: {operator}")
         
-        check_id(object_id).on_interact(current.AGENT.entity, action)
+        return check_id(object_id).on_interact(current.AGENT.entity, action)
     
     trycatch(helper, f"succeded with {operator} {object_id}")
 
@@ -271,8 +185,6 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
     """
 
     def helper():
-        action: ActionTry = None
-    
         if(operator == "LOCK"):
             action = ActionTry(ActionType.LOCK, check_id(using_id))
         elif (operator == "UNLOCK"):
@@ -280,7 +192,7 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
         else:
             raise HardException("unknown operator for this action: {operator}")
         
-        check_id(object_id).on_interact(current.AGENT.entity, action)
+        return check_id(object_id).on_interact(current.AGENT.entity, action)
     
     trycatch(helper, f"succeded with {operator} {object_id}")
 

@@ -48,6 +48,7 @@ class Dispatcher:
             print(result.harderror_count)
             results.append(result)
             current.RESULT = None
+            print(RunResult.average(results).toString())
         
         return RunResult.average(results)
 
