@@ -56,7 +56,7 @@ def build_easy() -> LevelSpec:
 
     return LevelSpec(
         agent_entities=[
-            (tron,"Goal: Find a potato, take it and place it on the table. GIVE the next toolcall - nothing more"),
+            (tron,"Goal: Find the potato in the other room, take it and place it on the table. GIVE the next toolcall - nothing more"),
         ],
         is_success=check_win_table_key,
     )
@@ -115,7 +115,7 @@ def build_hard() -> LevelSpec:
 
     return LevelSpec(
         agent_entities=[
-            (tron,"Goal: Find a potato, take it and place it on the table. GIVE the next toolcall - nothing more"),
+            (tron,"Goal: Find a potato in the other room (in the locked chest, use the key to open it), take it and place it on the table. GIVE the next toolcall - nothing more"),
         ],
         is_success=check_win_table_key,
     )

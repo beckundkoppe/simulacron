@@ -8,6 +8,7 @@ class ActionType(str, Enum):
     CLOSE = "close"
     UNLOCK = "unlock"
     LOCK = "unlock"
+    USE = "use"
 
 @dataclass
 class ActionTry:

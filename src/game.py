@@ -3,31 +3,16 @@ from advanced.agent import Agent
 from advanced.tool import tool
 from enviroment import current
 from enviroment.action import ActionTry, ActionType
-from enviroment.exception import HardException, SoftException, SuccessException
+from enviroment.exception import HardException, SoftException
 from enviroment.levels.level import Level, LevelSpec
 from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
 from debug import console
-from enviroment.entity import AgentEntity, ContainerEntity
+from enviroment.entity import AgentEntity
 from enviroment.interaction import Depth, ObserverPerception
 from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
 from llm.memory.memory import Memory, Role
-
-#def observe_all():
-#    for ent in World.entities:
-#        entity = World.get_entity(ent)
-#        if entity.perception is None:
-#            continue
-#        
-#        if entity.room is None:
-#            continue
-#        
-#        room = World.get_room(entity.room)
-#
-#        observations = observe(room, entity)
-#        console.json_dump(observations)
-#
 
 def observe(room: Room, observer: AgentEntity) -> str:
     data = {}
@@ -45,8 +30,6 @@ def observe(room: Room, observer: AgentEntity) -> str:
     data["your_inventory"] = observer.get_inventory()
     data["your_observation"] = room.perceive(observer.uuid, Depth.OMNISCIENT)
     return json.dumps(data)
-
-def test_run():
     class Agent:
         def __init__(self, entity):
             self.entity = entity
@@ -165,17 +148,6 @@ def move_to_object(object_id: str) -> str:
     trycatch(lambda: current.AGENT.entity.move_to_object(check_id(object_id)), "moved succesfully")
 
     return ""
-
-@tool
-def use_door(door_id: str) -> str:
-    """The human goes through a door.
-    
-    Args:
-        door_id (str): the door_id to go through
-    """
-    trycatch(lambda: current.AGENT.entity.use_connector(check_id(door_id)), "went through door")
-
-    return ""
         
 @tool
 def take_from(what_id: str, from_id: str) -> str:
@@ -186,7 +158,7 @@ def take_from(what_id: str, from_id: str) -> str:
         from_id (str): the id of object B from which the item is taken or 'FLOOR' for the floor
     """
     
-    if(from_id.capitalize() == "FLOOR"):
+    if(from_id == "FLOOR"):
         trycatch(lambda: current.AGENT.entity.take(check_id(what_id)), f"collected {what_id}")
 
     else:
@@ -203,7 +175,7 @@ def drop_to(what_id: str, to_id: str) -> str:
         to_id (str): the id of the object B where the item is placed or 'FLOOR' for the floor
     """
 
-    if(to_id.capitalize() == "FLOOR"):
+    if(to_id == "FLOOR"):
         trycatch(lambda: current.AGENT.entity.drop(check_id(what_id)), f"dropped {what_id}")
     else:
         trycatch(lambda: current.AGENT.entity.drop_into(check_id(what_id), check_id(to_id)), f"dropped {what_id} into {to_id}")
@@ -216,7 +188,7 @@ def interact_with_object(object_id: str, operator: str) -> str:
     
     Args:
         object_id (str): the the id of the item A to be dropped.
-        operator (str): The action to perform. Allowed values: OPEN, CLOSE.
+        operator (str): The action to perform. Allowed values: OPEN, CLOSE, GO_THROUGH.
     """
 
     def helper():
@@ -226,6 +198,8 @@ def interact_with_object(object_id: str, operator: str) -> str:
             action = ActionTry(ActionType.OPEN)
         elif (operator == "CLOSE"):
             action = ActionTry(ActionType.CLOSE)
+        elif (operator == "GO_THROUGH"):
+            action = ActionTry(ActionType.USE)
         else:
             raise HardException("unknown operator for this action: {operator}")
         
@@ -287,7 +261,6 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float):
             observation = observe(room, agent.entity)
             agent.entity_step([
                 move_to_position, move_to_object,
-                use_door,
                 take_from, drop_to,
                 interact_with_object, interact_with_object_using_item,
                 ], observation)

@@ -29,15 +29,29 @@ def main():
     dispatcher = Dispatcher(cache)
     config = Configuration(PerceptionType.FULL, PositionType.RELATIVE, True, True, PlanType.REPLAN, 0.0, "test")
 
-    result: RunResult = dispatcher.run_single(Run(
+    result1: RunResult = dispatcher.run_single(Run(
         config,
-        Model.Local.Ollama.Qwen3.VANILLA_14B,
+        Model.Local.Ollama.GPT_OSS_20B,
         Levels.POTATO_HARD.value,
         10,
-        2.0
+        3.0
         )
     )
-    print(result.toString())
+    
+
+    result2: RunResult = dispatcher.run_single(Run(
+        config,
+        Model.Local.Ollama.GPT_OSS_20B,
+        Levels.POTATO_HARD.value,
+        10,
+        3.0
+        )
+    )
+    print("Reruns: 5")
+    print(result1.toString())
+
+    print("Reruns: 5")
+    print(result2.toString())
 
 
 

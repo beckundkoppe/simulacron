@@ -53,6 +53,9 @@ class Entity:
         actor_entity,
         action: ActionTry
     ) -> str:
+        if(not World.get_room(actor_entity.room).isUuidIRoom(self.uuid)):
+            raise HardException(f"{self.readable_id} is not in your room")
+
         raise SoftException("had no effekt")
 
     def on_perceive(
@@ -223,32 +226,20 @@ class ContainerEntity(Entity):
         actor_entity,
         action: ActionTry
     ) -> str:
+        if(not World.get_room(actor_entity.room).isUuidIRoom(self.uuid)):
+            raise HardException(f"{self.readable_id} is not in your room")
+        
         if(action.type == ActionType.OPEN):
-            if(self.is_locked):
-                raise SoftException("cant open, is locked")
-            self.is_open = True
-            return "opened chest"
+            raise SoftException("is already opened")
 
         if(action.type == ActionType.CLOSE):
-            if(self.is_locked):
-                raise SoftException("cant close, is locked")
-            self.is_open = False
-
-            return "closed chest"
+            raise SoftException("can't be closed")
 
         if(action.type == ActionType.UNLOCK):
-            if(action.item_1 in self.keys):
-                self.is_locked = False
-                return "unlocked chest"
-            
-            raise SoftException("wrong key")
+            raise SoftException("is already unlocked")
 
         if(action.type == ActionType.LOCK):
-            if(action.item_1 in self.keys):
-                self.is_locked = True
-                raise SoftException("locked chest")
-            
-            raise SoftException("wrong key")
+            raise SoftException("can't be locked")
 
         super().on_interact(actor_entity, action)
         
@@ -304,30 +295,42 @@ class AdvancedContainerEntity(ContainerEntity):
         actor_entity,
         action: ActionTry
     ) -> str:
+        
+        if(not World.get_room(actor_entity.room).isUuidIRoom(self.uuid)):
+            raise HardException(f"{self.readable_id} is not in your room")
+
         if(action.type == ActionType.OPEN):
+            if(self.is_open):
+                return "already open"
             if(self.is_locked):
                 raise SoftException("cant open, is locked")
             self.is_open = True
-            return "opened chest"
+            return "opened"
 
         if(action.type == ActionType.CLOSE):
+            if(not self.is_open):
+                return "already closed"
             if(self.is_locked):
                 raise SoftException("cant close, is locked")
             self.is_open = False
 
-            return "closed chest"
+            return "closed"
 
         if(action.type == ActionType.UNLOCK):
+            if(not self.is_locked):
+                return "already unlocked"
             if(action.item_1 in self.keys):
                 self.is_locked = False
-                return "unlocked chest"
+                return "unlocked"
             
             raise SoftException("wrong key")
 
         if(action.type == ActionType.LOCK):
+            if(self.is_locked):
+                return "already locked"
             if(action.item_1 in self.keys):
                 self.is_locked = True
-                raise SoftException("locked chest")
+                raise SoftException("locked")
             
             raise SoftException("wrong key")
 
@@ -396,9 +399,11 @@ class AdvancedContainerEntity(ContainerEntity):
         self.keys.append(entity.uuid)
 
 class ConnectorEntity(Entity):
-    def __init__(self, name, pos, material = None, description = None, uniqueness = 0.5, prominence = 1):
+    def __init__(self, name, pos, material = None, description = None, uniqueness = 0.5, prominence = 1, is_locked = False):
         super().__init__(name, pos, material, description, uniqueness, prominence)
         self.otherDoor : ConnectorEntity = None
+        self.is_locked = is_locked
+        self.keys = []
 
     def connect(self, entity: "ConnectorEntity"):
         self.otherDoor = entity
@@ -413,6 +418,43 @@ class ConnectorEntity(Entity):
         user_entity.pos = self.otherDoor.pos
         user_entity.enter(connectionRoom)
 
+    def on_interact(
+        self,
+        actor_entity,
+        action: ActionTry
+    ) -> str:
+        
+        if(not World.get_room(actor_entity.room).isUuidIRoom(self.uuid)):
+            raise HardException(f"{self.readable_id} is not in your room")
+
+        if(action.type == ActionType.OPEN or action.type == ActionType.CLOSE):
+            raise SoftException("to go through, use the operator 'USE'")
+
+        if(action.type == ActionType.UNLOCK):
+            if(not self.is_locked):
+                return "already unlocked"
+            if(action.item_1 in self.keys):
+                self.is_locked = False
+                return "unlocked"
+            
+            raise SoftException("wrong key")
+
+        if(action.type == ActionType.LOCK):
+            if(self.is_locked):
+                return "already locked"
+            if(action.item_1 in self.keys):
+                self.is_locked = True
+                raise SoftException("locked")
+            
+        if(action.type == ActionType.USE):
+            if not self.is_locked:
+                actor_entity.use_connector(self.uuid)
+                return "went through"
+            
+        super().on_interact(actor_entity, action)
+
+    def add_key(self, entity):
+        self.keys.append(entity.uuid)
 
 class AgentEntity(Entity):
     def __init__(self, name: str, perception: ObserverPerception, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, is_collectible: bool = False,):
@@ -481,12 +523,20 @@ class AgentEntity(Entity):
 
     def move_to_object(self, target_uuid: UUID):
         target: Entity = World.get_entity(target_uuid)
+        room: Room = World.get_room(self.room)
 
-        if(self.room != target.room):
-            raise HardException(f"object: {target.readable_id} is not in your room")
+        if(self.room == target.room):
+            self.move_to_position(target.pos)
+            return
+        else:
+            for ent in room.entities:
+                entity = World.get_entity(ent)
+                if entity.hasChild(target_uuid):
+                     self.move_to_position(entity.pos)
+                     return
+            
+        raise HardException(f"object: {target.readable_id} is not in your room")
 
-        self.move_to_position(target.pos)
-        
     def move_to_position(self, pos):
         room: Room = World.get_room(self.room)
         if(not room.isPosInRoom(pos)):
@@ -514,7 +564,3 @@ class AgentEntity(Entity):
             data["id"] = entity.readable_id
             o.append(data)
         return o
-
-        
-
-        
