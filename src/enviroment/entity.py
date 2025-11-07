@@ -54,8 +54,25 @@ class Entity:
         return None
 
     def _ensure_same_room(self, actor_entity: "Entity") -> None:
-        if not World.get_room(actor_entity.room).isUuidIRoom(self.uuid):
-            raise HardException(f"{self.readable_id} is not in your room")
+        actor_room = World.get_room(actor_entity.room) if actor_entity and actor_entity.room else None
+        target_room = World.get_room(self.room) if self.room else None
+        if not actor_room or not actor_room.isUuidIRoom(self.uuid):
+            raise HardException(
+                f"{self.readable_id} is not in your current room.",
+                console_message=(
+                    f"{getattr(actor_entity, 'readable_id', 'unknown')} attempted to interact with "
+                    f"'{self.readable_id}', but it resides in "
+                    f"'{target_room.name if target_room else 'unknown'}' while the actor is in "
+                    f"'{actor_room.name if actor_room else 'unknown'}'."
+                ),
+                hint="Move to the object's room before interacting with it.",
+                context={
+                    "actor": getattr(actor_entity, "readable_id", None),
+                    "actor_room": actor_room.readable_id if actor_room else None,
+                    "target": self.readable_id,
+                    "target_room": target_room.readable_id if target_room else None,
+                },
+            )
 
     def enter(self, room: "Entity"):
         if self.room is None:
@@ -91,7 +108,18 @@ class Entity:
                 if result is not None:
                     return result
 
-        raise SoftException("had no effekt")
+        raise SoftException(
+            "That interaction had no effect on this object.",
+            console_message=(
+                f"No capability on '{self.readable_id}' handled action "
+                f"'{getattr(action.type, 'value', str(action.type))}'."
+            ),
+            hint="Try a different operator or interact with another object.",
+            context={
+                "entity": self.readable_id,
+                "action": getattr(action.type, "value", str(action.type)),
+            },
+        )
 
     def on_perceive(
         self,
@@ -393,12 +421,22 @@ class ConnectorEntity(Entity):
         actor_entity,
         action: ActionTry
     ) -> str:
-        
-        if(not World.get_room(actor_entity.room).isUuidIRoom(self.uuid)):
-            raise HardException(f"{self.readable_id} is not in your room")
+
+        self._ensure_same_room(actor_entity)
 
         if(action.type == ActionType.OPEN or action.type == ActionType.CLOSE):
-            raise SoftException("to go through, use the operator 'USE'")
+            raise SoftException(
+                "Use the USE operator to go through this connector.",
+                console_message=(
+                    f"Connector '{self.readable_id}' received '{action.type.value}' from "
+                    f"'{getattr(actor_entity, 'readable_id', 'unknown')}'."
+                ),
+                hint="Invoke interact_with_object(..., operator=\"USE\") to traverse connectors.",
+                context={
+                    "connector": self.readable_id,
+                    "operator": action.type.value,
+                },
+            )
 
         if(action.type == ActionType.UNLOCK):
             if(not self.is_locked):
@@ -406,16 +444,45 @@ class ConnectorEntity(Entity):
             if(action.item_1 in self.keys):
                 self.is_locked = False
                 return "unlocked"
-            
-            raise SoftException("wrong key")
+
+            key_id = None
+            if action.item_1:
+                key_entity = World.get_entity(action.item_1)
+                key_id = key_entity.readable_id if key_entity else str(action.item_1)
+
+            raise SoftException(
+                "That key does not fit this lock.",
+                console_message=(
+                    f"Key '{key_id or 'unknown'}' failed to unlock connector '{self.readable_id}'."
+                ),
+                hint="Use a matching key before unlocking.",
+                context={
+                    "connector": self.readable_id,
+                    "key": key_id,
+                },
+            )
 
         if(action.type == ActionType.LOCK):
             if(self.is_locked):
                 return "already locked"
             if(action.item_1 in self.keys):
                 self.is_locked = True
-                raise SoftException("locked")
-            
+                key_id = None
+                if action.item_1:
+                    key_entity = World.get_entity(action.item_1)
+                    key_id = key_entity.readable_id if key_entity else str(action.item_1)
+                raise SoftException(
+                    "The connector is now locked.",
+                    console_message=(
+                        f"Connector '{self.readable_id}' locked using key '{key_id or 'unknown'}'."
+                    ),
+                    hint="Unlock it again before attempting to use it.",
+                    context={
+                        "connector": self.readable_id,
+                        "key": key_id,
+                    },
+                )
+
         if(action.type == ActionType.USE):
             if not self.is_locked:
                 actor_entity.use_connector(self.uuid)
@@ -435,11 +502,37 @@ class AgentEntity(Entity):
     def take(self, item_uuid: UUID):
         item: Entity = World.get_entity(item_uuid)
 
-        if(not item.is_collectible):
-            raise SoftException(f"{item.readable_id} can't be collected")
-        
-        if(self.room != item.room):
-            raise HardException(f"{item.readable_id} is not in your room")
+        if not item.is_collectible:
+            raise SoftException(
+                f"{item.readable_id} cannot be collected.",
+                console_message=(
+                    f"Attempted to collect non-collectible entity '{item.readable_id}'."
+                ),
+                hint="Target objects marked as collectible in your observation.",
+                context={
+                    "item": item.readable_id,
+                    "action": "take",
+                },
+            )
+
+        if self.room != item.room:
+            agent_room = World.get_room(self.room) if self.room else None
+            item_room = World.get_room(item.room) if item.room else None
+            raise HardException(
+                f"{item.readable_id} is not in your current room.",
+                console_message=(
+                    f"Agent '{self.readable_id}' tried to take '{item.readable_id}' from "
+                    f"'{item_room.name if item_room else 'unknown'}' while located in "
+                    f"'{agent_room.name if agent_room else 'unknown'}'."
+                ),
+                hint="Move to the room containing the item before taking it.",
+                context={
+                    "agent": self.readable_id,
+                    "agent_room": agent_room.readable_id if agent_room else None,
+                    "item": item.readable_id,
+                    "item_room": item_room.readable_id if item_room else None,
+                },
+            )
 
         item.leave()
         item.pos = None
@@ -450,8 +543,24 @@ class AgentEntity(Entity):
         item: Entity = World.get_entity(item_uuid)
         own_room: Room = World.get_room(self.room)
 
-        if(not(item_uuid in self.inventory)):
-            raise HardException(f"{item.readable_id} is not in your inventory")
+        if item_uuid not in self.inventory:
+            inventory_ids = [
+                ent.readable_id
+                for ent in (World.get_entity(i) for i in self.inventory)
+                if ent and ent.readable_id
+            ]
+            raise HardException(
+                f"{item.readable_id} is not in your inventory.",
+                console_message=(
+                    f"Drop request for '{item.readable_id}' failed; inventory contains: "
+                    f"{', '.join(inventory_ids) or 'nothing'}."
+                ),
+                hint="Check your inventory in the observation before dropping items.",
+                context={
+                    "item": item.readable_id,
+                    "inventory": inventory_ids,
+                },
+            )
 
         item.pos = self.pos
         item.is_collectible = True
@@ -462,16 +571,69 @@ class AgentEntity(Entity):
         item = World.get_entity(item_uuid)
         container: ContainerEntity = World.get_entity(container_uuid)
 
-        if(not item.is_collectible):
-            raise SoftException(f"{item.readable_id} can't be collected")
+        if not item.is_collectible:
+            raise SoftException(
+                f"{item.readable_id} cannot be collected.",
+                console_message=(
+                    f"Attempted to take non-collectible '{item.readable_id}' from container "
+                    f"'{container.readable_id}'."
+                ),
+                hint="Only collectible items can be removed from containers.",
+                context={
+                    "item": item.readable_id,
+                    "container": container.readable_id,
+                    "action": "take_from",
+                },
+            )
 
         if not isinstance(container, ContainerEntity):
-            raise SoftException(f"you can't take something from {container.readable_id}")
+            raise SoftException(
+                f"You can't take items from {container.readable_id}.",
+                console_message=(
+                    f"Take-from requested on non-container '{container.readable_id}'."
+                ),
+                hint="Select a valid container or use TAKE for items on the floor.",
+                context={
+                    "item": item.readable_id,
+                    "container": container.readable_id,
+                },
+            )
 
-        if(not World.get_room(self.room).isUuidIRoom(container_uuid)):
-            raise HardException(f"container: {container.readable_id} is not in your room")
-        if(not container.contains_uuid(item_uuid)):
-            raise HardException(f"item: {item.readable_id} is not in container: {container.readable_id}")
+        agent_room = World.get_room(self.room) if self.room else None
+        container_room = World.get_room(container.room) if container and container.room else None
+        if not agent_room or not agent_room.isUuidIRoom(container_uuid):
+            raise HardException(
+                f"Container {container.readable_id} is not in your current room.",
+                console_message=(
+                    f"Agent '{self.readable_id}' attempted to take '{item.readable_id}' from "
+                    f"'{container.readable_id}' located in "
+                    f"'{container_room.name if container_room else 'unknown'}'."
+                ),
+                hint="Move to the room that holds the container before interacting with it.",
+                context={
+                    "agent": self.readable_id,
+                    "agent_room": agent_room.readable_id if agent_room else None,
+                    "container": container.readable_id,
+                    "container_room": container_room.readable_id if container_room else None,
+                },
+            )
+        if not container.contains_uuid(item_uuid):
+            raise HardException(
+                f"{item.readable_id} is not inside {container.readable_id}.",
+                console_message=(
+                    f"Removal failed; container '{container.readable_id}' does not hold '{item.readable_id}'."
+                ),
+                hint="Check the container contents from your observation before taking an item.",
+                context={
+                    "container": container.readable_id,
+                    "requested_item": item.readable_id,
+                    "contents": [
+                        child_entity.readable_id
+                        for child in getattr(container, "children", [])
+                        if (child_entity := World.get_entity(child)) and child_entity.readable_id
+                    ],
+                },
+            )
 
         item.is_collectible = False
         container.remove_child_uuid_if_exists(item_uuid)
@@ -482,10 +644,36 @@ class AgentEntity(Entity):
         container: ContainerEntity = World.get_entity(container_uuid)
 
         if not isinstance(container, ContainerEntity):
-            raise SoftException(f"you can't drop something from {container.readable_id}")
+            raise SoftException(
+                f"You can't place items into {container.readable_id}.",
+                console_message=(
+                    f"Drop-into attempted on non-container '{container.readable_id}'."
+                ),
+                hint="Choose a valid container or drop the item on the floor.",
+                context={
+                    "item": item.readable_id,
+                    "target": container.readable_id,
+                },
+            )
 
-        if(not (item_uuid in self.inventory)):
-            raise HardException(f"item: {item.readable_id} is not in inventory")
+        if item_uuid not in self.inventory:
+            inventory_ids = [
+                ent.readable_id
+                for ent in (World.get_entity(i) for i in self.inventory)
+                if ent and ent.readable_id
+            ]
+            raise HardException(
+                f"{item.readable_id} is not in your inventory.",
+                console_message=(
+                    f"Drop-into failed; inventory currently contains: "
+                    f"{', '.join(inventory_ids) or 'nothing'}."
+                ),
+                hint="Take the item first before trying to place it elsewhere.",
+                context={
+                    "item": item.readable_id,
+                    "inventory": inventory_ids,
+                },
+            )
 
         item.is_collectible = True
         container.add_child(item)
@@ -504,24 +692,78 @@ class AgentEntity(Entity):
                 if entity.hasChild(target_uuid):
                      self.move_to_position(entity.pos)
                      return
-            
-        raise HardException(f"object: {target.readable_id} is not in your room")
+
+        agent_room = World.get_room(self.room) if self.room else None
+        target_room = World.get_room(target.room) if target.room else None
+        raise HardException(
+            f"{target.readable_id} is not reachable from your current room.",
+            console_message=(
+                f"Agent '{self.readable_id}' attempted to move to '{target.readable_id}' located in "
+                f"'{target_room.name if target_room else 'unknown'}' while staying in "
+                f"'{agent_room.name if agent_room else 'unknown'}'."
+            ),
+            hint="Travel to the room containing the target before moving directly to it.",
+            context={
+                "agent": self.readable_id,
+                "agent_room": agent_room.readable_id if agent_room else None,
+                "target": target.readable_id,
+                "target_room": target_room.readable_id if target_room else None,
+            },
+        )
 
     def move_to_position(self, pos):
         room: Room = World.get_room(self.room)
-        if(not room.isPosInRoom(pos)):
-            raise SoftException(f"You can't go past the wall in room: {room.name}")
+        if not room.isPosInRoom(pos):
+            raise SoftException(
+                f"You can't move past the walls of {room.name}.",
+                console_message=(
+                    f"Requested position ({pos.x:.1f}, {pos.y:.1f}) lies outside room "
+                    f"'{room.name}' with bounds x<= {room.extend_x}, y<= {room.extend_y}."
+                ),
+                hint="Stay within the room dimensions reported in the observation.",
+                context={
+                    "room": room.readable_id,
+                    "requested_position": {"x": pos.x, "y": pos.y},
+                    "bounds": {"extend_x": room.extend_x, "extend_y": room.extend_y},
+                },
+            )
         self.pos = pos
-        
+
     def use_connector(self, connector_uuid: UUID):
         entity = World.get_entity(self.uuid)
         connector = World.get_entity(connector_uuid)
 
-        if(not(isinstance(connector,ConnectorEntity))):
-            raise SoftException(f"{connector.readable_id} can't be used as a door")
+        if not isinstance(connector, ConnectorEntity):
+            raise SoftException(
+                f"{getattr(connector, 'readable_id', 'This object')} cannot be used as a door.",
+                console_message=(
+                    f"use_connector expected a ConnectorEntity but received {type(connector).__name__}."
+                ),
+                hint="Target an actual connector (doorway) before calling USE.",
+                context={
+                    "requested": getattr(connector, "readable_id", None),
+                    "expected_type": "ConnectorEntity",
+                },
+            )
 
-        if(self.room != connector.room):
-            raise HardException(f"connector: {connector.readable_id} is not in your room")
+        if self.room != connector.room:
+            agent_room = World.get_room(self.room) if self.room else None
+            connector_room = World.get_room(connector.room) if connector.room else None
+            raise HardException(
+                f"Connector {connector.readable_id} is not in your current room.",
+                console_message=(
+                    f"Agent '{self.readable_id}' attempted to use connector '{connector.readable_id}' located in "
+                    f"'{connector_room.name if connector_room else 'unknown'}' while staying in "
+                    f"'{agent_room.name if agent_room else 'unknown'}'."
+                ),
+                hint="Move to the room where the connector resides before using it.",
+                context={
+                    "agent": self.readable_id,
+                    "agent_room": agent_room.readable_id if agent_room else None,
+                    "connector": connector.readable_id,
+                    "connector_room": connector_room.readable_id if connector_room else None,
+                },
+            )
 
         connector.enter_connect(entity)
 

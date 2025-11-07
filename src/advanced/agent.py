@@ -45,21 +45,49 @@ class Agent(ABC):
     def process_results(self):
         for result in Resultbuffer.buffer:
             if isinstance(result, FormalError):
-                msg = "[FORMAL ERROR] " + result.what
-                color = console.Color.RED.value
-                self.memory.add_message(Role.SYSTEM, msg)
-            if isinstance(result, ActionNotPossible):
-                msg = "[ACTION FAILURE] " + result.what
-                color = console.Color.RED.value
-                self.memory.add_message(Role.USER, msg)  
-            if isinstance(result, Success):
-                msg = "[ACTION] " + result.what
-                color = console.Color.YELLOW.value
-                self.memory.add_message(Role.USER, msg)
+                prefix = "[FORMAL ERROR]"
+                color = console.Color.RED
+                role = Role.SYSTEM
+            elif isinstance(result, ActionNotPossible):
+                prefix = "[ACTION FAILURE]"
+                color = console.Color.RED
+                role = Role.USER
+            elif isinstance(result, Success):
+                prefix = "[ACTION]"
+                color = console.Color.YELLOW
+                role = Role.USER
+            else:
+                continue
 
-            console.pretty(
-                console.bullet(f"[toolcall]\t{msg}", color),
-            )
+            agent_msg = f"{prefix} {result.agent_message}"
+            if result.hint:
+                agent_msg = f"{agent_msg} Hint: {result.hint}"
+
+            if self.memory:
+                self.memory.add_message(role, agent_msg)
+
+            console_lines = [
+                console.bullet(
+                    f"[toolcall]\t{prefix} {result.console_message}",
+                    color=color,
+                )
+            ]
+            if result.hint:
+                console_lines.append(
+                    console.bullet(
+                        f"[toolcall]\tHint: {result.hint}",
+                        color=console.Color.BLUE,
+                    )
+                )
+            if result.context:
+                console_lines.append(
+                    console.bullet_multi(
+                        f"[toolcall]\tContext: {console.dump_limited(result.context, max_depth=1)}",
+                        color=console.Color.BLUE,
+                    )
+                )
+
+            console.pretty(*console_lines, spacing=0)
         Resultbuffer.buffer.clear()
 
     def entity_step(self, tools, observations) -> str:
