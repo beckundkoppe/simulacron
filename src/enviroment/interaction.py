@@ -12,40 +12,61 @@ import util
 
 
 DEPTH_BLOCK = -1
-DEPTH_STEP = 10
 class Depth(Enum):
     NONE        = -1
     MINIMAL     = 0
-    REDUCED     = 10
-    BASIC       = 20
-    NORMAL      = 30
-    EXTENDED    = 40
-    RICH        = 50
-    FULL        = 60
+    REDUCED     = 1
+    BASIC       = 2
+    NORMAL      = 3
+    EXTENDED    = 4
+    RICH        = 5
+    FULL        = 6
     REVEAL      = FULL + 1   # drills down into every leaf of the tree but can be blocked by 'VISIBILITY_BLOCK'
     OMNISCIENT  = FULL + 2   # literally all information: drills down into every leaf of the tree and can not be blocked
 
-    def reduced(self, steps: int = DEPTH_STEP) -> "Depth":
-        if self is Depth.OMNISCIENT:
-            return Depth.OMNISCIENT
-        if steps == DEPTH_BLOCK:
-            return Depth.NONE
-        if self is Depth.REVEAL:
-            return Depth.REVEAL
-        
-        new_value = max(self.value - steps, Depth.MINIMAL.value)
-        floored = (new_value // DEPTH_STEP) * DEPTH_STEP
-        return Depth(floored)
+DEPTH_BLOCK = -1
 
-    def increased(self, steps: int = DEPTH_STEP) -> "Depth":
+class Depth(Enum):
+    NONE = -1
+    MINIMAL = 0
+    REDUCED = 1
+    BASIC = 2
+    NORMAL = 3
+    EXTENDED = 4
+    RICH = 5
+    FULL = 6
+    REVEAL = FULL + 1  # drills down into every leaf of the tree but can be blocked by 'VISIBILITY_BLOCK'
+    OMNISCIENT = FULL + 2  # literally all information: drills down into every leaf of the tree and can not be blocked
+
+    def reduced(self, visibility: float) -> "Depth":
+        """
+        Reduce the current depth based on a visibility factor in [0.0, 1.0].
+        - visibility == 0.0  → maximal reduction (to MINIMAL, unless blocked/special)
+        - visibility == 1.0  → no reduction
+        - linear interpolation between these extremes for values in between
+        Preserves special logic for OMNISCIENT, REVEAL, and DEPTH_BLOCK.
+        """
         if self is Depth.OMNISCIENT:
             return Depth.OMNISCIENT
+
+        if visibility <= 0.0:  # treat negative or zero as full block/reduction
+            return Depth.NONE if self.value == DEPTH_BLOCK else Depth.MINIMAL
+
         if self is Depth.REVEAL:
             return Depth.REVEAL
-        
-        new_value = min(self.value + steps, Depth.FULL.value)
-        ceiled = ((new_value + (DEPTH_STEP - 1)) // DEPTH_STEP) * DEPTH_STEP
-        return Depth(ceiled)
+
+        if visibility >= 1.0:
+            return self  # no reduction
+
+        # Map visibility [0.0, 1.0] → reduction steps [max_steps, 0]
+        # We consider the range from MINIMAL to FULL as the reducible part
+        max_reducible = Depth.FULL.value - Depth.MINIMAL.value
+        reduction_steps = max_reducible * (1.0 - visibility)
+
+        new_value = max(self.value - reduction_steps, Depth.MINIMAL.value)
+        # Round down to nearest defined depth level
+        stepped = Depth.MINIMAL.value + int(new_value - Depth.MINIMAL.value)
+        return Depth(stepped)
 
     def obfuscate_number(self, n: int) -> str:
         assert self is not Depth.NONE, "NONE should not expose numbers"
@@ -107,6 +128,8 @@ class Interaction(Enum):
     # -- no perception ---
     OPEN = auto()
     CLOSE = auto()
+    LOCK = auto()
+    UNLOCK = auto()
 
     # --- passive ---
     SURVEY = auto()         # broad, passive intake of the strongest stimuli

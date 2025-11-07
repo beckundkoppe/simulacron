@@ -2,6 +2,7 @@
 from typing import List
 from uuid import UUID
 
+from enviroment.action import ActionResult, ActionTry, ActionType
 from enviroment.exception import HardException, SoftException
 import config as config
 from enviroment.room import Position, Room
@@ -49,11 +50,9 @@ class Entity:
 
     def on_interact(
         self,
-        observer: ObserverPerception,
-        env: PerceptionEnviroment,
-        depth: Depth,
-    ) -> dict[str, object]:
-        return self.on_perceive(self, observer, env, depth)
+        action: ActionTry
+    ) -> ActionResult:
+         return ActionResult(success=False, result="no effekt")
 
     def on_perceive(
         self,
@@ -217,15 +216,6 @@ class ContainerEntity(Entity):
             if World.get_entity(c).hasChild(uuid):
                 return True
         return False
-
-    def on_interact(
-        self,
-        observer: ObserverPerception,
-        env: PerceptionEnviroment,
-        depth: Depth,
-    ) -> dict[str, object]:
-
-        return self.on_perceive(self, observer, env, depth)
         
     def on_perceive(
         self,
@@ -272,21 +262,35 @@ class AdvancedContainerEntity(ContainerEntity):
         self.is_open = is_open
         self.is_locked = is_locked
         self.visibility_closed = visibility_closed
+        self.keys = []
 
     def on_interact(
         self,
-        observer: ObserverPerception,
-        env: PerceptionEnviroment,
-        depth: Depth,
-    ) -> dict[str, object]:
-
-        if(env.interactions == Interaction.OPEN):
+        action: ActionTry
+    ) -> str:
+        if(action == ActionType.OPEN):
             self.is_open = True
+            return "opened chest"
 
-        if(env.interactions == Interaction.CLOSE):
+        if(action == ActionType.CLOSE):
             self.is_open = False
+            return "closed chest"
 
-        return self.on_perceive(self, observer, env, depth)
+        if(action == ActionType.UNLOCK):
+            if(action.object_1 in self.keys):
+                self.is_locked = False
+                return "unlocked chest"
+            else:
+                return "wrong key"
+
+        if(action == ActionType.LOCK):
+            if(action.object_1 in self.keys):
+                self.is_locked = True
+                return "locked chest"
+            else:
+                return "wrong key"
+
+        super().on_interact()
         
     def on_perceive(
         self,
@@ -300,7 +304,7 @@ class AdvancedContainerEntity(ContainerEntity):
             return info
 
         # container state
-        info["is_open"] = "open" if self.is_open else "closed"
+        info["state"] = "open" if self.is_open else "closed"
 
         count = len(self.children)
 
@@ -346,7 +350,9 @@ class AdvancedContainerEntity(ContainerEntity):
             ]
 
         return info
-
+    
+    def add_key(self, entity):
+        self.keys.append(entity)
 
 class ConnectorEntity(Entity):
     def __init__(self, name, pos, material = None, description = None, uniqueness = 0.5, prominence = 1):

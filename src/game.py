@@ -2,6 +2,7 @@ import json
 from advanced.agent import Agent
 from advanced.tool import tool
 from enviroment import current
+from enviroment.action import ActionTry, ActionType
 from enviroment.exception import HardException, SoftException
 from enviroment.levels.level import Level, LevelSpec
 from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
@@ -122,7 +123,30 @@ def trycatch(action, success_message):
         FormalError(str(h))
         current.RESULT.harderror_count += 1
 
-def check_id(readable_id: str) -> str:
+
+def safeexecute(action):
+    try:
+        action()
+    except SoftException as s:
+        ActionNotPossible(str(s))
+        current.RESULT.softerror_count += 1
+    except HardException as h:
+        FormalError(str(h))
+        current.RESULT.harderror_count += 1
+
+def safereturn(action):
+    try:
+        return action()
+    except SoftException as s:
+        ActionNotPossible(str(s))
+        current.RESULT.softerror_count += 1
+        return None
+    except HardException as h:
+        FormalError(str(h))
+        current.RESULT.harderror_count += 1
+        return None
+
+def check_id(readable_id: str):
     uuid = None
     for ent in World.entities:
         entity = World.get_entity(ent)
@@ -132,7 +156,7 @@ def check_id(readable_id: str) -> str:
     if(uuid != None):
         return uuid
 
-    raise HardException(f"no such object '{readable_id}'")
+    raise HardException(f"no such object '{readable_id}' in this very room")
 
 @tool
 def move_to_position(x: str, y: str) -> str:
@@ -144,6 +168,18 @@ def move_to_position(x: str, y: str) -> str:
     """
 
     trycatch(lambda: current.AGENT.entity.move_to_position(Position(float(x), float(y))), "moved succesfully")
+
+    return ""
+
+@tool
+def move_to_object(object_id: str) -> str:
+    """The human moves to a position.
+
+    Args:
+        object_id (str): the id of the object to move to
+    """
+
+    trycatch(lambda: current.AGENT.entity.move_to_object(check_id(object_id)), "moved succesfully")
 
     return ""
 
@@ -167,14 +203,13 @@ def take_from(item_id: str, from_id: str) -> str:
         from_id (str): the id of object B from which the item is taken or 'FLOOR' for the floor
     """
     
-    if(from_id == "FLOOR"):
+    if(from_id.capitalize() == "FLOOR"):
         trycatch(lambda: current.AGENT.entity.take(check_id(item_id)), f"collected {item_id}")
 
     else:
         trycatch(lambda: current.AGENT.entity.take_from(check_id(item_id), check_id(from_id)), f"collected {item_id} from {from_id}")
 
     return ""
-
 
 @tool
 def drop_to(item_id: str, to_id: str) -> str:
@@ -185,10 +220,73 @@ def drop_to(item_id: str, to_id: str) -> str:
         to_id (str): the id of the object B where the item is placed or 'FLOOR' for the floor
     """
 
-    if(to_id == "FLOOR"):
+    if(to_id.capitalize() == "FLOOR"):
         trycatch(lambda: current.AGENT.entity.drop(check_id(item_id)), f"dropped {item_id}")
     else:
         trycatch(lambda: current.AGENT.entity.drop_into(check_id(item_id), check_id(to_id)), f"dropped {item_id} into {to_id}")
+
+    return ""
+
+@tool
+def interact_with_object(object_id: str, operator: str) -> str:
+    """The agent interacts with an object using a specific operator.
+    
+    Args:
+        item_id (str): the the id of the item A to be dropped.
+        operator (str): The action to perform. Allowed values: OPEN, CLOSE.
+    """
+
+    action: ActionTry = None
+    object = None
+
+    def helper():
+        nonlocal object, action
+        object = check_id(object_id)
+        if(operator.capitalize() == "OPEN"):
+            action = ActionTry(ActionType.OPEN)
+        elif (operator.capitalize() == "CLOSE"):
+            action = ActionTry(ActionType.CLOSE)
+
+    safeexecute(helper)
+
+    ent = World.get_entity(object)
+
+    res = safereturn(ent.on_interact(action))
+
+    if(res is not None):
+        Success("succeded with " + operator + " " + object_id)
+
+    return ""
+
+@tool
+def interact_with_object_using_item(object_id: str, item_id: str, operator: str) -> str:
+    """The agent uses an item from inventory to interact with an object.
+    
+    Args:
+        object_id (str): The id of the object to interact with.
+        item_id (str): The id of the item to use from inventory.
+        operator (str): The action to perform. Allowed values: LOCK, UNLOCK.
+    """
+
+    action: ActionTry = None
+    object = None
+
+    def helper():
+        nonlocal object, action
+
+        object = check_id(object_id)
+
+        if(operator.capitalize() == "LOCK"):
+            action = ActionTry(ActionType.LOCK, check_id(item_id))
+        elif (operator.capitalize() == "UNLOCK"):
+            action = ActionTry(ActionType.UNLOCK, check_id(item_id))
+            check_id()
+    
+    safeexecute(helper)
+
+    ent = World.get_entity(object)
+
+    res = safereturn(ent.on_interact(action))
 
     return ""
 
@@ -216,7 +314,11 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float):
             print(f"Observation: {i+1}")
             room = World.get_room(agent.entity.room)
             observation = observe(room, agent.entity)
-            agent.entity_step([move_to_position, use_door, take_from, drop_to], observation)
+            agent.entity_step([
+                move_to_position, move_to_object,
+                use_door,
+                take_from, drop_to
+                ], observation)
             current.RESULT.observation_count += 1
 
         if(spec.is_success()):

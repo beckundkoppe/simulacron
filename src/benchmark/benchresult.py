@@ -12,11 +12,11 @@ class BenchResult:
     sr_long_horizon: float = 0
     success_rate: float = 0
 
-    actions_external: int = 0
-    actions_internal: int = 0
-    actions_total: int = 0
+    actions_external: float = 0
+    actions_internal: float = 0
+    actions_total: float = 0
 
-    failed_actions: int = 0
+    failed_actions: float = 0
     time_s: float = 0
 
     @staticmethod
@@ -37,10 +37,10 @@ class BenchResult:
             sr_short_horizon=mean("sr_short_horizon"),
             sr_long_horizon=mean("sr_long_horizon"),
             success_rate=mean("success_rate"),
-            actions_external=int(mean("actions_external")),
-            actions_internal=int(mean("actions_internal")),
-            actions_total=int(mean("actions_total")),
-            failed_actions=int(mean("failed_actions")),
+            actions_external=mean("actions_external"),
+            actions_internal=mean("actions_internal"),
+            actions_total=mean("actions_total"),
+            failed_actions=mean("failed_actions"),
             time_s=mean("time_s"),
         )
 
@@ -50,7 +50,7 @@ class RunResult:
     model_name: str
     config_name: str
     level_name: str
-    level_optimal_steps: int
+    level_optimal_steps: float
 
     toolcall_count: float = 0
     observation_count: float = 0

@@ -40,7 +40,7 @@ def build_easy() -> LevelSpec:
     potato = Entity("potato", is_collectible=True)
     diamond = Entity("diamond", is_collectible=True)
 
-    chest = AdvancedContainerEntity(name="Chest")
+    chest = AdvancedContainerEntity(name="chest")
     chest.add_child(potato)
 
     box = PaperBox()

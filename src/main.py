@@ -1,7 +1,5 @@
 # test_main.py
 
-
-
 from benchmark.benchresult import RunResult
 from benchmark.dispatcher import Dispatcher, Run
 from config import Configuration, PerceptionType, PlanType, PositionType
@@ -34,7 +32,11 @@ def main():
     print(result.toString())
     result: RunResult = dispatcher.run_single(Run(
         config,
+<<<<<<< HEAD
         Model.Local.Ollama.Llama.NEMOTRON_8B,
+=======
+        Model.Local.Ollama.Qwen3.VANILLA_8B,
+>>>>>>> 45aa026 (Work)
         Levels.POTATO_HARD.value,
         10,
         2.0
