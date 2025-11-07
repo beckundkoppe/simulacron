@@ -1,13 +1,21 @@
 
-from typing import List
+from __future__ import annotations
+
+from typing import Iterable, List, TYPE_CHECKING, Type, TypeVar
 from uuid import UUID
 
 from enviroment.action import ActionTry, ActionType
+from enviroment.capabilities import LockableCapability, OpenableCapability
 from enviroment.exception import HardException, SoftException, SuccessException
 import config as config
 from enviroment.room import Position, Room
 from enviroment.world import World
 from enviroment.interaction import CompositeDatum, Datum, DatumOperator, Depth, Interaction, PerceptionEnviroment, ObserverPerception, SensoryChannel
+
+if TYPE_CHECKING:
+    from enviroment.capabilities import Capability
+
+T = TypeVar("T", bound="Capability")
 
 class Entity:
     def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, is_collectible: bool = False) -> None:
@@ -25,7 +33,29 @@ class Entity:
 
         self.uuid: UUID | None = None
         self.readable_id: str | None = None
+
+        self._capabilities: list[Capability] = []
+
         World.add_entity(self)
+
+    # -- capability plumbing -------------------------------------------------
+    def add_capability(self, capability: Capability) -> None:
+        if capability.owner is not self:
+            raise ValueError("capability owner mismatch")
+        self._capabilities.append(capability)
+
+    def iter_capabilities(self) -> Iterable[Capability]:
+        return tuple(self._capabilities)
+
+    def get_capability(self, capability_type: Type[T]) -> T | None:
+        for capability in self._capabilities:
+            if isinstance(capability, capability_type):
+                return capability
+        return None
+
+    def _ensure_same_room(self, actor_entity: "Entity") -> None:
+        if not World.get_room(actor_entity.room).isUuidIRoom(self.uuid):
+            raise HardException(f"{self.readable_id} is not in your room")
 
     def enter(self, room: "Entity"):
         if self.room is None:
@@ -53,8 +83,13 @@ class Entity:
         actor_entity,
         action: ActionTry
     ) -> str:
-        if(not World.get_room(actor_entity.room).isUuidIRoom(self.uuid)):
-            raise HardException(f"{self.readable_id} is not in your room")
+        self._ensure_same_room(actor_entity)
+
+        for capability in self._capabilities:
+            if capability.supports(action.type):
+                result = capability.on_interact(actor_entity, action)
+                if result is not None:
+                    return result
 
         raise SoftException("had no effekt")
 
@@ -122,6 +157,9 @@ class Entity:
 
         if self.room is not None:
             self.info["position"] = self.pos.map(self.room).toString()
+
+        for capability in self._capabilities:
+            capability.on_perceive(observer, env, depth, self.info)
 
         return self.info
     
@@ -204,7 +242,7 @@ class ContainerEntity(Entity):
 
         self.children.append(child.uuid)
 
-    def contains_uuid(self, uuid: UUID) -> None:
+    def contains_uuid(self, uuid: UUID) -> bool:
         return uuid in self.children
 
     def remove_child_uuid_if_exists(self, uuid: UUID) -> None:
@@ -221,28 +259,6 @@ class ContainerEntity(Entity):
                 return True
         return False
     
-    def on_interact(
-        self,
-        actor_entity,
-        action: ActionTry
-    ) -> str:
-        if(not World.get_room(actor_entity.room).isUuidIRoom(self.uuid)):
-            raise HardException(f"{self.readable_id} is not in your room")
-        
-        if(action.type == ActionType.OPEN):
-            raise SoftException("is already opened")
-
-        if(action.type == ActionType.CLOSE):
-            raise SoftException("can't be closed")
-
-        if(action.type == ActionType.UNLOCK):
-            raise SoftException("is already unlocked")
-
-        if(action.type == ActionType.LOCK):
-            raise SoftException("can't be locked")
-
-        super().on_interact(actor_entity, action)
-        
     def on_perceive(
         self,
         observer: ObserverPerception,
@@ -258,6 +274,30 @@ class ContainerEntity(Entity):
 
         if depth.value <= Depth.MINIMAL.value:
             info["contents_count"] = "unknown"
+            return info
+
+        openable = self.get_capability(OpenableCapability)
+
+        if openable and not openable.is_open:
+            closed_visibility = max(0.0, openable.visibility_when_closed)
+            if closed_visibility > 0:
+                reduced_detail = depth.reduced(closed_visibility)
+                count_str = Depth.obfuscate_number(reduced_detail, count)
+                if count == 0:
+                    info["contents_count"] = "empty"
+                elif count == 1:
+                    info["contents_count"] = f"contains {count_str}"
+                else:
+                    info["contents_count"] = f"contains {count_str} items"
+            else:
+                if count == 0:
+                    info["contents_count"] = "empty"
+                elif count < 3:
+                    info["contents_count"] = "something inside"
+                elif count < 10:
+                    info["contents_count"] = "several things"
+                else:
+                    info["contents_count"] = "many things"
             return info
 
         reduced_detail = depth.reduced(self.visibility)
@@ -281,122 +321,52 @@ class ContainerEntity(Entity):
         return info
 
 class AdvancedContainerEntity(ContainerEntity):
-    def __init__(self, name: str, pos: Position | None = None, material: str | None = None, description: str | None = None, uniqueness: float = 0.5, prominence: float = 1.0, is_collectible: bool = False,
-                 is_open: bool = True, is_locked: bool = False, visibility: float = 1.0, visibility_closed: float = 0.0) -> None:
+    def __init__(
+        self,
+        name: str,
+        pos: Position | None = None,
+        material: str | None = None,
+        description: str | None = None,
+        uniqueness: float = 0.5,
+        prominence: float = 1.0,
+        is_collectible: bool = False,
+        *,
+        is_open: bool = True,
+        is_locked: bool = False,
+        visibility: float = 1.0,
+        visibility_closed: float = 0.0,
+    ) -> None:
         super().__init__(name, pos, material, description, uniqueness, prominence, is_collectible, visibility)
 
-        self.is_open = is_open
-        self.is_locked = is_locked
-        self.d  = visibility_closed
-        self.keys = []
+        self._openable = OpenableCapability(
+            self,
+            initially_open=is_open,
+            visibility_when_closed=visibility_closed,
+        )
+        self.add_capability(self._openable)
 
-    def on_interact(
-        self,
-        actor_entity,
-        action: ActionTry
-    ) -> str:
-        
-        if(not World.get_room(actor_entity.room).isUuidIRoom(self.uuid)):
-            raise HardException(f"{self.readable_id} is not in your room")
+        self._lockable = LockableCapability(self, initially_locked=is_locked)
+        self.add_capability(self._lockable)
 
-        if(action.type == ActionType.OPEN):
-            if(self.is_open):
-                return "already open"
-            if(self.is_locked):
-                raise SoftException("cant open, is locked")
-            self.is_open = True
-            return "opened"
+    @property
+    def is_open(self) -> bool:
+        return self._openable.is_open
 
-        if(action.type == ActionType.CLOSE):
-            if(not self.is_open):
-                return "already closed"
-            if(self.is_locked):
-                raise SoftException("cant close, is locked")
-            self.is_open = False
+    @is_open.setter
+    def is_open(self, value: bool) -> None:
+        self._openable.is_open = value
 
-            return "closed"
+    @property
+    def is_locked(self) -> bool:
+        return self._lockable.is_locked
 
-        if(action.type == ActionType.UNLOCK):
-            if(not self.is_locked):
-                return "already unlocked"
-            if(action.item_1 in self.keys):
-                self.is_locked = False
-                return "unlocked"
-            
-            raise SoftException("wrong key")
+    @is_locked.setter
+    def is_locked(self, value: bool) -> None:
+        self._lockable.is_locked = value
 
-        if(action.type == ActionType.LOCK):
-            if(self.is_locked):
-                return "already locked"
-            if(action.item_1 in self.keys):
-                self.is_locked = True
-                raise SoftException("locked")
-            
-            raise SoftException("wrong key")
-
-        super().on_interact(actor_entity, action)
-        
-    def on_perceive(
-        self,
-        observer: ObserverPerception,
-        env: PerceptionEnviroment,
-        depth: Depth,
-    ) -> dict[str, object]:
-        info = Entity.on_perceive(self, observer, env, depth)
-
-        if(not self.is_any_perceived):
-            return info
-
-        # container state
-        info["state"] = "open" if self.is_open else "closed"
-
-        count = len(self.children)
-
-        if depth.value <= Depth.MINIMAL.value:
-            info["contents_count"] = "unknown"
-            return info
-
-        if not self.is_open:
-            # --- CLOSED ---
-            #reduced_detail = depth.reduced(self.visibility_closed)
-
-            if count == 0:
-                info["contents_count"] = "empty"
-            elif count < 3:
-                # wenige, aber unklar wie viele
-                info["contents_count"] = "something inside"
-            elif count < 10:
-                info["contents_count"] = "several things"
-            else:
-                info["contents_count"] = "many things"
-
-            # no children perceived
-            return info
-
-        # --- OPEN ---
-        reduced_detail = depth.reduced(self.visibility)
-        count_str = Depth.obfuscate_number(reduced_detail, count)
-
-        if count == 0:
-            info["contents_count"] = "empty"
-        elif count == 1:
-            info["contents_count"] = f"contains {count_str}"
-        else:
-            info["contents_count"] = f"contains {count_str} items"
-
-        # Bei höheren DetailLevels: Kinder auch auflisten
-        if depth.value >= Depth.NORMAL.value and self.children:
-            child_detail = reduced_detail.reduced(1)  # Kinder noch eine Stufe unklarer
-            info["contents"] = [
-                World.get_entity(cid).on_perceive(observer, env, child_detail)
-                for cid in self.children
-                if World.get_entity(cid)
-            ]
-
-        return info
-    
-    def add_key(self, entity):
-        self.keys.append(entity.uuid)
+    def add_key(self, entity: Entity) -> None:
+        if entity.uuid is not None:
+            self._lockable.allow_key(entity.uuid)
 
 class ConnectorEntity(Entity):
     def __init__(self, name, pos, material = None, description = None, uniqueness = 0.5, prominence = 1, is_locked = False):

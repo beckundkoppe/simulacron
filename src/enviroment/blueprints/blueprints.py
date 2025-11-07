@@ -1,3 +1,4 @@
+from enviroment.capabilities import OpenableCapability
 from enviroment.entity import AdvancedContainerEntity, ContainerEntity, Entity
 from enviroment.position import Position
 
@@ -134,13 +135,8 @@ class PaperBox(Box):
                 "The lid bends easily when pressed, and it carries faint marks from tape and labels."
             ),
         )
-        # It's typically not locked and opens without resistance
-        self.is_open = False
-        self.is_locked = False
-
-        # Visibility: contents somewhat perceivable even when closed
-        self.visibility_open = 1.0
-        self.visibility_closed = 0.3
+        openable = OpenableCapability(self, initially_open=False, visibility_when_closed=0.3)
+        self.add_capability(openable)
 
         # Slightly more generic and less prominent visually than a wooden chest
         self.uniqueness = 0.4
