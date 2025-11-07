@@ -6,6 +6,7 @@ from uuid import UUID
 
 from enviroment.action import ActionTry, ActionType
 from enviroment.exception import SoftException
+from enviroment.world import World
 
 if TYPE_CHECKING:
     from enviroment.entity import Entity
@@ -57,7 +58,17 @@ class OpenableCapability(Capability):
                 return "already open"
             lockable = self.owner.get_capability(LockableCapability)
             if lockable and lockable.is_locked:
-                raise SoftException("cant open, is locked")
+                raise SoftException(
+                    "The object is locked; unlock it before opening.",
+                    console_message=(
+                        f"Open blocked because '{self.owner.readable_id}' is locked."
+                    ),
+                    hint="Use the UNLOCK operator with the correct key first.",
+                    context={
+                        "target": self.owner.readable_id,
+                        "action": ActionType.OPEN.value,
+                    },
+                )
             self.is_open = True
             return "opened"
 
@@ -66,7 +77,17 @@ class OpenableCapability(Capability):
                 return "already closed"
             lockable = self.owner.get_capability(LockableCapability)
             if lockable and lockable.is_locked:
-                raise SoftException("cant close, is locked")
+                raise SoftException(
+                    "The object is locked and cannot be closed right now.",
+                    console_message=(
+                        f"Close blocked because '{self.owner.readable_id}' is locked."
+                    ),
+                    hint="Unlock it first or remove the locking mechanism.",
+                    context={
+                        "target": self.owner.readable_id,
+                        "action": ActionType.CLOSE.value,
+                    },
+                )
             self.is_open = False
             return "closed"
 
@@ -108,7 +129,22 @@ class LockableCapability(Capability):
             if not self.is_locked:
                 return "already unlocked"
             if not self._has_key(action):
-                raise SoftException("wrong key")
+                key_id = None
+                if action.item_1:
+                    key_entity = World.get_entity(action.item_1)
+                    key_id = key_entity.readable_id if key_entity else str(action.item_1)
+                raise SoftException(
+                    "That key does not fit the lock.",
+                    console_message=(
+                        f"Unlock failed; key '{key_id or 'unknown'}' is not allowed on '{self.owner.readable_id}'."
+                    ),
+                    hint="Choose a key listed as compatible with this lock.",
+                    context={
+                        "target": self.owner.readable_id,
+                        "key": key_id,
+                        "action": ActionType.UNLOCK.value,
+                    },
+                )
             self.is_locked = False
             return "unlocked"
 
@@ -116,11 +152,36 @@ class LockableCapability(Capability):
             if self.is_locked:
                 return "already locked"
             if not self._has_key(action):
-                raise SoftException("wrong key")
+                key_id = None
+                if action.item_1:
+                    key_entity = World.get_entity(action.item_1)
+                    key_id = key_entity.readable_id if key_entity else str(action.item_1)
+                raise SoftException(
+                    "That key cannot lock this object.",
+                    console_message=(
+                        f"Lock failed; key '{key_id or 'unknown'}' is not allowed on '{self.owner.readable_id}'."
+                    ),
+                    hint="Use one of the keys referenced in the observation.",
+                    context={
+                        "target": self.owner.readable_id,
+                        "key": key_id,
+                        "action": ActionType.LOCK.value,
+                    },
+                )
 
             openable = self.owner.get_capability(OpenableCapability)
             if openable and openable.is_open:
-                raise SoftException("cant lock while open")
+                raise SoftException(
+                    "Close the object before locking it.",
+                    console_message=(
+                        f"Lock prevented because '{self.owner.readable_id}' is still open."
+                    ),
+                    hint="Close it first, then lock it.",
+                    context={
+                        "target": self.owner.readable_id,
+                        "action": ActionType.LOCK.value,
+                    },
+                )
 
             self.is_locked = True
             return "locked"

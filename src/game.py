@@ -37,19 +37,40 @@ def observe(room: Room, observer: AgentEntity) -> str:
         def process_results(self):
             for result in Resultbuffer.buffer:
                 if isinstance(result, FormalError):
-                    msg = "[FORMAL ERROR] " + result.what
-                    color = console.Color.RED.value
-                if isinstance(result, ActionNotPossible):
-                    msg = "[action not possible] " + result.what
-                    color = console.Color.RED.value
-                if isinstance(result, Success):
-                    return
-                    #msg = "[ACTION] " + result.what
-                    #color = console.Color.YELLOW.value
+                    prefix = "[FORMAL ERROR]"
+                    color = console.Color.RED
+                elif isinstance(result, ActionNotPossible):
+                    prefix = "[ACTION FAILURE]"
+                    color = console.Color.RED
+                elif isinstance(result, Success):
+                    prefix = "[ACTION]"
+                    color = console.Color.YELLOW
+                else:
+                    continue
 
-                console.pretty(
-                    console.bullet(f"[toolcall]\t{msg}", color),
-                )
+                console_lines = [
+                    console.bullet(
+                        f"[toolcall]\t{prefix} {result.console_message}",
+                        color=color,
+                    )
+                ]
+
+                if result.hint:
+                    console_lines.append(
+                        console.bullet(
+                            f"[toolcall]\tHint: {result.hint}",
+                            color=console.Color.BLUE,
+                        )
+                    )
+                if result.context:
+                    console_lines.append(
+                        console.bullet_multi(
+                            f"[toolcall]\tContext: {console.dump_limited(result.context, max_depth=1)}",
+                            color=console.Color.BLUE,
+                        )
+                    )
+
+                console.pretty(*console_lines, spacing=0)
             Resultbuffer.buffer.clear()
             
 
@@ -97,7 +118,7 @@ def observe(room: Room, observer: AgentEntity) -> str:
 def trycatch(action, success_msg):
     try:
         msg = ""
-        message = action() 
+        message = action()
         if message is None:
             msg = success_msg
         else:
@@ -106,10 +127,24 @@ def trycatch(action, success_msg):
         Success(msg)
         current.RESULT.toolcall_count += 1
     except SoftException as s:
-        ActionNotPossible(str(s))
+        agent_msg = getattr(s, "agent_message", str(s))
+        console_msg = getattr(s, "console_message", agent_msg)
+        ActionNotPossible(
+            agent_msg,
+            console_msg,
+            hint=getattr(s, "hint", None),
+            context=getattr(s, "context", None),
+        )
         current.RESULT.softerror_count += 1
     except HardException as h:
-        FormalError(str(h))
+        agent_msg = getattr(h, "agent_message", str(h))
+        console_msg = getattr(h, "console_message", agent_msg)
+        FormalError(
+            agent_msg,
+            console_msg,
+            hint=getattr(h, "hint", None),
+            context=getattr(h, "context", None),
+        )
         current.RESULT.harderror_count += 1
 
 def check_id(readable_id: str):
@@ -122,7 +157,29 @@ def check_id(readable_id: str):
     if(uuid != None):
         return uuid
 
-    raise HardException(f"no such object '{readable_id}' in this very room")
+    agent_entity = getattr(current.AGENT, "entity", None)
+    room = World.get_room(agent_entity.room) if agent_entity and agent_entity.room else None
+    available_ids: list[str] = []
+    if room:
+        for ent in room.entities:
+            entity = World.get_entity(ent)
+            if entity and entity.readable_id:
+                available_ids.append(entity.readable_id)
+
+    raise HardException(
+        f"No object named '{readable_id}' is available in your current room.",
+        console_message=(
+            f"Lookup failed for '{readable_id}'. Room "
+            f"'{room.name if room else 'unknown'}' currently exposes: "
+            f"{', '.join(sorted(available_ids)) or 'no interactive objects'}."
+        ),
+        hint="Check your latest observation for the correct identifier or move closer to the target.",
+        context={
+            "requested_id": readable_id,
+            "room": room.readable_id if room else None,
+            "available_ids": sorted(available_ids),
+        },
+    )
 
 @tool
 def move_to_position(x: str, y: str) -> str:
