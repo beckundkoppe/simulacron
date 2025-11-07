@@ -6,8 +6,6 @@ from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
 
-MAIN = None
-CHAMBER = None
 
 def build_easy() -> LevelSpec:
     """
@@ -19,10 +17,6 @@ def build_easy() -> LevelSpec:
     main = Room("main", 4, 4)
     chamber = Room.chamber()
 
-    global MAIN
-    global CHAMBER
-    MAIN = main
-    CHAMBER = chamber
 
     perception = ObserverPerception()
     tron = AgentEntity("tron", perception, pos=Position(0.0, 0.0))

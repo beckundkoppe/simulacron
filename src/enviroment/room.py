@@ -65,15 +65,7 @@ class Room:
         return perceptions
 
     def contains_entity(self, entity: "Entity") -> bool:
-        return self.get_entity(entity) is not None
-        #if entity in self.entities:
-        #    return True
-#
-        #for ent in self.entities:
-        #    if ent.hasChild(entity):
-        #        return True
-        #    
-        #return False
+        return self.get_root_entity(entity) is not None
     
     def isPosInRoom(self, pos: Position) -> bool:
         if 0 <= pos.x <= self.extend_x and 0 <= pos.y <= self.extend_y:
@@ -81,7 +73,7 @@ class Room:
         else:
             return False
         
-    def get_entity(self, entity: "Entity") -> "Entity":
+    def get_root_entity(self, entity: "Entity") -> "Entity":
         if entity in self.entities:
             return entity
 

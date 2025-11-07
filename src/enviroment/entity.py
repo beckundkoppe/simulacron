@@ -59,7 +59,7 @@ class Entity:
 
     def _distance_to_actor(self, actor_entity: "Entity") -> float | None:
         # Returns Euclidean distance if both positions exist, else None.
-        ownPos = actor_entity.room.get_entity(self).pos
+        ownPos = actor_entity.room.get_root_entity(self).pos
 
         if actor_entity is None or ownPos is None or actor_entity.pos is None:
             return None
