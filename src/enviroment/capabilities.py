@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+
 from typing import Callable, Iterable, TYPE_CHECKING
-from uuid import UUID
 
 from enviroment.action import ActionTry, ActionType
 from enviroment.exception import SoftException
@@ -90,18 +90,18 @@ class LockableCapability(Capability):
         owner: Entity,
         *,
         initially_locked: bool = False,
-        allowed_keys: Iterable[UUID] | None = None,
+        allowed_keys: Iterable[Entity] | None = None,
     ) -> None:
         super().__init__(owner)
         self.is_locked = initially_locked
-        self._allowed_keys: set[UUID] = set(allowed_keys or [])
+        self._allowed_keys: set[Entity] = set(allowed_keys or [])
 
-    def allow_key(self, key_uuid: UUID) -> None:
-        if key_uuid is not None:
-            self._allowed_keys.add(key_uuid)
+    def allow_key(self, key: Entity) -> None:
+        if key is not None:
+            self._allowed_keys.add(key)
 
     def _has_key(self, action: ActionTry) -> bool:
-        return action.item_1 in self._allowed_keys
+        return action.item_1 is not None and action.item_1 in self._allowed_keys
 
     def on_interact(self, actor_entity: Entity, action: ActionTry) -> str | None:
         if action.type == ActionType.UNLOCK:

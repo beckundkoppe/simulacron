@@ -608,7 +608,7 @@ class Datum:
             print(f"\n{debug_bar}")
             print("[ PERCEPTION DEBUG ]\n")
             print(f"Observer : {observer.name}")
-            print(f"Entity   : {self.entity.readable_id} ({self.entity.uuid})")
+            print(f"Entity   : {self.entity.readable_id} ({self.entity.entity_id})")
             print(f"Datum    : {self.key}")
             print(f"Required Depth : {self.min_detection_level.name}")
             print(f"Operator       : {self.op.name}")

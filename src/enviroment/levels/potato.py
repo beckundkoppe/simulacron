@@ -124,14 +124,13 @@ def check_win_table_key() -> bool:
     potato = None
     table: ContainerEntity = None
 
-    for uuid in World.entities:
-        ent = World.get_entity(uuid)
-        if(ent.name == "potato"):
+    for ent in World.entities.values():
+        if ent.name == "potato":
             potato = ent
-        if(ent.name == "table"):
+        if ent.name == "table":
             table = ent
     
     assert potato != None, "No potato"
     assert table != None, "No table"
     
-    return potato.uuid in table.children
+    return potato in table.children

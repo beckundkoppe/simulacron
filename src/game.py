@@ -16,6 +16,8 @@ from llm.memory.memory import Memory, Role
 
 def observe(room: Room, observer: AgentEntity) -> str:
     data = {}
+    if room is None:
+        raise HardException("agent is not in a room")
     data["you_are_in_room"] = {
         "name": room.name,
         "your_pos": {
@@ -28,7 +30,7 @@ def observe(room: Room, observer: AgentEntity) -> str:
         }
     }
     data["your_inventory"] = observer.get_inventory()
-    data["your_observation"] = room.perceive(observer.uuid, Depth.OMNISCIENT)
+    data["your_observation"] = room.perceive(observer, Depth.OMNISCIENT)
     return json.dumps(data)
     class Agent:
         def __init__(self, entity):
@@ -60,9 +62,9 @@ def observe(room: Room, observer: AgentEntity) -> str:
     agent = Agent(tron)
     current.AGENT = agent
 
-    room = World.get_room(tron.room)
+    room = tron.room
 
-    observation = observe(World.get_room(tron.room), tron)
+    observation = observe(tron.room, tron)
     print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
 
     move_to_position("2.0","2.0")
@@ -71,27 +73,27 @@ def observe(room: Room, observer: AgentEntity) -> str:
     use_door("door_6")
     agent.process_results()
 
-    observation = observe(World.get_room(tron.room), tron)
+    observation = observe(tron.room, tron)
     print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
 
 
     take_from("potato_8", "chest_10")
     agent.process_results()
 
-    observation = observe(World.get_room(tron.room), tron)
+    observation = observe(tron.room, tron)
     print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
 
     use_door("door_7")
     agent.process_results()
 
-    observation = observe(World.get_room(tron.room), tron)
+    observation = observe(tron.room, tron)
     print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
 
     drop_to("potato_8", "table_5")
     agent.process_results()
     move_to_position("1.0", "1.0")
     agent.process_results()
-    observation = observe(World.get_room(tron.room), tron)
+    observation = observe(tron.room, tron)
     print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
 
 def trycatch(action, success_msg):
@@ -113,14 +115,9 @@ def trycatch(action, success_msg):
         current.RESULT.harderror_count += 1
 
 def check_id(readable_id: str):
-    uuid = None
-    for ent in World.entities:
-        entity = World.get_entity(ent)
-        if(entity.readable_id == readable_id):
-            uuid = ent
-
-    if(uuid != None):
-        return uuid
+    for entity in World.entities.values():
+        if entity.readable_id == readable_id:
+            return entity
 
     raise HardException(f"no such object '{readable_id}' in this very room")
 
@@ -203,7 +200,8 @@ def interact_with_object(object_id: str, operator: str) -> str:
         else:
             raise HardException("unknown operator for this action: {operator}")
         
-        World.get_entity(check_id(object_id)).on_interact(current.AGENT.entity, action)
+        target = check_id(object_id)
+        target.on_interact(current.AGENT.entity, action)
     
     trycatch(helper, f"succeded with {operator} {object_id}")
 
@@ -229,7 +227,8 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
         else:
             raise HardException("unknown operator for this action: {operator}")
         
-        World.get_entity(check_id(object_id)).on_interact(current.AGENT.entity, action)
+        target = check_id(object_id)
+        target.on_interact(current.AGENT.entity, action)
     
     trycatch(helper, f"succeded with {operator} {object_id}")
 
@@ -257,7 +256,7 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float):
     for i in range(int(level.optimal_steps * optimal_steps_multilier)):
         for agent in agents:
             print(f"Observation: {i+1}")
-            room = World.get_room(agent.entity.room)
+            room = agent.entity.room
             observation = observe(room, agent.entity)
             agent.entity_step([
                 move_to_position, move_to_object,

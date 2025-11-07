@@ -1,60 +1,66 @@
 from __future__ import annotations
-from typing import Dict, Optional
 
-import uuid
-from uuid import UUID
+from typing import Dict, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - for type checkers only
+    from enviroment.entity import Entity
+    from enviroment.room import Room
 
 
 class World:
-    entities: Dict[UUID, "Entity"] = {}
-    rooms: Dict[UUID, "Room"] = {}
+    """Global registry that tracks all rooms and entities."""
+
+    entities: Dict[int, "Entity"] = {}
+    rooms: Dict[int, "Room"] = {}
     _id_counter: int = 0
 
     @staticmethod
-    def add_entity(entity: "Entity") -> UUID:
-        if entity.uuid is not None:
+    def _next_id() -> int:
+        World._id_counter += 1
+        return World._id_counter
+
+    @staticmethod
+    def add_entity(entity: "Entity") -> int:
+        if entity.entity_id is not None:
             raise ValueError("Entity already belongs to a world")
 
-        World._id_counter += 1
-        new_uuid = uuid.uuid4()
-        entity.uuid = new_uuid
-        entity.readable_id = f"{entity.name}_{World._id_counter}"
+        entity_id = World._next_id()
+        entity.entity_id = entity_id
+        entity.readable_id = f"{entity.name}_{entity_id}"
 
-        World.entities[new_uuid] = entity
-        return new_uuid
-
-    @staticmethod
-    def remove_entity(uuid: UUID) -> None:
-        entity = World.entities.pop(uuid, None)
-        if entity:
-            entity.world = None
+        World.entities[entity_id] = entity
+        return entity_id
 
     @staticmethod
-    def get_entity(uuid: UUID) -> Optional["Entity"]:
-        return World.entities.get(uuid)
+    def remove_entity(entity_id: int) -> None:
+        World.entities.pop(entity_id, None)
 
     @staticmethod
-    def add_room(room: "Room") -> UUID:
-        World._id_counter += 1
-        new_uuid = uuid.uuid4()
-        room.uuid = new_uuid
-        room.readable_id = f"{room.name}_{World._id_counter}"
-
-        World.rooms[new_uuid] = room
-        return new_uuid
+    def get_entity(entity_id: int) -> Optional["Entity"]:
+        return World.entities.get(entity_id)
 
     @staticmethod
-    def remove_room(uuid: UUID) -> None:
-        room = World.rooms.pop(uuid, None)
-        if room:
-            room.world = None
+    def add_room(room: "Room") -> int:
+        if room.room_id is not None:
+            raise ValueError("Room already belongs to a world")
+
+        room_id = World._next_id()
+        room.room_id = room_id
+        room.readable_id = f"{room.name}_{room_id}"
+
+        World.rooms[room_id] = room
+        return room_id
 
     @staticmethod
-    def get_room(uuid: UUID) -> Optional["Room"]:
-        return World.rooms.get(uuid)
-    
+    def remove_room(room_id: int) -> None:
+        World.rooms.pop(room_id, None)
+
     @staticmethod
-    def clear():
+    def get_room(room_id: int) -> Optional["Room"]:
+        return World.rooms.get(room_id)
+
+    @staticmethod
+    def clear() -> None:
         World.entities.clear()
         World.rooms.clear()
         World._id_counter = 0

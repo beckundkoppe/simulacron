@@ -1,9 +1,14 @@
-from typing import Set
-from uuid import UUID
+from __future__ import annotations
+
+from typing import Set, TYPE_CHECKING
 
 from enviroment.interaction import Depth, Interaction, PerceptionEnviroment
 from enviroment.position import Position
 from enviroment.world import World
+
+if TYPE_CHECKING:
+    from enviroment.entity import AgentEntity, Entity
+
 
 class Room:
     def __init__(
@@ -28,20 +33,25 @@ class Room:
         self.light_level = float(light_level)
         self.ambient_noise = float(ambient_noise)
         self.ambient_smell = float(ambient_smell)
-        self.entities: Set[UUID] = set()
+        self.entities: Set["Entity"] = set()
 
-        self.uuid: UUID | None = None
+        self.room_id: int | None = None
+        self.readable_id: str | None = None
+
         World.add_room(self)
 
-    def perceive(self, observer_uuid, depth: Depth):
+    def perceive(self, observer: "AgentEntity" | None, depth: Depth):
         perceptions = []
 
-        for obj in self.entities:
-            if obj == observer_uuid:
+        for target in self.entities:
+            if observer is not None and target is observer:
                 continue
 
-            target = World.get_entity(obj)
-            observer = World.get_entity(observer_uuid)
+            if observer is None:
+                continue
+
+            if observer.pos is None or target.pos is None:
+                continue
 
             distance: float = observer.pos.distanceTo(target.pos)
 
@@ -63,16 +73,19 @@ class Room:
 
         return perceptions
 
-    def isUuidIRoom(self, uuid) -> bool:
-        if uuid in self.entities:
+    def contains_entity(self, entity: "Entity" | None) -> bool:
+        if entity is None:
+            return False
+
+        if entity in self.entities:
             return True
 
         for ent in self.entities:
-            if World.get_entity(ent).hasChild(uuid):
+            if ent.hasChild(entity):
                 return True
-            
+
         return False
-    
+
     def isPosInRoom(self, pos: Position) -> bool:
         if 0 <= pos.x <= self.extend_x and 0 <= pos.y <= self.extend_y:
             return True
