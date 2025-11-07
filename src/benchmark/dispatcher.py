@@ -37,7 +37,7 @@ class Dispatcher:
             result = RunResult(run.model.value.tag, run.configuration.name, run.level.name, run.level.optimal_steps)
             current.RESULT = result
 
-            cache.get(run.model) # load model before starting timer
+            self.cache.get(run.model) # load model before starting timer
 
             start_time = time.time()
             game.run_level(self.cache, run.model, run.level, run.optimal_steps_multiplier)

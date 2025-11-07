@@ -29,14 +29,9 @@ def main():
     dispatcher = Dispatcher(cache)
     config = Configuration(PerceptionType.FULL, PositionType.RELATIVE, True, True, PlanType.REPLAN, 0.0, "test")
 
-    print(result.toString())
     result: RunResult = dispatcher.run_single(Run(
         config,
-<<<<<<< HEAD
-        Model.Local.Ollama.Llama.NEMOTRON_8B,
-=======
-        Model.Local.Ollama.Qwen3.VANILLA_8B,
->>>>>>> 45aa026 (Work)
+        Model.Local.Ollama.Qwen3.VANILLA_14B,
         Levels.POTATO_HARD.value,
         10,
         2.0

@@ -63,20 +63,51 @@ class Model(Enum):
     class Local(Enum):
 
         class LlamaCpp(Enum):
-            DEEPSEEK_QWEN_7B = ModelSpec(
-                name="Deepseek-R1-distill-qwen-7B-Q8_0",
-                tag="deepseek_qwen_7b",
-                location=Location.LOCAL,
-                backend=Backend.LLAMACPP,
-                agent_backend=AgentBackend.LLAMACPPAGENT,
-                kind=ModelKind.HYBRID,
-                source=SourceHuggingface(
-                    repo_id="bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
-                    filename="DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf",
-                    local_dir="data/model/"
-                    #https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF/blob/main/DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf
-                ),
-            )
+            class Deepseek(Enum):
+                CODER_V2_16B_Q8 = ModelSpec(
+                    name="Deepseek-Coder-V2-16B-Q8",
+                    tag="deepseek-coder_16b_q8",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="lmstudio-community/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+                        filename="DeepSeek-Coder-V2-Lite-Instruct-Q8_0.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/lmstudio-community/DeepSeek-Coder-V2-Lite-Instruct-GGUF
+                    ),
+                )
+
+                CODER_V2_16B_Q4 = ModelSpec(
+                    name="Deepseek-Coder-V2-16B-Q4",
+                    tag="deepseek-coder_16b_q4",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="lmstudio-community/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+                        filename="DeepSeek-Coder-V2-Lite-Instruct-IQ4_XS.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/lmstudio-community/DeepSeek-Coder-V2-Lite-Instruct-GGUF
+                    ),
+                )
+
+                R1_QWEN_7B = ModelSpec(
+                    name="Deepseek-R1-distill-qwen-7B-Q8_0",
+                    tag="deepseek_qwen_7b",
+                    location=Location.LOCAL,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+                        filename="DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF/blob/main/DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf
+                    ),
+                )
 
             LLAMA3_GROQ_8B_Q8 = ModelSpec(
                 name="Llama3-Groq-8B-Q8-Toolcalling",

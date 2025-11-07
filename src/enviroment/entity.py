@@ -2,8 +2,8 @@
 from typing import List
 from uuid import UUID
 
-from enviroment.action import ActionResult, ActionTry, ActionType
-from enviroment.exception import HardException, SoftException
+from enviroment.action import ActionTry, ActionType
+from enviroment.exception import HardException, SoftException, SuccessException
 import config as config
 from enviroment.room import Position, Room
 from enviroment.world import World
@@ -50,9 +50,10 @@ class Entity:
 
     def on_interact(
         self,
+        actor_entity,
         action: ActionTry
-    ) -> ActionResult:
-         return ActionResult(success=False, result="no effekt")
+    ) -> str:
+        raise SoftException("had no effekt")
 
     def on_perceive(
         self,
@@ -261,36 +262,43 @@ class AdvancedContainerEntity(ContainerEntity):
 
         self.is_open = is_open
         self.is_locked = is_locked
-        self.visibility_closed = visibility_closed
+        self.d  = visibility_closed
         self.keys = []
 
     def on_interact(
         self,
+        actor_entity,
         action: ActionTry
     ) -> str:
-        if(action == ActionType.OPEN):
+        print(action)
+        if(action.type == ActionType.OPEN):
+            if(self.is_locked):
+                raise SoftException("cant open, is locked")
             self.is_open = True
             return "opened chest"
 
-        if(action == ActionType.CLOSE):
+        if(action.type == ActionType.CLOSE):
+            if(self.is_locked):
+                raise SoftException("cant close, is locked")
             self.is_open = False
+
             return "closed chest"
 
-        if(action == ActionType.UNLOCK):
-            if(action.object_1 in self.keys):
+        if(action.type == ActionType.UNLOCK):
+            if(action.item_1 in self.keys):
                 self.is_locked = False
                 return "unlocked chest"
-            else:
-                return "wrong key"
+            
+            raise SoftException("wrong key")
 
-        if(action == ActionType.LOCK):
-            if(action.object_1 in self.keys):
+        if(action.type == ActionType.LOCK):
+            if(action.item_1 in self.keys):
                 self.is_locked = True
-                return "locked chest"
-            else:
-                return "wrong key"
+                raise SoftException("locked chest")
+            
+            raise SoftException("wrong key")
 
-        super().on_interact()
+        super().on_interact(actor_entity, action)
         
     def on_perceive(
         self,
@@ -298,7 +306,7 @@ class AdvancedContainerEntity(ContainerEntity):
         env: PerceptionEnviroment,
         depth: Depth,
     ) -> dict[str, object]:
-        info = super().on_perceive(observer, env, depth)
+        info = Entity.on_perceive(self, observer, env, depth)
 
         if(not self.is_any_perceived):
             return info
@@ -314,7 +322,7 @@ class AdvancedContainerEntity(ContainerEntity):
 
         if not self.is_open:
             # --- CLOSED ---
-            reduced_detail = depth.reduced(self.visibility_closed)
+            #reduced_detail = depth.reduced(self.visibility_closed)
 
             if count == 0:
                 info["contents_count"] = "empty"

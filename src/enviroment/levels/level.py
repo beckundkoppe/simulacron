@@ -4,7 +4,7 @@ from typing import Callable
 
 from enviroment.entity import Entity
 from enviroment.levels.data import LevelSpec
-from enviroment.levels.potato import build_easy, build_hard
+from enviroment.levels.potato import build_easy, build_hard, build_medium
 
 class LevelType(Enum):
     SHORT           = "short horizon"
@@ -19,4 +19,5 @@ class Level:
 
 class Levels(Enum):
     POTATO_EASY = Level("Potato (easy)", LevelType.SHORT, 8, build_easy)
+    POTATO_MEDIUM = Level("Potato (medium)", LevelType.SHORT, 8, build_medium)
     POTATO_HARD = Level("Potato (hard)", LevelType.SHORT, 8, build_hard)

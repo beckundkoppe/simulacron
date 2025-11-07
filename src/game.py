@@ -3,7 +3,7 @@ from advanced.agent import Agent
 from advanced.tool import tool
 from enviroment import current
 from enviroment.action import ActionTry, ActionType
-from enviroment.exception import HardException, SoftException
+from enviroment.exception import HardException, SoftException, SuccessException
 from enviroment.levels.level import Level, LevelSpec
 from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
 from debug import console
@@ -57,7 +57,7 @@ def test_run():
                     msg = "[FORMAL ERROR] " + result.what
                     color = console.Color.RED.value
                 if isinstance(result, ActionNotPossible):
-                    msg = "[ACTION FAILURE] " + result.what
+                    msg = "[action not possible] " + result.what
                     color = console.Color.RED.value
                 if isinstance(result, Success):
                     return
@@ -111,10 +111,16 @@ def test_run():
     observation = observe(World.get_room(tron.room), tron)
     print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observation))!s}", color=console.Color.CYAN))
 
-def trycatch(action, success_message):
+def trycatch(action, success_msg):
     try:
-        action()
-        Success(success_message)
+        msg = ""
+        message = action() 
+        if message is None:
+            msg = success_msg
+        else:
+            msg = message
+
+        Success(msg)
         current.RESULT.toolcall_count += 1
     except SoftException as s:
         ActionNotPossible(str(s))
@@ -122,29 +128,6 @@ def trycatch(action, success_message):
     except HardException as h:
         FormalError(str(h))
         current.RESULT.harderror_count += 1
-
-
-def safeexecute(action):
-    try:
-        action()
-    except SoftException as s:
-        ActionNotPossible(str(s))
-        current.RESULT.softerror_count += 1
-    except HardException as h:
-        FormalError(str(h))
-        current.RESULT.harderror_count += 1
-
-def safereturn(action):
-    try:
-        return action()
-    except SoftException as s:
-        ActionNotPossible(str(s))
-        current.RESULT.softerror_count += 1
-        return None
-    except HardException as h:
-        FormalError(str(h))
-        current.RESULT.harderror_count += 1
-        return None
 
 def check_id(readable_id: str):
     uuid = None
@@ -195,35 +178,35 @@ def use_door(door_id: str) -> str:
     return ""
         
 @tool
-def take_from(item_id: str, from_id: str) -> str:
+def take_from(what_id: str, from_id: str) -> str:
     """The human picks up an item A from a object B and adds it to their inventory. Only use this, when you are nearby B.
     
     Args:
-        item_id (str): the id of item A to be taken.
+        what_id (str): the id of item A to be taken.
         from_id (str): the id of object B from which the item is taken or 'FLOOR' for the floor
     """
     
     if(from_id.capitalize() == "FLOOR"):
-        trycatch(lambda: current.AGENT.entity.take(check_id(item_id)), f"collected {item_id}")
+        trycatch(lambda: current.AGENT.entity.take(check_id(what_id)), f"collected {what_id}")
 
     else:
-        trycatch(lambda: current.AGENT.entity.take_from(check_id(item_id), check_id(from_id)), f"collected {item_id} from {from_id}")
+        trycatch(lambda: current.AGENT.entity.take_from(check_id(what_id), check_id(from_id)), f"collected {what_id} from {from_id}")
 
     return ""
 
 @tool
-def drop_to(item_id: str, to_id: str) -> str:
+def drop_to(what_id: str, to_id: str) -> str:
     """The human drops an item A from their inventory into or onto another object B. Only use this, when you are nearby B.
     
     Args:
-        item_id (str): the the id of the item A to be dropped.
+        what_id (str): the the id of the item A to be dropped.
         to_id (str): the id of the object B where the item is placed or 'FLOOR' for the floor
     """
 
     if(to_id.capitalize() == "FLOOR"):
-        trycatch(lambda: current.AGENT.entity.drop(check_id(item_id)), f"dropped {item_id}")
+        trycatch(lambda: current.AGENT.entity.drop(check_id(what_id)), f"dropped {what_id}")
     else:
-        trycatch(lambda: current.AGENT.entity.drop_into(check_id(item_id), check_id(to_id)), f"dropped {item_id} into {to_id}")
+        trycatch(lambda: current.AGENT.entity.drop_into(check_id(what_id), check_id(to_id)), f"dropped {what_id} into {to_id}")
 
     return ""
 
@@ -232,61 +215,49 @@ def interact_with_object(object_id: str, operator: str) -> str:
     """The agent interacts with an object using a specific operator.
     
     Args:
-        item_id (str): the the id of the item A to be dropped.
+        object_id (str): the the id of the item A to be dropped.
         operator (str): The action to perform. Allowed values: OPEN, CLOSE.
     """
 
-    action: ActionTry = None
-    object = None
-
     def helper():
-        nonlocal object, action
-        object = check_id(object_id)
-        if(operator.capitalize() == "OPEN"):
+        action: ActionTry = None
+    
+        if(operator == "OPEN"):
             action = ActionTry(ActionType.OPEN)
-        elif (operator.capitalize() == "CLOSE"):
+        elif (operator == "CLOSE"):
             action = ActionTry(ActionType.CLOSE)
-
-    safeexecute(helper)
-
-    ent = World.get_entity(object)
-
-    res = safereturn(ent.on_interact(action))
-
-    if(res is not None):
-        Success("succeded with " + operator + " " + object_id)
+        else:
+            raise HardException("unknown operator for this action: {operator}")
+        
+        World.get_entity(check_id(object_id)).on_interact(current.AGENT.entity, action)
+    
+    trycatch(helper, f"succeded with {operator} {object_id}")
 
     return ""
 
 @tool
-def interact_with_object_using_item(object_id: str, item_id: str, operator: str) -> str:
+def interact_with_object_using_item(object_id: str, using_id: str, operator: str) -> str:
     """The agent uses an item from inventory to interact with an object.
     
     Args:
         object_id (str): The id of the object to interact with.
-        item_id (str): The id of the item to use from inventory.
+        using_id (str): The id of the item to use from inventory.
         operator (str): The action to perform. Allowed values: LOCK, UNLOCK.
     """
 
-    action: ActionTry = None
-    object = None
-
     def helper():
-        nonlocal object, action
-
-        object = check_id(object_id)
-
-        if(operator.capitalize() == "LOCK"):
-            action = ActionTry(ActionType.LOCK, check_id(item_id))
-        elif (operator.capitalize() == "UNLOCK"):
-            action = ActionTry(ActionType.UNLOCK, check_id(item_id))
-            check_id()
+        action: ActionTry = None
     
-    safeexecute(helper)
-
-    ent = World.get_entity(object)
-
-    res = safereturn(ent.on_interact(action))
+        if(operator == "LOCK"):
+            action = ActionTry(ActionType.LOCK, check_id(using_id))
+        elif (operator == "UNLOCK"):
+            action = ActionTry(ActionType.UNLOCK, check_id(using_id))
+        else:
+            raise HardException("unknown operator for this action: {operator}")
+        
+        World.get_entity(check_id(object_id)).on_interact(current.AGENT.entity, action)
+    
+    trycatch(helper, f"succeded with {operator} {object_id}")
 
     return ""
 
@@ -317,7 +288,8 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float):
             agent.entity_step([
                 move_to_position, move_to_object,
                 use_door,
-                take_from, drop_to
+                take_from, drop_to,
+                interact_with_object, interact_with_object_using_item,
                 ], observation)
             current.RESULT.observation_count += 1
 

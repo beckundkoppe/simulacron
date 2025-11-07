@@ -11,4 +11,4 @@ DEBUG_PERCEPTION_FILTER.add(("*", "*", "material"))
 
 DEBUG_LIMITED = True
 
-VERBOSE_BACKEND = False
+VERBOSE_BACKEND = True

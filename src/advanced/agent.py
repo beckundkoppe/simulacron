@@ -229,7 +229,7 @@ class LangchainAgent(Agent):
             name = tool_call.name
             args = tool_call.args
 
-            #print(f"[TOOLCALL] {name}, args: {args}")
+            print(f"[TOOLCALL] {name}, args: {args}")
 
             if name in tool_map:
                 sig = inspect.signature(tool_map[name])
@@ -241,7 +241,7 @@ class LangchainAgent(Agent):
             if name in tool_map:
                     tool_map[name](**filtered_args)                    
             else:
-                raise Exception
+                raise Exception("unknown tool")
 
 
         #-------------------------
@@ -271,8 +271,8 @@ class LangchainAgent(Agent):
                 tc = ToolCall.from_raw(raw, False)
                 ret = _execute_toolcall(tc)
                 valid_toolcall = True
-            except:
-                FormalError(f"toolcall failed: {raw}")
+            except Exception as e:
+                FormalError(f"toolcall failed: {str(e)}\n{raw}")
                 current.RESULT.harderror_count += 1
 
 
@@ -289,8 +289,8 @@ class LangchainAgent(Agent):
                 try:
                     tc = ToolCall.from_raw(data, True)
                     ret = _execute_toolcall(tc)
-                except:
-                    FormalError(f"toolcall failed: {data}")
+                except Exception as e:
+                    FormalError(f"toolcall failed: {str(e)}\n{data}")
                     current.RESULT.harderror_count += 1
 
 

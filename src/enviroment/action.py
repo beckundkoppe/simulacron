@@ -10,12 +10,6 @@ class ActionType(str, Enum):
     LOCK = "unlock"
 
 @dataclass
-class ActionResult:
-    success: bool = ""
-    result: str = ""
-    error: str = ""
-
-@dataclass
 class ActionTry:
     type: ActionType 
-    object_1: UUID = None
+    item_1: UUID = None
