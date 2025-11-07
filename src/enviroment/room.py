@@ -1,9 +1,11 @@
-from typing import Set
-from uuid import UUID
+from typing import Set, TYPE_CHECKING
 
 from enviroment.interaction import Depth, Interaction, PerceptionEnviroment
 from enviroment.position import Position
 from enviroment.world import World
+
+if TYPE_CHECKING:
+    from enviroment.entity import Entity
 
 class Room:
     def __init__(
@@ -28,20 +30,19 @@ class Room:
         self.light_level = float(light_level)
         self.ambient_noise = float(ambient_noise)
         self.ambient_smell = float(ambient_smell)
-        self.entities: Set[UUID] = set()
+        self.entities: Set["Entity"] = set()
 
-        self.uuid: UUID | None = None
         World.add_room(self)
 
-    def perceive(self, observer_uuid, depth: Depth):
+    def perceive(self, observer_entity: "Entity", depth: Depth):
         perceptions = []
 
         for obj in self.entities:
-            if obj == observer_uuid:
+            if obj is observer_entity:
                 continue
 
-            target = World.get_entity(obj)
-            observer = World.get_entity(observer_uuid)
+            target = obj
+            observer = observer_entity
 
             distance: float = observer.pos.distanceTo(target.pos)
 
@@ -63,12 +64,12 @@ class Room:
 
         return perceptions
 
-    def isUuidIRoom(self, uuid) -> bool:
-        if uuid in self.entities:
+    def contains_entity(self, entity: "Entity") -> bool:
+        if entity in self.entities:
             return True
 
         for ent in self.entities:
-            if World.get_entity(ent).hasChild(uuid):
+            if ent.hasChild(entity):
                 return True
             
         return False
