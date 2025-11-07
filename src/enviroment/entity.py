@@ -217,6 +217,40 @@ class ContainerEntity(Entity):
             if World.get_entity(c).hasChild(uuid):
                 return True
         return False
+    
+    def on_interact(
+        self,
+        actor_entity,
+        action: ActionTry
+    ) -> str:
+        if(action.type == ActionType.OPEN):
+            if(self.is_locked):
+                raise SoftException("cant open, is locked")
+            self.is_open = True
+            return "opened chest"
+
+        if(action.type == ActionType.CLOSE):
+            if(self.is_locked):
+                raise SoftException("cant close, is locked")
+            self.is_open = False
+
+            return "closed chest"
+
+        if(action.type == ActionType.UNLOCK):
+            if(action.item_1 in self.keys):
+                self.is_locked = False
+                return "unlocked chest"
+            
+            raise SoftException("wrong key")
+
+        if(action.type == ActionType.LOCK):
+            if(action.item_1 in self.keys):
+                self.is_locked = True
+                raise SoftException("locked chest")
+            
+            raise SoftException("wrong key")
+
+        super().on_interact(actor_entity, action)
         
     def on_perceive(
         self,
@@ -270,7 +304,6 @@ class AdvancedContainerEntity(ContainerEntity):
         actor_entity,
         action: ActionTry
     ) -> str:
-        print(action)
         if(action.type == ActionType.OPEN):
             if(self.is_locked):
                 raise SoftException("cant open, is locked")
@@ -360,7 +393,7 @@ class AdvancedContainerEntity(ContainerEntity):
         return info
     
     def add_key(self, entity):
-        self.keys.append(entity)
+        self.keys.append(entity.uuid)
 
 class ConnectorEntity(Entity):
     def __init__(self, name, pos, material = None, description = None, uniqueness = 0.5, prominence = 1):

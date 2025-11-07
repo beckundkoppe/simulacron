@@ -195,12 +195,19 @@ class LangchainAgent(Agent):
             id: str
             type: str
             @classmethod
-            def from_raw(cls, raw, heuristic) -> "ToolCall":
-                """Accept either a JSON string or a dict and return a ToolCall."""
-                    
+            def from_raw(cls, raw, heuristic) -> "ToolCall":  
                 if(heuristic):
                     data = {}
-                    data["name"] = raw["name"]
+
+                    if("name" in raw):
+                        data["name"] = raw["name"]
+                    elif("action" in raw):
+                        data["name"] = raw["action"]
+                    else:
+                        console.pretty(
+                            console.bullet(f"LLM IS FUCKING STUPID (wrong key for name): {data}", color=console.Color.RED),
+                        )
+
                     data["id"] = ""
                     data["type"] = "tool_call"
 
