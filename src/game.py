@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import json
+
+import config
+from config import PositionType
 from advanced.agent import Agent
 from advanced.tool import tool
 from enviroment import current
@@ -18,14 +21,59 @@ from llm.memory.memory import Memory, Role
 from llm.model import Model
 from llm.runner import Runner
 
+
+def _active_position_type() -> PositionType:
+    configuration = getattr(config, "CONFIG", None)
+    return getattr(configuration, "position_type", PositionType.RELATIVE)
+
+
+def _position_payload(pos: Position, room: Room) -> tuple[str, object]:
+    if getattr(config, "CONFIG", None) is None:
+        return ("relative", {"x": pos.x, "y": pos.y})
+
+    mapped = pos.map(room)
+    if mapped.type == PositionType.CHESSBOARD:
+        return ("chessboard", mapped.toString())
+    if mapped.type == PositionType.ROOMLESS:
+        return ("roomless", mapped.toString())
+    return ("relative", {"x": mapped.x, "y": mapped.y})
+
+
+def _update_move_tool_description() -> None:
+    mode = _active_position_type()
+    if mode == PositionType.CHESSBOARD:
+        args_desc = (
+            "        x (str): the file letter (a-h) of the destination square.\n"
+            "        y (str): the rank (1-8) of the destination square.\n"
+        )
+        mode_hint = "Current coordinate mode: chessboard (files a-h, ranks 1-8)."
+    else:
+        args_desc = (
+            "        x (float): the x coordinate inside the current room.\n"
+            "        y (float): the y coordinate inside the current room.\n"
+        )
+        mode_hint = "Current coordinate mode: relative floating point coordinates."
+
+    description = (
+        "The human moves to a position.\n\n"
+        f"    {mode_hint}\n"
+        "\n"
+        "    Args:\n"
+        f"{args_desc}"
+    )
+
+    move_to_position.__doc__ = description
+    if hasattr(move_to_position, "_tool_meta"):
+        move_to_position._tool_meta["description"] = description
+
+
 def observe(room: Room, observer: AgentEntity) -> str:
+    position_format, position_value = _position_payload(observer.pos, room)
     data = {}
     data["you_are_in_room"] = {
         "name": room.name,
-        "your_pos": {
-            "x": observer.pos.x,
-            "y": observer.pos.y,
-        },
+        "position_format": position_format,
+        "your_pos": position_value,
         "room_size": {
             "extend_x": room.extend_x,
             "extend_y": room.extend_y,
@@ -107,14 +155,32 @@ def check_id(readable_id: str):
 
 @tool
 def move_to_position(x: str, y: str) -> str:
-    """The human moves to a position.
+    """The human moves to a position."""
 
-    Args:
-        x (float): the x coordinate
-        y (float): the y coordinate
-    """
+    def _perform_move():
+        agent = getattr(current.AGENT, "entity", None)
+        if agent is None:
+            raise HardException(
+                "No agent entity is available to perform the movement.",
+                console_message="move_to_position was invoked without an active agent entity.",
+            )
 
-    trycatch(lambda: current.AGENT.entity.move_to_position(Position(float(x), float(y))), "moved succesfully")
+        room = agent.room
+        try:
+            position = Position.from_input(x, y, room)
+        except ValueError as exc:
+            raise HardException(
+                "The provided coordinates could not be interpreted.",
+                console_message=(
+                    f"Failed to parse coordinates x='{x}', y='{y}' with mode "
+                    f"{_active_position_type().name.lower()}: {exc}"
+                ),
+                hint="Consult the observation field 'position_format' for the expected coordinate style.",
+            ) from exc
+
+        return agent.move_to_position(position)
+
+    trycatch(_perform_move, "moved succesfully")
 
     return ""
 
@@ -348,6 +414,7 @@ class SingleAgentTeam(AgentTeam):
         current.AGENT = self.agent
         print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
 
+        _update_move_tool_description()
         self.agent.register_tools(TOOLS)
         self.agent.invoke(observations, "Give best next action")
 
@@ -377,6 +444,7 @@ class TwoAgentTeam(AgentTeam):
         print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
         imagination = self.imaginator.invoke(observations, "Give best next action (short)")
 
+        _update_move_tool_description()
         self.realisator.register_tools(TOOLS)
 
         self.realisator.memory = Memory()
