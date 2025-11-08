@@ -606,7 +606,7 @@ class TwoAgentTeam(AgentTeam):
         while keep_alive:
             self.realisator.register_tools(TOOLS)
             #process_formal_errors(None) #delete formal errors from unallowed
-            reply = self.realisator.invoke(observations + " PLAN: " + imagination, "Give the toolcalls that arise from the plan. (if something is unclear answer with a precice and short question)")
+            reply = self.realisator.invoke(observations + " PLAN: " + imagination, "Give the toolcalls that arise from the plan. (if something is unclear answer with a precice and short question). ")
             keep_alive = process_formal_errors(self.realisator)
             self._broadcast_new_suggestions()
             #print(">" + reply + "<")
