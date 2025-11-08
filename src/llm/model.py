@@ -66,7 +66,7 @@ class Model(Enum):
             class Deepseek(Enum):
                 CODER_V2_16B_Q8 = ModelSpec(
                     name="Deepseek-Coder-V2-16B-Q8",
-                    tag="deepseek-coder_16b_q8",
+                    tag="deepseek_coder_16b_q8",
                     location=Location.LOCAL,
                     backend=Backend.LLAMACPP,
                     agent_backend=AgentBackend.LLAMACPPAGENT,
@@ -81,7 +81,7 @@ class Model(Enum):
 
                 CODER_V2_16B_Q4 = ModelSpec(
                     name="Deepseek-Coder-V2-16B-Q4",
-                    tag="deepseek-coder_16b_q4",
+                    tag="deepseek_coder_16b_q4",
                     location=Location.LOCAL,
                     backend=Backend.LLAMACPP,
                     agent_backend=AgentBackend.LLAMACPPAGENT,
@@ -173,7 +173,7 @@ class Model(Enum):
 
                 LLAMA_3_1_8B_Q8 = ModelSpec(
                     name="Meta-Llama-3.1-8B-Instruct-GGUF",
-                    tag="llama3.1groq_8b_q8",
+                    tag="llama3.1_groq_8b_q8",
                     location=Location.LOCAL,
                     backend=Backend.LLAMACPP,
                     agent_backend=AgentBackend.LLAMACPPAGENT,
@@ -338,6 +338,126 @@ class Model(Enum):
                 ),
             )
 
+            class Cogito(Enum):
+                COGITO_8B = ModelSpec(
+                    name="Cogito-8B",
+                    tag="cogito_8b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="cogito:8b",
+                        #https://ollama.com/library/cogito
+                    ),
+                )
+
+                COGITO_14B = ModelSpec(
+                    name="Cogito-14B",
+                    tag="cogito_14b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="cogito:8b",
+                        #https://ollama.com/library/cogito
+                    ),
+                )
+
+            class Exaone(Enum):
+                EXAONE_32B = ModelSpec(
+                    name="Exaone_32B",
+                    tag="exaone_32b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="exaone-deep:32b",
+                        #https://ollama.com/library/exaone-deep
+                    ),
+                )
+
+            class Granite(Enum):
+                GRANITE4_32B = ModelSpec(
+                    name="Granite4-32B",
+                    tag="granite4_32b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="granite4:32b-a9b-h",
+                        #https://ollama.com/library/granite4/tags
+                    ),
+                )
+
+                GRANITE4_7B = ModelSpec(
+                    name="Granite4-7B",
+                    tag="granite4_7b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="granite4:7b-a1b-h",
+                        #https://ollama.com/library/granite4/tags
+                    ),
+                )
+
+                GRANITE4_3B = ModelSpec(
+                    name="Granite4-3B",
+                    tag="granite4_3b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="granite4:3b",
+                        #https://ollama.com/library/granite4/tags
+                    ),
+                )
+
+                GRANITE4_1B = ModelSpec(
+                    name="Granite4-1B",
+                    tag="granite4_1b",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="granite4:1b",
+                        #https://ollama.com/library/granite4/tags
+                    ),
+                )
+
+                GRANITE4_350M = ModelSpec(
+                    name="Granite4-1B",
+                    tag="granite4_350m",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="granite4:350m",
+                        #https://ollama.com/library/granite4/tags
+                    ),
+                )
+
+            MAGISTRAL_SMALL_24B = ModelSpec(
+                name="Magistral-Small-24B-Q4",
+                tag="magistral_small_24B",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceOllama(
+                    model_id="magistral:24b",
+                    #https://ollama.com/library/magistral/tags
+                ),
+            )
+
             #DEEPSEEK_R1_14B = ModelSpec(
             #    name="DEEPSEEK-R1_14B",
             #    tag="deepseek-r1_14B",
@@ -361,45 +481,6 @@ class Model(Enum):
                 source=SourceOllama(
                     model_id="dolphin3:8b",
                     #https://ollama.com/library/dolphin3
-                ),
-            )
-
-            COGITO_8B = ModelSpec(
-                name="Cogito-8B",
-                tag="cogito_8b",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.HYBRID,
-                source=SourceOllama(
-                    model_id="cogito:8b",
-                    #https://ollama.com/library/cogito
-                ),
-            )
-
-            COGITO_14B = ModelSpec(
-                name="Cogito-14B",
-                tag="cogito_14b",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.HYBRID,
-                source=SourceOllama(
-                    model_id="cogito:8b",
-                    #https://ollama.com/library/cogito
-                ),
-            )
-
-            EXAONE_32B = ModelSpec(
-                name="Exaone_32B",
-                tag="exaone_32b",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.HYBRID,
-                source=SourceOllama(
-                    model_id="exaone-deep:32b",
-                    #https://ollama.com/library/exaone-deep
                 ),
             )
 

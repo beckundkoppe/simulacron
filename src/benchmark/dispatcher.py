@@ -44,7 +44,7 @@ class Dispatcher:
                 self.cache.get(run.realisator)
 
             start_time = time.time()
-            game.run_level(self.cache, run.model, run.level, run.optimal_steps_multiplier, run.realisator)
+            game.run_level(run.level, run.optimal_steps_multiplier, self.cache, run.model, run.realisator)
             end_time = time.time()
             result.time_s = end_time - start_time
 

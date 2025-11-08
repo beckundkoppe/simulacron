@@ -18,6 +18,7 @@ from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
 from learning.manager import LearningEvent, get_learning_manager
+from llm.cache import Cache
 from llm.memory.memory import Memory, Role, SummarizingMemory
 from llm.model import Model
 from llm.runner import Runner
@@ -421,17 +422,8 @@ class AgentTeam(ABC):
 class SingleAgentTeam(AgentTeam):
     agent: Agent
 
-    def __init__(
-        self,
-        task: str,
-        entity: AgentEntity,
-        runner: Runner,
-        *,
-        learning_manager=None,
-        cache=None,
-        model=None,
-    ):
-        agent_mem = SummarizingMemory(cache=cache, model=model)
+    def __init__(self, task: str, entity: AgentEntity, runner: Runner, extra: Runner, learning_manager=None,):
+        agent_mem = SummarizingMemory(model=extra)
         agent_mem.add_message(Role.SYSTEM, task)
 
         if learning_manager is not None:
@@ -458,20 +450,10 @@ class TwoAgentTeam(AgentTeam):
     imaginator: Agent
     realisator: Agent
 
-    def __init__(
-        self,
-        task: str,
-        entity: AgentEntity,
-        imaginator: Runner,
-        realisator: Runner,
-        *,
-        learning_manager=None,
-        cache=None,
-        model=None,
-    ):
+    def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner, extra: Runner, learning_manager=None):
         self.imaginator = imaginator
         self.realisator = realisator
-        img_mem = SummarizingMemory(max_tokens=200, cache=cache, model=model)
+        img_mem = SummarizingMemory(model=extra)
         img_mem.add_message(Role.SYSTEM, task)
 
         if learning_manager is not None:
@@ -519,17 +501,20 @@ class TwoAgentTeam(AgentTeam):
 
         current.AGENT = None
 
-def run_level(cache, model, level: Level, optimal_steps_multilier: float, realisator):
+def run_level(level: Level, optimal_steps_multilier: float, cache, main_model, realisator = None, extra_model = None):
+    if(realisator is None):
+        realisator = main_model
+    if(extra_model is None):
+        extra_model = main_model
 
     spec: LevelSpec = level.build()
-
     console.pretty(console.banner(level.name, char="+", color=console.Color.BLUE))
 
     learning_manager = get_learning_manager()
     learning_manager.start_episode(
         level_name=level.name,
         configuration=getattr(config, "CONFIG", None),
-        model=model,
+        model=main_model,
     )
 
     persistent_guidelines = learning_manager.get_guideline_prompts()
@@ -544,57 +529,51 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float, realis
         console.pretty(*lines, spacing=0)
 
     teams = []
-
-    for agentic in spec.agent_entities:
-        entity, prompt = agentic
-        console.pretty(console.bullet(entity.name + "\t[PROMPT:] " + prompt, color=console.Color.BLUE))
-
-        if config.CONFIG.imagine_feature:
-            if(realisator is not None):
-                teams.append(
-                    TwoAgentTeam(
-                        prompt,
-                        entity,
-                        cache.get(model),
-                        cache.get(realisator),
-                        learning_manager=learning_manager,
-                        cache=cache,
-                        model=model,
-                    )
-                )
-            else:
-                teams.append(
-                    TwoAgentTeam(
-                        prompt,
-                        entity,
-                        cache.get(model),
-                        cache.get(model),
-                        learning_manager=learning_manager,
-                        cache=cache,
-                        model=model,
-                    )
-                )
-        else:
-            teams.append(
-                SingleAgentTeam(
-                    prompt,
-                    entity,
-                    cache.get(model),
-                    learning_manager=learning_manager,
-                    cache=cache,
-                    model=model,
-                )
-            )
-
     success = False
 
     try:
+        for entity, prompt in spec.agent_entities:
+            console.pretty(console.bullet(f"{entity.name}\t[PROMPT:] {prompt}", color=console.Color.BLUE))
+
+            if config.CONFIG.imagine_feature:
+                if realisator is not None:
+                    teams.append(
+                        TwoAgentTeam(
+                            prompt,
+                            entity,
+                            cache.get(main_model),
+                            cache.get(realisator),
+                            extra=cache.get(extra_model),
+                            learning_manager=learning_manager
+                        )
+                    )
+                else:
+                    teams.append(
+                        TwoAgentTeam(
+                            prompt,
+                            entity,
+                            cache.get(main_model),
+                            cache.get(main_model),
+                            extra=cache.get(extra_model),
+                        )
+                    )
+            else:
+                teams.append(
+                    SingleAgentTeam(
+                        prompt,
+                        entity,
+                        cache.get(main_model),
+                        model=main_model,
+                        extra=cache.get(extra_model),
+                    )
+                )
+
         for i in range(int(level.optimal_steps * optimal_steps_multilier)):
+            console.pretty(console.banner(f"Observation: {i}", color=console.Color.MAGENTA))
+
             for team in teams:
                 current.RESULT.observation_count += 1
-                print(f"Observation: {i}")
                 observation = observe(team.get_entity().room, team.get_entity())
-
                 team.step(observation)
 
                 if spec.is_success():
@@ -606,6 +585,7 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float, realis
                 break
 
         current.RESULT.success = 1 if success else 0
+
     finally:
         summary = learning_manager.finalize_episode(
             success=success,
@@ -613,4 +593,3 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float, realis
         )
         if summary:
             console.pretty(console.box(summary, color=console.Color.MAGENTA))
-    

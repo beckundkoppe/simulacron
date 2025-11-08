@@ -179,8 +179,7 @@ class SummarizingMemory(Memory):
         trigger_ratio: float = 0.9,
         preserve_recent: int = 6,
         *,
-        cache: Optional["Cache"] = None,
-        model: Optional["Model"] = None,
+        model = None,
         summary_instructions: Optional[str] = None,
     ) -> None:
         if max_tokens <= 0:
@@ -190,10 +189,6 @@ class SummarizingMemory(Memory):
         self.max_tokens = int(max_tokens)
         self.trigger_ratio = trigger_ratio
         self.preserve_recent = max(2, preserve_recent)
-        if cache is not None and model is None:
-            raise ValueError("model must be provided when cache is configured")
-
-        self._cache = cache
         self._model = model
         self._summary_runner: Optional["Runner"] = None
         self._summary_instructions = summary_instructions or (
@@ -273,23 +268,14 @@ class SummarizingMemory(Memory):
         if not messages:
             return ""
 
-        runner = self._get_runner()
         summary_limit = max(32, self.max_tokens // 8)
 
-        if runner is not None:
-            try:
-                return self._summarize_with_llm(messages, runner, summary_limit)
-            except Exception:
-                pass
+        try:
+            return self._summarize_with_llm(messages, self._model, summary_limit)
+        except Exception:
+            pass
 
         return self._fallback_summary(messages, summary_limit)
-
-    def _get_runner(self) -> Optional["Runner"]:
-        if self._cache is None or self._model is None:
-            return None
-        if self._summary_runner is None:
-            self._summary_runner = self._cache.get(self._model)
-        return self._summary_runner
 
     def _summarize_with_llm(
         self,

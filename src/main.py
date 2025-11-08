@@ -31,16 +31,17 @@ def main():
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        Model.Local.LlamaCpp.Qwen.VANILLA_8B,
+        Model.Local.Ollama.DOLPHIN3_8B,
         Levels.VAGUE_INSTRUCT.POTATO_EASY.value,
         10,
         3.0,
+        Model.Local.Ollama.Granite.GRANITE4_3B,
         )
     )
-    
-    print("Reruns: 10")
+
+    print("\n\n\nReruns: 4")
     print(result1.toString())
-   
+
     #Only use toolcalls. For toolcalls, use the following syntax: {"name": "<tool_name>", "args": {"<arg_key>": "<arg_value>"}}
 
 

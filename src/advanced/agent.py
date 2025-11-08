@@ -242,7 +242,7 @@ class LangchainAgent(Agent):
             result = self._llm.invoke(memory.get_history(self.runner.backend) + [{"role": Role.USER.value, "content": hint}])
         except Exception as e:
             FormalError(f"llm call failed: {str(e)}\nRETRY WITH A VALID ANSWER")
-            return
+            return ""
 
         if VERBOSE_BACKEND: console.json_dump(result)
 
@@ -254,7 +254,7 @@ class LangchainAgent(Agent):
         console.pretty(console.bullet(f"[{self.name}] {reply}", color=console.Color.YELLOW))
 
         if self._tools is None:
-            return
+            return reply
 
         valid_toolcall = False
         for raw in result.tool_calls:
