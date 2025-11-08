@@ -402,8 +402,8 @@ class AgentTeam(ABC):
 class SingleAgentTeam(AgentTeam):
     agent: Agent
 
-    def __init__(self, task: str, entity: AgentEntity, runner: Runner):
-        agent_mem = SummarizingMemory()
+    def __init__(self, task: str, entity: AgentEntity, runner: Runner, cache=None, model=None):
+        agent_mem = SummarizingMemory(cache=cache, model=model)
         agent_mem.add_message(Role.SYSTEM, task)
         self.agent = Agent.build(runner, entity=entity, memory=agent_mem)
 
@@ -426,10 +426,10 @@ class TwoAgentTeam(AgentTeam):
     imaginator: Agent
     realisator: Agent
 
-    def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner):
+    def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner, cache=None, model=None):
         self.imaginator = imaginator
         self.realisator = realisator
-        img_mem = SummarizingMemory(max_tokens=200)
+        img_mem = SummarizingMemory(max_tokens=200, cache=cache, model=model)
         img_mem.add_message(Role.SYSTEM, task)
         self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
 
@@ -483,11 +483,11 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float, realis
 
         if config.CONFIG.imagine_feature:
             if(realisator is not None):
-                teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(realisator)))
+                teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(realisator), cache=cache, model=model))
             else:
-                teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(model)))
+                teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(model), cache=cache, model=model))
         else:
-            teams.append(SingleAgentTeam(prompt, entity, cache.get(model)))
+            teams.append(SingleAgentTeam(prompt, entity, cache.get(model), cache=cache, model=model))
 
     for i in range(int(level.optimal_steps * optimal_steps_multilier)):
         for team in teams:
