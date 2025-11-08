@@ -317,7 +317,7 @@ def list_learning_suggestions() -> str:
         return "No pending reflection prompts."
 
     lines = [
-        "Pending reflection prompts (use store_meta_learning to persist insights):",
+        "Pending reflection prompts (capture insights with store_meta_learning and rate them via rate_meta_learning):",
     ]
     for suggestion in suggestions:
         lines.append(f"- {suggestion.id}: {suggestion.content}")
@@ -340,6 +340,20 @@ def store_meta_learning(
         category=category,
         persistence=persistence,
         source=normalized_source,
+    )
+
+
+@tool
+def rate_meta_learning(content: str, label: str, score: Optional[float] = None, rationale: str = "") -> str:
+    """Update the usefulness rating of an existing learning (labels: core, useful, niche, retire)."""
+
+    learning_manager = get_learning_manager()
+    rationale_text = rationale.strip() or None
+    return learning_manager.rate_learning(
+        content=content,
+        label=label,
+        score=score,
+        rationale=rationale_text,
     )
 
 
@@ -485,6 +499,7 @@ TOOLS = [
     interact_with_object_using_item,
     list_learning_suggestions,
     store_meta_learning,
+    rate_meta_learning,
 ]
 
 class AgentTeam(ABC):
@@ -506,9 +521,9 @@ class SingleAgentTeam(AgentTeam):
                 agent_mem.add_message(
                     Role.SYSTEM,
                     (
-                        "Whenever you make a mistake or succeed unexpectedly, call `list_learning_suggestions` to "
-                        "review reflection prompts. Derive high-level, reusable insights and persist them using "
-                        "`store_meta_learning`, choosing between dynamic or post_episode persistence."
+                        "Reflection prompts arrive in batches—use `list_learning_suggestions` when notified, evaluate "
+                        "whether a high-quality, generalisable learning exists, persist it with `store_meta_learning`, "
+                        "and keep usefulness scores up to date via `rate_meta_learning`."
                     ),
                 )
 
@@ -545,8 +560,9 @@ class TwoAgentTeam(AgentTeam):
                 img_mem.add_message(
                     Role.SYSTEM,
                     (
-                        "When reflection prompts arrive you must describe potential meta learnings in your plan using "
-                        "lines prefixed with 'LEARNING:' so the realisator can persist them."
+                        "Reflection prompts are batched; when they appear, analyse whether a transferable insight exists, "
+                        "note it in the plan with 'LEARNING:' including context and a suggested rating label (core/useful/" 
+                        "niche/retire) so the realisator can act on it."
                     ),
                 )
 
@@ -561,9 +577,9 @@ class TwoAgentTeam(AgentTeam):
                 real_mem.add_message(
                     Role.SYSTEM,
                     (
-                        "Consult `list_learning_suggestions` for new reflection prompts and persist validated meta "
-                        "learnings with `store_meta_learning` when the imaginator highlights them. Keep learnings "
-                        "general and reusable."
+                        "Consult `list_learning_suggestions` for batched prompts, capture only broadly useful meta "
+                        "learnings with `store_meta_learning`, and record usefulness with `rate_meta_learning` using the "
+                        "core/useful/niche/retire scale."
                     ),
                 )
 
