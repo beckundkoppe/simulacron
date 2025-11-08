@@ -64,11 +64,6 @@ class Runner(ABC):
 
         raise ValueError("Unsupported configuration")
 
-    def new_memory(self) -> Memory:
-        if self.context_window:
-            return SummarizingMemory(self.context_window)
-        return Memory()
-
 # ----------------------------------------------------------
 # LlamaCppAgent
 # ----------------------------------------------------------

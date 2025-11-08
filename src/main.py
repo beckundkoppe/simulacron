@@ -31,7 +31,7 @@ def main():
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        Model.Local.LlamaCpp.LLAMA3_GROQ_8B_Q8,
+        Model.Local.LlamaCpp.Qwen.VANILLA_8B,
         Levels.VAGUE_INSTRUCT.POTATO_EASY.value,
         10,
         3.0,

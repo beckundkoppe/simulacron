@@ -109,6 +109,7 @@ class Model(Enum):
                     ),
                 )
 
+            class Qwen(Enum):
                 NEMOTRON_14B_Q8 = ModelSpec(
                     name="Nemotron-Qwen2.4-14B-Q8",
                     tag="nemotron_qwen_14B",
@@ -139,18 +140,66 @@ class Model(Enum):
                     ),
                 )
 
-            LLAMA3_GROQ_8B_Q8 = ModelSpec(
-                name="Llama3-Groq-8B-Q8-Toolcalling",
-                tag="llama3_groq_8b_q8",
+                VANILLA_8B = ModelSpec(
+                    name="Qwen3-14B",
+                    tag="qwen3_14b",
+                    location=Location.LOCAL,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="Qwen/Qwen3-8B-GGUF",
+                        filename="Qwen3-8B-Q4_K_M.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/Qwen/Qwen3-8B-GGUF?show_file_info=Qwen3-8B-Q8_0.gguf
+                    ),
+                )
+
+            class Llama3(Enum):
+                LLAMA3_GROQ_8B_Q8 = ModelSpec(
+                    name="Llama3-Groq-8B-Q8-Toolcalling",
+                    tag="llama3_groq_8b_q8",
+                    location=Location.LOCAL,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF",
+                        filename="llama-3-groq-8b-tool-use-q8_0.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF
+                    ),
+                )
+
+                LLAMA_3_1_8B_Q8 = ModelSpec(
+                    name="Meta-Llama-3.1-8B-Instruct-GGUF",
+                    tag="llama3.1groq_8b_q8",
+                    location=Location.LOCAL,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+	                    filename="Meta-Llama-3.1-8B-Instruct-Q8_0.gguf",
+
+                        local_dir="data/model/"
+                        #https://huggingface.co/rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF
+                    ),
+                )
+
+
+            MPT_30B = ModelSpec(
+                name="MPT-30B-Q2",
+                tag="mpt_30b",
                 location=Location.LOCAL,
                 backend=Backend.LLAMACPP,
                 agent_backend=AgentBackend.LLAMACPPAGENT,
                 kind=ModelKind.HYBRID,
                 source=SourceHuggingface(
-                    repo_id="rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF",
-                    filename="llama-3-groq-8b-tool-use-q8_0.gguf",
+                    repo_id="maddes8cht/mosaicml-mpt-30b-gguf",
+                    filename="mosaicml-mpt-30b-Q2_K.gguf",
                     local_dir="data/model/"
-                    #https://huggingface.co/rumbleFTW/Llama-3-Groq-8B-Tool-Use-Q8_0-GGUF
+                    #https://huggingface.co/maddes8cht/mosaicml-mpt-30b-gguf
                 ),
             )
 

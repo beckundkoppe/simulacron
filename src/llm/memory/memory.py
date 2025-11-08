@@ -160,7 +160,7 @@ class SummarizingMemory(Memory):
 
     def __init__(
         self,
-        max_tokens: int,
+        max_tokens: int = 4096,
         trigger_ratio: float = 0.9,
         preserve_recent: int = 6,
     ) -> None:
@@ -210,7 +210,6 @@ class SummarizingMemory(Memory):
 
         for role, msg in head:
             if role is Role.SYSTEM and msg.startswith(self._SUMMARY_PREFIX):
-                # Previous summaries should be merged into the new summary.
                 summarizable.append((role, msg[len(self._SUMMARY_PREFIX):].lstrip()))
             elif role is Role.SYSTEM:
                 preserved_system.append((role, msg))
@@ -218,13 +217,23 @@ class SummarizingMemory(Memory):
                 summarizable.append((role, msg))
 
         if not summarizable:
-            # Nothing that can be summarised – keep the original history.
             return
 
         summary_text = self._build_summary(summarizable)
-        summary_message = (Role.SYSTEM, f"{self._SUMMARY_PREFIX} {summary_text}")
+        combined_summary = f"{self._SUMMARY_PREFIX} {summary_text}"
 
-        self._history = preserved_system + [summary_message] + tail
+        # Merge with existing summary if one exists in preserved_system
+        for i, (role, msg) in enumerate(preserved_system):
+            if role is Role.SYSTEM and msg.startswith(self._SUMMARY_PREFIX):
+                old_summary = msg[len(self._SUMMARY_PREFIX):].lstrip()
+                merged = f"{self._SUMMARY_PREFIX} {old_summary} {summary_text}"
+                preserved_system[i] = (Role.SYSTEM, merged)
+                break
+        else:
+            preserved_system.append((Role.SYSTEM, combined_summary))
+
+        self._history = preserved_system + tail
+
 
     def _build_summary(self, messages: List[Tuple[Role, str]]) -> str:
         summary_tokens = max(32, self.max_tokens // 8)

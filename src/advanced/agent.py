@@ -3,6 +3,7 @@ import ast
 from dataclasses import dataclass
 import inspect
 import json
+import re
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from advanced.heuristic import parse_toolcall_json, parse_toolcalls_fallback
@@ -55,7 +56,8 @@ class LlamaAgent(Agent):
         """Register the given functions as LLM tools."""
 
         if tools is None:
-            tools = []
+            self._output_settings = None
+            return
 
         valid_tools = []
         for t in tools:
@@ -94,7 +96,7 @@ class LlamaAgent(Agent):
                 raise ValueError(f"Unknown role: {role_str}")
 
             history.add_message({"role": r, "content": msg})
-
+            
         reply = self.agent.get_chat_response(
             message=message + " " + hint,
             chat_history=history,
@@ -102,8 +104,10 @@ class LlamaAgent(Agent):
             print_output=VERBOSE_BACKEND
         )
 
-        if not isinstance(reply, str):
-            reply = ""
+        if isinstance(reply, str):
+            reply = re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL)
+        else:
+            return ""
 
         console.pretty(console.bullet(f"[{self.name}] {reply}", color=console.Color.YELLOW))
 

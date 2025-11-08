@@ -17,7 +17,7 @@ from enviroment.interaction import Depth, ObserverPerception
 from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
-from llm.memory.memory import Role
+from llm.memory.memory import Memory, Role, SummarizingMemory
 from llm.model import Model
 from llm.runner import Runner
 
@@ -403,7 +403,7 @@ class SingleAgentTeam(AgentTeam):
     agent: Agent
 
     def __init__(self, task: str, entity: AgentEntity, runner: Runner):
-        agent_mem = runner.new_memory()
+        agent_mem = SummarizingMemory()
         agent_mem.add_message(Role.SYSTEM, task)
         self.agent = Agent.build(runner, entity=entity, memory=agent_mem)
 
@@ -416,6 +416,7 @@ class SingleAgentTeam(AgentTeam):
 
         _update_move_tool_description()
         self.agent.register_tools(TOOLS)
+        self.agent.memory.save("mem.txt")
         self.agent.invoke(observations, "Give best next action.")
 
         process_results(self.agent)
@@ -428,11 +429,11 @@ class TwoAgentTeam(AgentTeam):
     def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner):
         self.imaginator = imaginator
         self.realisator = realisator
-        img_mem = imaginator.new_memory()
+        img_mem = SummarizingMemory(max_tokens=200)
         img_mem.add_message(Role.SYSTEM, task)
         self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
 
-        real_mem = realisator.new_memory()
+        real_mem = Memory()
         real_mem.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Execute'")
         self.realisator = Agent.build(realisator, entity=entity, memory=real_mem, name="realisator")
 
@@ -443,10 +444,12 @@ class TwoAgentTeam(AgentTeam):
         current.AGENT = self.imaginator
         print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
         self.imaginator.register_tools(None)
+
+        self.imaginator.memory.save("mem.txt")
         imagination = self.imaginator.invoke(observations, "Give best next action (short)")
 
         _update_move_tool_description()
-        self.realisator.memory = self.realisator.runner.new_memory()
+        self.realisator.memory = Memory()
         self.realisator.memory.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls.")
 
         keep_alive = True
