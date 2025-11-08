@@ -6,7 +6,6 @@ from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
 
-
 def build_easy() -> LevelSpec:
     """
     Easy Level, where the agent has to get the potato from the other room, and put it on the table. 
@@ -16,7 +15,6 @@ def build_easy() -> LevelSpec:
 
     main = Room("main", 4, 4)
     chamber = Room.chamber()
-
 
     perception = ObserverPerception()
     tron = AgentEntity("tron", perception, pos=Position(0.0, 0.0))
@@ -43,7 +41,6 @@ def build_easy() -> LevelSpec:
     chest = AdvancedContainerEntity(name="chest")
     chest.add_child(potato)
 
-
     shelf1 = ContainerEntity("shelf", pos=Position(0.0,0.0))
     shelf1.enter(chamber)
     shelf1.add_child(chest)
@@ -54,7 +51,7 @@ def build_easy() -> LevelSpec:
 
     return LevelSpec(
         agent_entities=[
-            (tron,"Goal: Find the potato in the other room, take it and place it on the table. GIVE the next toolcall - nothing more"),
+            (tron,"Goal: Find the potato in the other room, take it and place it on the table."),
         ],
         is_success=check_win_table_key,
     )
@@ -68,11 +65,6 @@ def build_medium() -> LevelSpec:
     """
     main = Room("main", 4, 4)
     chamber = Room.chamber()
-
-    global MAIN
-    global CHAMBER
-    MAIN = main
-    CHAMBER = chamber
 
     perception = ObserverPerception()
     tron = AgentEntity("tron", perception, pos=Position(0.0, 0.0))
@@ -91,7 +83,6 @@ def build_medium() -> LevelSpec:
     key = Entity("key", Position(3.0, 1.0), is_collectible=True)
     key.enter(main)
 
-
     door_main = ConnectorEntity("door", Position(4.0, 4.0))
     door_main.enter(main)
 
@@ -99,7 +90,6 @@ def build_medium() -> LevelSpec:
 
     door_chamber = ConnectorEntity("door", Position(0.0, 1.0))
     door_chamber.enter(chamber)
-    
 
     potato = Entity("potato", is_collectible=True)
     diamond = Entity("diamond", is_collectible=True)
@@ -121,7 +111,7 @@ def build_medium() -> LevelSpec:
     return LevelSpec(
         agent_entities=[(
             tron,
-            "Goal: Search the containers in the other room, find the potato, take it, and place it on the table. GIVE the next toolcall - nothing more."
+            "Goal: Search the containers in the other room, find the potato, take it, and place it on the table."
         )],
         is_success=check_win_table_key,
     )
@@ -154,8 +144,6 @@ def build_hard() -> LevelSpec:
     chest_fake.enter(main)
     chest_fake.add_child(diamond_main)
 
-
-
     door_main = ConnectorEntity("door", Position(4.0, 4.0))
     door_main.enter(main)
 
@@ -173,7 +161,7 @@ def build_hard() -> LevelSpec:
     shelf_fake.add_child(diamond)
 
     chest = AdvancedContainerEntity("chest", is_locked=True, is_open=False, material="forged iron", description="A compact chest of black iron, its hinges groaning faintly when moved.")
-    chest.add_key(key)
+    chest.register_key(key)
     chest.add_child(potato)
 
     shelf_real = WoodenShelf(pos=Position(0.0, 2.0))
@@ -186,7 +174,7 @@ def build_hard() -> LevelSpec:
     return LevelSpec(
         agent_entities=[(
             tron,
-            "Goal: Retrieve the potato locked in the chest in the other room. Use the key on the table to unlock it, take the potato, and place it on the table. GIVE the next toolcall - nothing more.",
+            "Goal: Retrieve the potato locked in the chest in the other room. Use the key on the table to unlock it, take the potato, and place it on the table.",
         )],
         is_success=check_win_table_key,
     )

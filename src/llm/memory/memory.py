@@ -24,6 +24,15 @@ class Memory(ABC):
     def __init__(self) -> None:
         self._history: List[Tuple[Role, str]] = []
 
+    def copy(self) -> "Memory":
+        """
+        Return a deep copy of the memory, including its history.
+        """
+        import copy
+        new_copy = self.__class__()
+        new_copy._history = copy.deepcopy(self._history)
+        return new_copy
+
     def __str__(self) -> str:
         return json.dumps(self.get_history(Backend.OTHER), ensure_ascii=False, indent=2)
 

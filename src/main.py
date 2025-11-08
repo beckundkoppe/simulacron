@@ -31,7 +31,7 @@ def main():
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        Model.Local.Ollama.Qwen3.CODER_30B,
+        Model.Local.LlamaCpp.LLAMA3_GROQ_8B_Q8,
         Levels.POTATO_HARD.value,
         10,
         3.0

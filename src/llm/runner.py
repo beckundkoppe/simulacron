@@ -16,7 +16,7 @@ from llm.model import AgentBackend, Backend, Model, SourceFile, SourceHuggingfac
 # ----------------------------------------------------------
 class Runner(ABC):
     _n_gpu_layers=-1
-    _n_ctx=4096
+    _n_ctx=8192
     _n_threads=24
     _max_tokens=4096
 

@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 import json
 from advanced.agent import Agent
 from advanced.tool import tool
@@ -7,12 +9,14 @@ from enviroment.exception import HardException, SoftException
 from enviroment.levels.level import Level, LevelSpec
 from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
 from debug import console
-from enviroment.entity import AgentEntity
+from enviroment.entity import AgentEntity, Entity
 from enviroment.interaction import Depth, ObserverPerception
 from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
 from llm.memory.memory import Memory, Role
+from llm.model import Model
+from llm.runner import Runner
 
 def observe(room: Room, observer: AgentEntity) -> str:
     data = {}
@@ -60,6 +64,16 @@ def trycatch(action, success_msg):
             console_msg,
             hint=getattr(h, "hint", None),
             context=getattr(h, "context", None),
+        )
+        current.RESULT.harderror_count += 1
+    except Exception as e:
+        agent_msg = getattr(e, "agent_message", str(e))
+        console_msg = getattr(e, "console_message", agent_msg)
+        FormalError(
+            agent_msg,
+            console_msg,
+            hint=getattr(e, "hint", None),
+            context=getattr(e, "context", None),
         )
         current.RESULT.harderror_count += 1
 
@@ -125,7 +139,7 @@ def take_from(what_id: str, from_id: str) -> str:
         from_id (str): the id of object B from which the item is taken or 'FLOOR' for the floor
     """
     
-    if(from_id == "FLOOR"):
+    if(from_id.upper() == "FLOOR"):
         trycatch(lambda: current.AGENT.entity.take(check_id(what_id)), f"collected {what_id}")
 
     else:
@@ -142,7 +156,7 @@ def drop_to(what_id: str, to_id: str) -> str:
         to_id (str): the id of the object B where the item is placed or 'FLOOR' for the floor
     """
 
-    if(to_id == "FLOOR"):
+    if(to_id.upper() == "FLOOR"):
         trycatch(lambda: current.AGENT.entity.drop(check_id(what_id)), f"dropped {what_id}")
     else:
         trycatch(lambda: current.AGENT.entity.drop_into(check_id(what_id), check_id(to_id)), f"dropped {what_id} into {to_id}")
@@ -159,11 +173,11 @@ def interact_with_object(object_id: str, operator: str) -> str:
     """
 
     def helper():
-        if(operator == "OPEN"):
+        if(operator.upper() == "OPEN"):
             action = ActionTry(ActionType.OPEN)
-        elif (operator == "CLOSE"):
+        elif (operator.upper() == "CLOSE"):
             action = ActionTry(ActionType.CLOSE)
-        elif (operator == "GO_THROUGH"):
+        elif (operator.upper() == "GO_THROUGH"):
             action = ActionTry(ActionType.USE)
         else:
             raise HardException("unknown operator for this action: {operator}")
@@ -185,9 +199,9 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
     """
 
     def helper():
-        if(operator == "LOCK"):
+        if(operator.upper() == "LOCK"):
             action = ActionTry(ActionType.LOCK, check_id(using_id))
-        elif (operator == "UNLOCK"):
+        elif (operator.upper() == "UNLOCK"):
             action = ActionTry(ActionType.UNLOCK, check_id(using_id))
         else:
             raise HardException("unknown operator for this action: {operator}")
@@ -198,36 +212,209 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
 
     return ""
 
+
+def process_formal_errors(agent) -> bool:
+    """Process FormalError results from the result buffer and clear them.
+    
+    Returns:
+        True if any FormalError was found and processed, False otherwise.
+    """
+    has_error = False
+    to_remove = []
+    
+    for result in Resultbuffer.buffer:
+        if not isinstance(result, FormalError):
+            continue
+
+        has_error = True
+        to_remove.append(result)
+        prefix = "[FORMAL ERROR]"
+        color = console.Color.RED
+        role = Role.SYSTEM
+
+        agent_msg = f"{prefix} {result.agent_message}"
+        if result.hint:
+            agent_msg = f"{agent_msg} Hint: {result.hint}"
+
+        if agent.memory:
+            agent.memory.add_message(role, agent_msg)
+
+        console_lines = [
+            console.bullet(
+                f"[toolcall] {prefix} {result.console_message}",
+                color=color,
+            )
+        ]
+        if result.hint:
+            console_lines.append(
+                console.bullet(
+                    f"\nHint: {result.hint}",
+                    color=console.Color.CYAN,
+                )
+            )
+        if result.context:
+            console_lines.append(
+                console.bullet_multi(
+                    f"\nContext: {console.dump_limited(result.context, max_depth=1)}",
+                    color=console.Color.BLUE,
+                )
+            )
+
+        console.pretty(*console_lines, spacing=0)
+    
+    # Remove processed FormalError results from buffer
+    for result in to_remove:
+        Resultbuffer.buffer.remove(result)
+    
+    return has_error
+
+def process_action_results(agent):
+    """Process ActionNotPossible and Success results from the result buffer and clear them."""
+    to_remove = []
+    
+    for result in Resultbuffer.buffer:
+        if isinstance(result, ActionNotPossible):
+            prefix = "[ACTION FAILURE]"
+            color = console.Color.RED
+            role = Role.USER
+        elif isinstance(result, Success):
+            prefix = "[ACTION EXECUTED]"
+            color = console.Color.YELLOW
+            role = Role.USER
+        else:
+            continue
+
+        to_remove.append(result)
+        agent_msg = f"{prefix} {result.agent_message}"
+        if result.hint:
+            agent_msg = f"{agent_msg} Hint: {result.hint}"
+
+        if agent.memory:
+            agent.memory.add_message(role, agent_msg)
+
+        console_lines = [
+            console.bullet(
+                f"[toolcall] {prefix} {result.console_message}",
+                color=color,
+            )
+        ]
+        if result.hint:
+            console_lines.append(
+                console.bullet(
+                    f"\nHint: {result.hint}",
+                    color=console.Color.BLUE,
+                )
+            )
+        if result.context:
+            console_lines.append(
+                console.bullet_multi(
+                    f"\nContext: {console.dump_limited(result.context, max_depth=1)}",
+                    color=console.Color.BLUE,
+                )
+            )
+
+        console.pretty(*console_lines, spacing=0)
+    
+    # Remove processed action results from buffer
+    for result in to_remove:
+        Resultbuffer.buffer.remove(result)
+
+def process_results(agent):
+    """Process all results from the result buffer and clear it."""
+    process_formal_errors(agent)
+    process_action_results(agent)
+
+
+TOOLS = [move_to_position, move_to_object, take_from, drop_to, interact_with_object, interact_with_object_using_item]
+
+class AgentTeam(ABC):
+    @abstractmethod
+    def get_entity(self) -> Entity: ...
+    @abstractmethod
+    def step(self, observations: str) -> str: ...
+
+class SingleAgentTeam(AgentTeam):
+    agent: Agent
+
+    def __init__(self, task: str, entity: AgentEntity, runner: Runner):
+        agent_mem = Memory()
+        agent_mem.add_message(Role.SYSTEM, task)
+        self.agent = Agent.build(runner, entity=entity, memory=agent_mem)
+
+    def get_entity(self) -> Entity:
+        return self.agent.entity
+
+    def step(self, observations: str) -> str:
+        current.AGENT = self.agent
+        print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
+
+        self.agent.register_tools(TOOLS)
+        self.agent.invoke(observations, "Give best next action")
+
+        process_results(self.agent)
+        current.AGENT = None
+
+class TwoAgentTeam(AgentTeam):
+    imaginator: Agent
+    realisator: Agent
+
+    def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner):
+        self.imaginator = imaginator
+        self.realisator = realisator
+        img_mem = Memory()
+        img_mem.add_message(Role.SYSTEM, task)
+        self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
+
+        real_mem = Memory()
+        real_mem.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Only one at a time. if you want to do another reply with '#next'")
+        self.realisator = Agent.build(realisator, entity=entity, memory=real_mem, name="realisator")
+
+    def get_entity(self) -> Entity:
+        return self.imaginator.entity
+
+    def step(self, observations: str) -> str:
+        current.AGENT = self.imaginator
+        print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
+        imagination = self.imaginator.invoke(observations, "Give best next action (short)")
+
+        self.realisator.register_tools(TOOLS)
+
+        self.realisator.memory = Memory()
+        self.realisator.memory.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Only one at a time. if you want to do another reply with '#next'")
+
+        keep_alive = True
+        while keep_alive:
+            reply = self.realisator.invoke(observations + " PLAN: " + imagination, "Give the toolcalls that arise from the plan (multiple allowed).")
+            keep_alive = process_formal_errors(self.realisator)
+
+        
+
+        process_action_results(self.imaginator)
+
+        current.AGENT = None
+
 def run_level(cache, model, level: Level, optimal_steps_multilier: float):
 
     spec: LevelSpec = level.build()
 
     console.pretty(console.banner(level.name, char="+", color=console.Color.BLUE))
 
-    agents = []
+    teams = []
 
-    for eg in spec.agent_entities:
-        entity, prompt = eg
-
-        agent_mem = Memory()
-        agent_mem.add_message(Role.SYSTEM, prompt)
+    for agentic in spec.agent_entities:
+        entity, prompt = agentic  
         console.pretty(console.bullet(entity.name + "\t[PROMPT:] " + prompt, color=console.Color.BLUE))
-        agent = Agent.build(cache.get(model), entity=entity, memory=agent_mem)
-
-        agents.append(agent)
+        #teams.append(SingleAgentTeam(prompt, entity, cache.get(model)))
+        teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(model)))
 
 
     for i in range(int(level.optimal_steps * optimal_steps_multilier)):
-        for agent in agents:
-            print(f"Observation: {i+1}")
-            room = agent.entity.room
-            observation = observe(room, agent.entity)
-            agent.entity_step([
-                move_to_position, move_to_object,
-                take_from, drop_to,
-                interact_with_object, interact_with_object_using_item,
-                ], observation)
+        for team in teams:
             current.RESULT.observation_count += 1
+            print(f"Observation: {i}")
+            observation = observe(team.get_entity().room, team.get_entity())
+
+            team.step(observation)
 
         if(spec.is_success()):
             print("Finished")

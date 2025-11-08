@@ -441,7 +441,7 @@ class AdvancedContainerEntity(ContainerEntity):
     def is_locked(self, value: bool) -> None:
         self._lockable.is_locked = value
 
-    def add_key(self, entity: Entity) -> None:
+    def register_key(self, entity: Entity) -> None:
         if entity is not None:
             self._lockable.allow_key(entity)
 
@@ -544,6 +544,8 @@ class AgentEntity(Entity):
         self.inventory: List[Entity] = []
 
     def take(self, item: Entity):
+        item._ensure_in_range(self)
+
         if not item.is_collectible:
             raise SoftException(
                 f"{item.readable_id} cannot be collected.",
@@ -610,6 +612,9 @@ class AgentEntity(Entity):
         self.inventory.remove(item)
 
     def take_from(self, item: Entity, container: ContainerEntity):
+        item._ensure_same_room(self)
+        item._ensure_in_range(self)
+
         if not item.is_collectible:
             raise SoftException(
                 f"{item.readable_id} cannot be collected.",
@@ -622,19 +627,6 @@ class AgentEntity(Entity):
                     "item": item.readable_id,
                     "container": container.readable_id,
                     "action": "take_from",
-                },
-            )
-
-        if not isinstance(container, ContainerEntity):
-            raise SoftException(
-                f"You can't take items from {container.readable_id}.",
-                console_message=(
-                    f"Take-from requested on non-container '{container.readable_id}'."
-                ),
-                hint="Select a valid container or use TAKE for items on the floor.",
-                context={
-                    "item": item.readable_id,
-                    "container": container.readable_id,
                 },
             )
 
@@ -679,18 +671,8 @@ class AgentEntity(Entity):
         self.inventory.append(item)
 
     def drop_into(self, item: Entity, container: ContainerEntity):
-        if not isinstance(container, ContainerEntity):
-            raise SoftException(
-                f"You can't place items into {container.readable_id}.",
-                console_message=(
-                    f"Drop-into attempted on non-container '{container.readable_id}'."
-                ),
-                hint="Choose a valid container or drop the item on the floor.",
-                context={
-                    "item": item.readable_id,
-                    "target": container.readable_id,
-                },
-            )
+        container._ensure_same_room(self)
+        container._ensure_in_range(self)
 
         if item not in self.inventory:
             inventory_ids = [
@@ -789,19 +771,6 @@ class AgentEntity(Entity):
         self.pos = pos
 
     def use_connector(self, connector: ConnectorEntity):
-        if not isinstance(connector, ConnectorEntity):
-            raise SoftException(
-                f"{getattr(connector, 'readable_id', 'This object')} cannot be used as a door.",
-                console_message=(
-                    f"use_connector expected a ConnectorEntity but received {type(connector).__name__}."
-                ),
-                hint="Target an actual connector (doorway) before calling USE.",
-                context={
-                    "requested": getattr(connector, "readable_id", None),
-                    "expected_type": "ConnectorEntity",
-                },
-            )
-
         if self.room != connector.room:
             agent_room = self.room
             connector_room = connector.room
