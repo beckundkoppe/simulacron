@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Tuple, Optional, TYPE_CHECKING
+from typing import Iterable, List, Tuple, Optional, TYPE_CHECKING
 import json
 
 from llm.model import Backend
@@ -57,6 +57,21 @@ class Memory(ABC):
         if not isinstance(message, str):
             raise TypeError(f"Memory expects plain text messages, got {type(message).__name__}")
         self._history.append((role, message))
+
+    def prepend_message(self, role: Role, message: str) -> None:
+        """Insert a message at the beginning of the history."""
+        assert isinstance(role, Role), "role must be a Role enum"
+        if not isinstance(message, str):
+            raise TypeError(f"Memory expects plain text messages, got {type(message).__name__}")
+        self._history.insert(0, (role, message))
+
+    def extend_at_top(self, entries: "Iterable[tuple[Role, str]]") -> None:
+        """Prepend multiple messages while preserving their order."""
+
+        # Materialise the iterable once so that we can insert in reverse order
+        batch = list(entries)
+        for role, message in reversed(batch):
+            self.prepend_message(role, message)
 
     def save(self, path: str) -> None:
         """Persist the memory to a JSON file."""
