@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 import json
+from itertools import count
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, TYPE_CHECKING
 
@@ -57,6 +58,9 @@ class EpisodeContext:
     dynamic: List[Learning] = field(default_factory=list)
     post_episode: List[Learning] = field(default_factory=list)
     seen_keys: Set[str] = field(default_factory=set)
+    suggestion_index: Dict[str, str] = field(default_factory=dict)
+    suggestions: Dict[str, "LearningSuggestion"] = field(default_factory=dict)
+    used_suggestions: Set[str] = field(default_factory=set)
 
     def serialize(self, *, success: bool, stats: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         return {
@@ -68,6 +72,7 @@ class EpisodeContext:
             "dynamic": [learning.to_dict() for learning in self.dynamic],
             "post_episode": [learning.to_dict() for learning in self.post_episode],
             "stats": stats or {},
+            "reflection_prompts": [suggestion.to_dict() for suggestion in self.suggestions.values()],
         }
 
 
@@ -133,6 +138,7 @@ class LearningManager:
         self._episode: Optional[EpisodeContext] = None
         self._cached_guidelines: List[str] = []
         self._cached_reflections: List[str] = []
+        self._suggestion_counter = count(1)
 
     def start_episode(
         self,
@@ -159,6 +165,7 @@ class LearningManager:
             configuration_name=config_name,
             model_name=model_tag,
         )
+        self._suggestion_counter = count(1)
 
         stored_items = self.repository.get_post_episode_items(
             configuration_name=config_name,
@@ -196,35 +203,104 @@ class LearningManager:
         *,
         hint: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    ) -> Optional["LearningSuggestion"]:
+        """Backward compatible entry point that now routes to reflection prompts."""
+
+        return self.register_event(event, base_message, hint=hint, context=context)
+
+    def register_event(
+        self,
+        event: LearningEvent,
+        base_message: str,
+        *,
+        hint: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Optional["LearningSuggestion"]:
         if not self.enabled or not self._episode:
-            return
+            return None
 
-        message = base_message.strip()
-        if not message:
-            return
+        suggestion = self._build_reflection_prompt(event, base_message, hint=hint, context=context)
+        if suggestion is None:
+            return None
 
-        key = f"{event.value}:{message.lower()}"
+        if suggestion.id in self._episode.suggestions:
+            return self._episode.suggestions[suggestion.id]
+
+        key = suggestion.metadata.get("dedupe_key")
+        if key:
+            if key in self._episode.suggestion_index:
+                existing_id = self._episode.suggestion_index[key]
+                return self._episode.suggestions.get(existing_id)
+            self._episode.suggestion_index[key] = suggestion.id
+
+        self._episode.suggestions[suggestion.id] = suggestion
+        return suggestion
+
+    def get_pending_suggestions(self) -> List["LearningSuggestion"]:
+        if not self.enabled or not self._episode:
+            return []
+
+        pending: List[LearningSuggestion] = []
+        for suggestion_id, suggestion in self._episode.suggestions.items():
+            if suggestion_id in self._episode.used_suggestions:
+                continue
+            pending.append(suggestion)
+        return pending
+
+    def save_learning(
+        self,
+        *,
+        content: str,
+        category: str = "guideline",
+        persistence: str = "dynamic",
+        source: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        if not self.enabled or not self._episode:
+            return "Learning feature is disabled for this configuration."
+
+        normalized_content = content.strip()
+        if not normalized_content:
+            return "Learning content must not be empty."
+
+        try:
+            learning_type = LearningType(persistence)
+        except ValueError:
+            return (
+                "Unknown persistence value. Use 'dynamic' for immediate application or "
+                "'post_episode' for after-action learnings."
+            )
+
+        target_collection: List[Learning] = getattr(self._episode, learning_type.value)
+
+        key = f"learning:{normalized_content.lower()}"
         if key in self._episode.seen_keys:
-            return
+            return "This learning has already been recorded."
 
-        self._episode.seen_keys.add(key)
-        dynamic_text = self._format_dynamic_text(event, message, hint)
-        metadata = {
-            "category": event.value,
-            "base_message": message,
+        metadata: Dict[str, Any] = {
+            "category": category,
+            "base_message": normalized_content,
         }
-        if hint:
-            metadata["hint"] = hint
         if context:
             metadata["context"] = context
 
-        self._episode.dynamic.append(
+        if source:
+            if source in self._episode.suggestions:
+                self._episode.used_suggestions.add(source)
+            metadata["prompt_source"] = source
+
+        target_collection.append(
             Learning(
-                type=LearningType.DYNAMIC,
-                content=dynamic_text,
+                type=learning_type,
+                content=normalized_content,
                 metadata=metadata,
             )
+        )
+        self._episode.seen_keys.add(key)
+
+        return (
+            "Learning stored successfully. It will be reused during this episode "
+            "and future runs depending on its persistence."
         )
 
     def finalize_episode(
@@ -285,36 +361,6 @@ class LearningManager:
 
     def get_reflection_notes(self) -> List[str]:
         return list(self._cached_reflections)
-
-    def _format_dynamic_text(
-        self,
-        event: LearningEvent,
-        message: str,
-        hint: Optional[str],
-    ) -> str:
-        cleaned = message.strip()
-        if cleaned and cleaned[-1] in ".!?":
-            cleaned = cleaned[:-1]
-
-        suffix = ""
-        if hint:
-            suffix = f" Hint: {hint}"
-        if event is LearningEvent.FORMAL_ERROR:
-            return (
-                "Formal error encountered. Ensure parameter validation and rule compliance before repeating similar "
-                f"actions. Detail: {cleaned}.{suffix}"
-            )
-        if event is LearningEvent.ACTION_FAILURE:
-            return (
-                "Action failed during execution. Re-evaluate prerequisites or environmental conditions before retrying. "
-                f"Detail: {cleaned}.{suffix}"
-            )
-        if event is LearningEvent.ACTION_SUCCESS:
-            return (
-                "Successful strategy observed. Consider reusing this approach when context aligns. "
-                f"Detail: {cleaned}.{suffix}"
-            )
-        return f"Observation: {cleaned}.{suffix}"
 
     def _build_guidelines(self, success: bool) -> List[str]:
         if not self._episode:
@@ -380,6 +426,88 @@ class LearningManager:
             seen.add(lowered)
             ordered.append(normalized)
         return ordered
+    def _build_reflection_prompt(
+        self,
+        event: LearningEvent,
+        base_message: str,
+        *,
+        hint: Optional[str],
+        context: Optional[Dict[str, Any]],
+    ) -> Optional["LearningSuggestion"]:
+        message = base_message.strip()
+        if not message:
+            return None
+
+        prompt_lines: List[str] = []
+        if event is LearningEvent.FORMAL_ERROR:
+            prompt_lines.append(
+                "A formal error occurred. Analyse why the action violated the rules or parameters and describe the fix."
+            )
+        elif event is LearningEvent.ACTION_FAILURE:
+            prompt_lines.append(
+                "An attempted action failed. Diagnose missing prerequisites or misunderstandings before retrying."
+            )
+        elif event is LearningEvent.ACTION_SUCCESS:
+            prompt_lines.append(
+                "A successful action was observed. Extract the reusable tactic so it can be repeated intentionally."
+            )
+        else:
+            prompt_lines.append("Review the recent event and capture any reusable guidance.")
+
+        prompt_lines.append(f"Event detail: {message}")
+        if hint:
+            prompt_lines.append(f"Hint: {hint}")
+        prompt_lines.append(
+            "Respond by articulating the insight and, when confident, persist it using the `store_meta_learning` tool."
+        )
+
+        metadata: Dict[str, Any] = {
+            "event": event.value,
+            "base_message": message,
+            "dedupe_key": self._make_suggestion_key(event, message, hint=hint),
+        }
+        if hint:
+            metadata["hint"] = hint
+        if context:
+            metadata["context"] = context
+
+        suggestion = LearningSuggestion(
+            id=f"S{next(self._suggestion_counter)}",
+            content=" ".join(prompt_lines),
+            event=event,
+            metadata=metadata,
+        )
+        return suggestion
+
+    @staticmethod
+    def _make_suggestion_key(
+        event: LearningEvent,
+        message: str,
+        *,
+        hint: Optional[str] = None,
+    ) -> str:
+        key_parts = [event.value, message.lower().strip()]
+        if hint:
+            key_parts.append(f"hint:{hint.lower().strip()}")
+        return "|".join(key_parts)
+
+
+@dataclass
+class LearningSuggestion:
+    """Reflection prompt that nudges the agent to derive a meta learning."""
+
+    id: str
+    content: str
+    event: LearningEvent
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "content": self.content,
+            "event": self.event.value,
+            "metadata": self.metadata,
+        }
 
 
 _LEARNING_MANAGER: Optional[LearningManager] = None
