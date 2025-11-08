@@ -17,6 +17,7 @@ from enviroment.interaction import Depth, ObserverPerception
 from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
+from learning.manager import LearningEvent, get_learning_manager
 from llm.memory.memory import Memory, Role, SummarizingMemory
 from llm.model import Model
 from llm.runner import Runner
@@ -305,6 +306,14 @@ def process_formal_errors(agent) -> bool:
             if agent.memory:
                 agent.memory.add_message(role, agent_msg)
 
+        learning_manager = get_learning_manager()
+        learning_manager.record_dynamic_learning(
+            LearningEvent.FORMAL_ERROR,
+            result.agent_message,
+            hint=result.hint,
+            context=result.context,
+        )
+
         console_lines = [
             console.bullet(
                 f"[toolcall] {prefix} {result.console_message}",
@@ -343,10 +352,12 @@ def process_action_results(agent):
             prefix = "[ACTION FAILURE]"
             color = console.Color.RED
             role = Role.USER
+            learning_event = LearningEvent.ACTION_FAILURE
         elif isinstance(result, Success):
             prefix = "[ACTION EXECUTED]"
             color = console.Color.YELLOW
             role = Role.USER
+            learning_event = LearningEvent.ACTION_SUCCESS
         else:
             continue
 
@@ -357,6 +368,14 @@ def process_action_results(agent):
 
         if agent.memory:
             agent.memory.add_message(role, agent_msg)
+
+        learning_manager = get_learning_manager()
+        learning_manager.record_dynamic_learning(
+            learning_event,
+            result.agent_message,
+            hint=result.hint,
+            context=result.context,
+        )
 
         console_lines = [
             console.bullet(
@@ -402,9 +421,22 @@ class AgentTeam(ABC):
 class SingleAgentTeam(AgentTeam):
     agent: Agent
 
-    def __init__(self, task: str, entity: AgentEntity, runner: Runner, cache=None, model=None):
+    def __init__(
+        self,
+        task: str,
+        entity: AgentEntity,
+        runner: Runner,
+        *,
+        learning_manager=None,
+        cache=None,
+        model=None,
+    ):
         agent_mem = SummarizingMemory(cache=cache, model=model)
         agent_mem.add_message(Role.SYSTEM, task)
+
+        if learning_manager is not None:
+            learning_manager.apply_persistent_learnings(agent_mem)
+
         self.agent = Agent.build(runner, entity=entity, memory=agent_mem)
 
     def get_entity(self) -> Entity:
@@ -426,15 +458,33 @@ class TwoAgentTeam(AgentTeam):
     imaginator: Agent
     realisator: Agent
 
-    def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner, cache=None, model=None):
+    def __init__(
+        self,
+        task: str,
+        entity: AgentEntity,
+        imaginator: Runner,
+        realisator: Runner,
+        *,
+        learning_manager=None,
+        cache=None,
+        model=None,
+    ):
         self.imaginator = imaginator
         self.realisator = realisator
         img_mem = SummarizingMemory(max_tokens=200, cache=cache, model=model)
         img_mem.add_message(Role.SYSTEM, task)
+
+        if learning_manager is not None:
+            learning_manager.apply_persistent_learnings(img_mem)
+
         self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
 
         real_mem = Memory()
         real_mem.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Execute'")
+
+        if learning_manager is not None:
+            learning_manager.apply_persistent_learnings(real_mem)
+
         self.realisator = Agent.build(realisator, entity=entity, memory=real_mem, name="realisator")
 
     def get_entity(self) -> Entity:
@@ -475,32 +525,92 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float, realis
 
     console.pretty(console.banner(level.name, char="+", color=console.Color.BLUE))
 
+    learning_manager = get_learning_manager()
+    learning_manager.start_episode(
+        level_name=level.name,
+        configuration=getattr(config, "CONFIG", None),
+        model=model,
+    )
+
+    persistent_guidelines = learning_manager.get_guideline_prompts()
+    if persistent_guidelines:
+        lines = [
+            console.bullet("[learning] Loaded persistent meta learnings for this run:", color=console.Color.GREEN)
+        ]
+        lines.extend(
+            console.bullet(text, bullet="-", color=console.Color.GREEN)
+            for text in persistent_guidelines
+        )
+        console.pretty(*lines, spacing=0)
+
     teams = []
 
     for agentic in spec.agent_entities:
-        entity, prompt = agentic  
+        entity, prompt = agentic
         console.pretty(console.bullet(entity.name + "\t[PROMPT:] " + prompt, color=console.Color.BLUE))
 
         if config.CONFIG.imagine_feature:
             if(realisator is not None):
-                teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(realisator), cache=cache, model=model))
+                teams.append(
+                    TwoAgentTeam(
+                        prompt,
+                        entity,
+                        cache.get(model),
+                        cache.get(realisator),
+                        learning_manager=learning_manager,
+                        cache=cache,
+                        model=model,
+                    )
+                )
             else:
-                teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(model), cache=cache, model=model))
+                teams.append(
+                    TwoAgentTeam(
+                        prompt,
+                        entity,
+                        cache.get(model),
+                        cache.get(model),
+                        learning_manager=learning_manager,
+                        cache=cache,
+                        model=model,
+                    )
+                )
         else:
-            teams.append(SingleAgentTeam(prompt, entity, cache.get(model), cache=cache, model=model))
+            teams.append(
+                SingleAgentTeam(
+                    prompt,
+                    entity,
+                    cache.get(model),
+                    learning_manager=learning_manager,
+                    cache=cache,
+                    model=model,
+                )
+            )
 
-    for i in range(int(level.optimal_steps * optimal_steps_multilier)):
-        for team in teams:
-            current.RESULT.observation_count += 1
-            print(f"Observation: {i}")
-            observation = observe(team.get_entity().room, team.get_entity())
+    success = False
 
-            team.step(observation)
+    try:
+        for i in range(int(level.optimal_steps * optimal_steps_multilier)):
+            for team in teams:
+                current.RESULT.observation_count += 1
+                print(f"Observation: {i}")
+                observation = observe(team.get_entity().room, team.get_entity())
 
-        if(spec.is_success()):
-            print("Finished")
-            current.RESULT.success = 1
-            return
-        
-    current.RESULT.success = 0    
+                team.step(observation)
+
+                if spec.is_success():
+                    success = True
+                    break
+
+            if success:
+                print("Finished")
+                break
+
+        current.RESULT.success = 1 if success else 0
+    finally:
+        summary = learning_manager.finalize_episode(
+            success=success,
+            run_result=current.RESULT,
+        )
+        if summary:
+            console.pretty(console.box(summary, color=console.Color.MAGENTA))
     
