@@ -5,6 +5,16 @@ import json
 
 from llm.model import Backend
 
+
+def _approximate_token_count(text: str) -> int:
+    """Return a rough token count for a text snippet."""
+    # Using whitespace splitting provides a cheap lower bound that does not
+    # require a backend specific tokenizer. We still ensure a minimum of one
+    # token so that empty or whitespace-only messages do not break the
+    # heuristics that depend on the value.
+    tokens = len(text.split())
+    return max(1, tokens)
+
 class MemoryType(str, Enum):
     SIMPLE = "simple"
     WINDOW = "window"
@@ -141,3 +151,95 @@ class Memory(ABC):
 
         lines.append(debug_separator(color=color))
         pretty(*lines)
+
+
+class SummarizingMemory(Memory):
+    """Memory that compresses older messages when the context nears exhaustion."""
+
+    _SUMMARY_PREFIX = "[conversation-summary]"
+
+    def __init__(
+        self,
+        max_tokens: int,
+        trigger_ratio: float = 0.9,
+        preserve_recent: int = 6,
+    ) -> None:
+        if max_tokens <= 0:
+            raise ValueError("max_tokens must be a positive integer")
+
+        super().__init__()
+        self.max_tokens = int(max_tokens)
+        self.trigger_ratio = trigger_ratio
+        self.preserve_recent = max(2, preserve_recent)
+
+    def copy(self) -> "SummarizingMemory":
+        import copy
+
+        new_copy = self.__class__(
+            self.max_tokens,
+            trigger_ratio=self.trigger_ratio,
+            preserve_recent=self.preserve_recent,
+        )
+        new_copy._history = copy.deepcopy(self._history)
+        return new_copy
+
+    def add_message(self, role: Role, message: str) -> None:
+        super().add_message(role, message)
+        self._ensure_within_context()
+
+    def _ensure_within_context(self) -> None:
+        if not self.max_tokens:
+            return
+
+        current_tokens = sum(_approximate_token_count(msg) for _, msg in self._history)
+        threshold = int(self.max_tokens * self.trigger_ratio)
+        if current_tokens < threshold:
+            return
+
+        self._summarize_history()
+
+    def _summarize_history(self) -> None:
+        if len(self._history) <= self.preserve_recent:
+            return
+
+        head = self._history[:-self.preserve_recent]
+        tail = self._history[-self.preserve_recent:]
+
+        preserved_system: List[Tuple[Role, str]] = []
+        summarizable: List[Tuple[Role, str]] = []
+
+        for role, msg in head:
+            if role is Role.SYSTEM and msg.startswith(self._SUMMARY_PREFIX):
+                # Previous summaries should be merged into the new summary.
+                summarizable.append((role, msg[len(self._SUMMARY_PREFIX):].lstrip()))
+            elif role is Role.SYSTEM:
+                preserved_system.append((role, msg))
+            else:
+                summarizable.append((role, msg))
+
+        if not summarizable:
+            # Nothing that can be summarised – keep the original history.
+            return
+
+        summary_text = self._build_summary(summarizable)
+        summary_message = (Role.SYSTEM, f"{self._SUMMARY_PREFIX} {summary_text}")
+
+        self._history = preserved_system + [summary_message] + tail
+
+    def _build_summary(self, messages: List[Tuple[Role, str]]) -> str:
+        summary_tokens = max(32, self.max_tokens // 8)
+        max_words = summary_tokens
+        parts: List[str] = []
+        for role, msg in messages:
+            clean_msg = " ".join(str(msg).split())
+            parts.append(f"{role.value}: {clean_msg}")
+
+        if not parts:
+            return ""
+
+        words = " ".join(parts).split()
+        if len(words) <= max_words:
+            return " ".join(words)
+
+        truncated = " ".join(words[:max_words]) + " ..."
+        return truncated

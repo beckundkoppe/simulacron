@@ -48,7 +48,7 @@ class LlamaAgent(Agent):
         self.provider = LlamaCppPythonProvider(runner._llm)
         self.agent = LlamaCppAgent(self.provider)
         self._output_settings = None
-        self.memory = memory
+        self.memory = memory or runner.new_memory()
         self.tools: Sequence[Callable] = None
 
     def register_tools(self, tools: Sequence[Callable]) -> None:
@@ -67,10 +67,7 @@ class LlamaAgent(Agent):
      )
 
     def invoke(self, message: str, hint: str = "") -> str:
-        if self.memory is None:
-            memory = Memory()
-        else:
-            memory = self.memory
+        memory = self.memory
 
         history = BasicChatHistory(
             chat_history_strategy=BasicChatHistoryStrategy.last_k_messages,
@@ -116,7 +113,7 @@ class LangchainAgent(Agent):
         assert isinstance(runner, LangchainRunner)
         self.runner = runner
         self._llm = runner.llm
-        self.memory = memory
+        self.memory = memory or runner.new_memory()
 
     def register_tools(self, tools: Sequence[Callable]) -> None:
         self._tools = tools
@@ -217,10 +214,7 @@ class LangchainAgent(Agent):
 
         #-------------------------
 
-        if self.memory is None:
-            memory = Memory()
-        else:
-            memory = self.memory
+        memory = self.memory
 
         memory.add_message(Role.USER, message)
 
