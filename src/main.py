@@ -31,11 +31,11 @@ def main():
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        Model.Local.Ollama.DOLPHIN3_8B,
-        Levels.VAGUE_INSTRUCT.POTATO_EASY.value,
+        Model.Local.Ollama.Qwen3.VANILLA_8B,
+        Levels.DETAILED_INSTRUCT.POTATO_EASY.value,
         10,
         3.0,
-        Model.Local.Ollama.Granite.GRANITE4_3B,
+        extra_model=Model.Local.Ollama.Granite.GRANITE4_3B,
         )
     )
 
