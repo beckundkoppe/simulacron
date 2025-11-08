@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import json
+from typing import Optional, Set
 
 import config
 from config import PositionType
@@ -17,7 +18,7 @@ from enviroment.interaction import Depth, ObserverPerception
 from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
-from learning.manager import LearningEvent, get_learning_manager
+from learning.manager import LearningEvent, LearningSuggestion, get_learning_manager
 from llm.cache import Cache
 from llm.memory.memory import Memory, Role, SummarizingMemory
 from llm.model import Model
@@ -125,6 +126,32 @@ def trycatch(action, success_msg):
             context=getattr(e, "context", None),
         )
         current.RESULT.harderror_count += 1
+
+
+def _inform_agents_about_suggestion(suggestion: Optional[LearningSuggestion], *agents) -> None:
+    if suggestion is None:
+        return
+
+    console.pretty(
+        console.bullet(
+            f"[reflection] {suggestion.id}: {suggestion.content}",
+            color=console.Color.GREEN,
+        )
+    )
+
+    advisory = (
+        f"[REFLECTION:{suggestion.id}] {suggestion.content} "
+        "Use `list_learning_suggestions` to review and `store_meta_learning` to capture the distilled lesson."
+    )
+
+    for agent in agents:
+        if agent is None:
+            continue
+        memory = getattr(agent, "memory", None)
+        if memory is None:
+            continue
+        memory.add_message(Role.SYSTEM, advisory)
+
 
 def check_id(readable_id: str):
     for entity in World.entities:
@@ -258,7 +285,7 @@ def interact_with_object(object_id: str, operator: str) -> str:
 @tool
 def interact_with_object_using_item(object_id: str, using_id: str, operator: str) -> str:
     """The agent uses an item from inventory to interact with an object.
-    
+
     Args:
         object_id (str): The id of the object to interact with.
         using_id (str): The id of the item to use from inventory.
@@ -272,12 +299,48 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
             action = ActionTry(ActionType.UNLOCK, check_id(using_id))
         else:
             raise HardException("unknown operator for this action: {operator}")
-        
+
         return check_id(object_id).on_interact(current.AGENT.entity, action)
-    
+
     trycatch(helper, f"succeded with {operator} {object_id}")
 
     return ""
+
+
+@tool
+def list_learning_suggestions() -> str:
+    """List reflection prompts awaiting conversion into explicit meta learnings."""
+
+    learning_manager = get_learning_manager()
+    suggestions = learning_manager.get_pending_suggestions()
+    if not suggestions:
+        return "No pending reflection prompts."
+
+    lines = [
+        "Pending reflection prompts (use store_meta_learning to persist insights):",
+    ]
+    for suggestion in suggestions:
+        lines.append(f"- {suggestion.id}: {suggestion.content}")
+    return "\n".join(lines)
+
+
+@tool
+def store_meta_learning(
+    content: str,
+    category: str = "guideline",
+    persistence: str = "dynamic",
+    source: str = "",
+) -> str:
+    """Persist a meta-level learning. Persistence can be 'dynamic' or 'post_episode'."""
+
+    learning_manager = get_learning_manager()
+    normalized_source = source.strip() or None
+    return learning_manager.save_learning(
+        content=content,
+        category=category,
+        persistence=persistence,
+        source=normalized_source,
+    )
 
 
 def process_formal_errors(agent) -> bool:
@@ -308,12 +371,13 @@ def process_formal_errors(agent) -> bool:
                 agent.memory.add_message(role, agent_msg)
 
         learning_manager = get_learning_manager()
-        learning_manager.record_dynamic_learning(
+        suggestion = learning_manager.register_event(
             LearningEvent.FORMAL_ERROR,
             result.agent_message,
             hint=result.hint,
             context=result.context,
         )
+        _inform_agents_about_suggestion(suggestion, agent)
 
         console_lines = [
             console.bullet(
@@ -371,12 +435,13 @@ def process_action_results(agent):
             agent.memory.add_message(role, agent_msg)
 
         learning_manager = get_learning_manager()
-        learning_manager.record_dynamic_learning(
+        suggestion = learning_manager.register_event(
             learning_event,
             result.agent_message,
             hint=result.hint,
             context=result.context,
         )
+        _inform_agents_about_suggestion(suggestion, agent)
 
         console_lines = [
             console.bullet(
@@ -411,7 +476,16 @@ def process_results(agent):
     process_action_results(agent)
 
 
-TOOLS = [move_to_position, move_to_object, take_from, drop_to, interact_with_object, interact_with_object_using_item]
+TOOLS = [
+    move_to_position,
+    move_to_object,
+    take_from,
+    drop_to,
+    interact_with_object,
+    interact_with_object_using_item,
+    list_learning_suggestions,
+    store_meta_learning,
+]
 
 class AgentTeam(ABC):
     @abstractmethod
@@ -428,6 +502,15 @@ class SingleAgentTeam(AgentTeam):
 
         if learning_manager is not None:
             learning_manager.apply_persistent_learnings(agent_mem)
+            if learning_manager.enabled:
+                agent_mem.add_message(
+                    Role.SYSTEM,
+                    (
+                        "Whenever you make a mistake or succeed unexpectedly, call `list_learning_suggestions` to "
+                        "review reflection prompts. Derive high-level, reusable insights and persist them using "
+                        "`store_meta_learning`, choosing between dynamic or post_episode persistence."
+                    ),
+                )
 
         self.agent = Agent.build(runner, entity=entity, memory=agent_mem)
 
@@ -458,6 +541,14 @@ class TwoAgentTeam(AgentTeam):
 
         if learning_manager is not None:
             learning_manager.apply_persistent_learnings(img_mem)
+            if learning_manager.enabled:
+                img_mem.add_message(
+                    Role.SYSTEM,
+                    (
+                        "When reflection prompts arrive you must describe potential meta learnings in your plan using "
+                        "lines prefixed with 'LEARNING:' so the realisator can persist them."
+                    ),
+                )
 
         self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
 
@@ -466,8 +557,18 @@ class TwoAgentTeam(AgentTeam):
 
         if learning_manager is not None:
             learning_manager.apply_persistent_learnings(real_mem)
+            if learning_manager.enabled:
+                real_mem.add_message(
+                    Role.SYSTEM,
+                    (
+                        "Consult `list_learning_suggestions` for new reflection prompts and persist validated meta "
+                        "learnings with `store_meta_learning` when the imaginator highlights them. Keep learnings "
+                        "general and reusable."
+                    ),
+                )
 
         self.realisator = Agent.build(realisator, entity=entity, memory=real_mem, name="realisator")
+        self._known_suggestions: Set[str] = set()
 
     def get_entity(self) -> Entity:
         return self.imaginator.entity
@@ -477,6 +578,7 @@ class TwoAgentTeam(AgentTeam):
         print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
         self.imaginator.register_tools(None)
 
+        self._broadcast_new_suggestions()
         self.imaginator.memory.save("mem.txt")
         imagination = self.imaginator.invoke(observations, "Give best next action (short)")
 
@@ -490,16 +592,31 @@ class TwoAgentTeam(AgentTeam):
             #process_formal_errors(None) #delete formal errors from unallowed
             reply = self.realisator.invoke(observations + " PLAN: " + imagination, "Give the toolcalls that arise from the plan. (if something is unclear answer with a precice and short question)")
             keep_alive = process_formal_errors(self.realisator)
+            self._broadcast_new_suggestions()
             #print(">" + reply + "<")
-            
+
             if(len(reply) > 0):
                 #self.imaginator.memory.add_message(Role.USER, reply)
                 self.imaginator.memory.add_message(Role.USER, "last action was not specified well. please provide more explicit instruction")
                 keep_alive = False
 
         process_action_results(self.imaginator)
+        self._broadcast_new_suggestions()
 
         current.AGENT = None
+
+    def _broadcast_new_suggestions(self) -> None:
+        learning_manager = get_learning_manager()
+        for suggestion in learning_manager.get_pending_suggestions():
+            if suggestion.id in self._known_suggestions:
+                continue
+            note = (
+                f"[REFLECTION:{suggestion.id}] {suggestion.content} "
+                "Summarize as 'LEARNING:' lines so the realisator can persist them."
+            )
+            if self.imaginator.memory:
+                self.imaginator.memory.add_message(Role.SYSTEM, note)
+            self._known_suggestions.add(suggestion.id)
 
 def run_level(level: Level, optimal_steps_multilier: float, cache, main_model, realisator = None, extra_model = None):
     if(realisator is None):
