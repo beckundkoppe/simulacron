@@ -72,7 +72,6 @@ def observe(room: Room, observer: AgentEntity) -> str:
     data = {}
     data["you_are_in_room"] = {
         "name": room.name,
-        "position_format": position_format,
         "your_pos": position_value,
         "room_size": {
             "extend_x": room.extend_x,
@@ -302,8 +301,9 @@ def process_formal_errors(agent) -> bool:
         if result.hint:
             agent_msg = f"{agent_msg} Hint: {result.hint}"
 
-        if agent.memory:
-            agent.memory.add_message(role, agent_msg)
+        if agent is not None:
+            if agent.memory:
+                agent.memory.add_message(role, agent_msg)
 
         console_lines = [
             console.bullet(
@@ -379,7 +379,7 @@ def process_action_results(agent):
                 )
             )
 
-        console.pretty(*console_lines, spacing=0)
+        console.pretty(*console_lines)
     
     # Remove processed action results from buffer
     for result in to_remove:
@@ -416,7 +416,7 @@ class SingleAgentTeam(AgentTeam):
 
         _update_move_tool_description()
         self.agent.register_tools(TOOLS)
-        self.agent.invoke(observations, "Give best next action")
+        self.agent.invoke(observations, "Give best next action.")
 
         process_results(self.agent)
         current.AGENT = None
@@ -433,7 +433,7 @@ class TwoAgentTeam(AgentTeam):
         self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
 
         real_mem = realisator.new_memory()
-        real_mem.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Only one at a time. if you want to do another reply with '#next'")
+        real_mem.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Execute'")
         self.realisator = Agent.build(realisator, entity=entity, memory=real_mem, name="realisator")
 
     def get_entity(self) -> Entity:
@@ -442,26 +442,31 @@ class TwoAgentTeam(AgentTeam):
     def step(self, observations: str) -> str:
         current.AGENT = self.imaginator
         print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
+        self.imaginator.register_tools(None)
         imagination = self.imaginator.invoke(observations, "Give best next action (short)")
 
         _update_move_tool_description()
-        self.realisator.register_tools(TOOLS)
-
         self.realisator.memory = self.realisator.runner.new_memory()
-        self.realisator.memory.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Only one at a time. if you want to do another reply with '#next'")
+        self.realisator.memory.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls.")
 
         keep_alive = True
         while keep_alive:
-            reply = self.realisator.invoke(observations + " PLAN: " + imagination, "Give the toolcalls that arise from the plan (multiple allowed).")
+            self.realisator.register_tools(TOOLS)
+            #process_formal_errors(None) #delete formal errors from unallowed
+            reply = self.realisator.invoke(observations + " PLAN: " + imagination, "Give the toolcalls that arise from the plan. (if something is unclear answer with a precice and short question)")
             keep_alive = process_formal_errors(self.realisator)
-
-        
+            #print(">" + reply + "<")
+            
+            if(len(reply) > 0):
+                #self.imaginator.memory.add_message(Role.USER, reply)
+                self.imaginator.memory.add_message(Role.USER, "last action was not specified well. please provide more explicit instruction")
+                keep_alive = False
 
         process_action_results(self.imaginator)
 
         current.AGENT = None
 
-def run_level(cache, model, level: Level, optimal_steps_multilier: float):
+def run_level(cache, model, level: Level, optimal_steps_multilier: float, realisator):
 
     spec: LevelSpec = level.build()
 
@@ -472,9 +477,14 @@ def run_level(cache, model, level: Level, optimal_steps_multilier: float):
     for agentic in spec.agent_entities:
         entity, prompt = agentic  
         console.pretty(console.bullet(entity.name + "\t[PROMPT:] " + prompt, color=console.Color.BLUE))
-        #teams.append(SingleAgentTeam(prompt, entity, cache.get(model)))
-        teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(model)))
 
+        if config.CONFIG.imagine_feature:
+            if(realisator is not None):
+                teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(realisator)))
+            else:
+                teams.append(TwoAgentTeam(prompt, entity, cache.get(model), cache.get(model)))
+        else:
+            teams.append(SingleAgentTeam(prompt, entity, cache.get(model)))
 
     for i in range(int(level.optimal_steps * optimal_steps_multilier)):
         for team in teams:

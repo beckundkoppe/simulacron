@@ -32,9 +32,9 @@ def main():
     result1: RunResult = dispatcher.run_single(Run(
         config,
         Model.Local.LlamaCpp.LLAMA3_GROQ_8B_Q8,
-        Levels.POTATO_HARD.value,
+        Levels.VAGUE_INSTRUCT.POTATO_EASY.value,
         10,
-        3.0
+        3.0,
         )
     )
     

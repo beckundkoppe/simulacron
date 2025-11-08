@@ -6,7 +6,7 @@ from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
 
-def build_easy() -> LevelSpec:
+def build_easy(detailed_instruction: bool) -> LevelSpec:
     """
     Easy Level, where the agent has to get the potato from the other room, and put it on the table. 
     clear instruction.
@@ -49,14 +49,22 @@ def build_easy() -> LevelSpec:
     shelf2.enter(chamber)
     shelf2.add_child(diamond)
 
+    instr = ""
+    if detailed_instruction:
+        instr = "Goal: Find the potato in the other room, take it and place it on the table."
+    else:
+        instr = "Goal: Find the potato and place it on the table."
+
     return LevelSpec(
-        agent_entities=[
-            (tron,"Goal: Find the potato in the other room, take it and place it on the table."),
+        agent_entities=[(
+            tron,
+            instr
+            ),
         ],
         is_success=check_win_table_key,
     )
 
-def build_medium() -> LevelSpec:
+def build_medium(detailed_instruction) -> LevelSpec:
     """
     Medium Level:
     The agent must find the correct container holding the potato. The container needs to be opened.
@@ -108,15 +116,21 @@ def build_medium() -> LevelSpec:
     door_main.connect(door_chamber)
     door_chamber.connect(door_main)
 
+    instr = ""
+    if detailed_instruction:
+        instr = "Goal: Search the containers in the other room, find the potato, take it, and place it on the table."
+    else:
+        instr = "Goal: Find the potato and place it on the table."
+
     return LevelSpec(
         agent_entities=[(
             tron,
-            "Goal: Search the containers in the other room, find the potato, take it, and place it on the table."
+            instr
         )],
         is_success=check_win_table_key,
     )
 
-def build_hard() -> LevelSpec:
+def build_hard(detailed_instruction) -> LevelSpec:
     """
     Hard Level:
     The potato is locked in a chest in the other room.
@@ -171,10 +185,17 @@ def build_hard() -> LevelSpec:
     door_main.connect(door_chamber)
     door_chamber.connect(door_main)
 
+
+    instr = ""
+    if detailed_instruction:
+        instr = "Goal: Retrieve the potato locked in the chest in the other room. Use the key on the table to unlock it, take the potato, and place it on the table."
+    else:
+        instr = "Goal: Find the potato and place it on the table."
+
     return LevelSpec(
         agent_entities=[(
             tron,
-            "Goal: Retrieve the potato locked in the chest in the other room. Use the key on the table to unlock it, take the potato, and place it on the table.",
+            instr
         )],
         is_success=check_win_table_key,
     )

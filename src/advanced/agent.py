@@ -52,19 +52,23 @@ class LlamaAgent(Agent):
         self.tools: Sequence[Callable] = None
 
     def register_tools(self, tools: Sequence[Callable]) -> None:
-     """Register the given functions as LLM tools."""
-     valid_tools = []
-     for t in tools:
-         # requires _tool_meta from explicit @tool decoration
-         meta = getattr(t, "_tool_meta", None)
-         if not meta:
-             raise ValueError(f"Tool {t.__name__} must be decorated with @tool.")
-         valid_tools.append(t)
+        """Register the given functions as LLM tools."""
 
-     self._output_settings = LlmStructuredOutputSettings.from_functions(
-         valid_tools,
-         allow_parallel_function_calling=True,
-     )
+        if tools is None:
+            tools = []
+
+        valid_tools = []
+        for t in tools:
+             # requires _tool_meta from explicit @tool decoration
+             meta = getattr(t, "_tool_meta", None)
+             if not meta:
+                 raise ValueError(f"Tool {t.__name__} must be decorated with @tool.")
+             valid_tools.append(t)
+
+        self._output_settings = LlmStructuredOutputSettings.from_functions(
+            valid_tools,
+            allow_parallel_function_calling=True,
+        )
 
     def invoke(self, message: str, hint: str = "") -> str:
         memory = self.memory
@@ -114,9 +118,15 @@ class LangchainAgent(Agent):
         self.runner = runner
         self._llm = runner.llm
         self.memory = memory or runner.new_memory()
+        self._tools = None
 
     def register_tools(self, tools: Sequence[Callable]) -> None:
         self._tools = tools
+
+        if tools is None:
+            self._llm = self.runner.llm.bind_tools([])
+            return
+
         if(isinstance(self._llm, ChatOpenAI)):
             general_tools = [
                 # requires _tool_meta from explicit @tool decoration
@@ -127,7 +137,7 @@ class LangchainAgent(Agent):
                 )
                 for t in tools
             ]
-            self._llm = self.runner._llm.bind_tools(general_tools)
+            self._llm = self.runner.llm.bind_tools(general_tools)
         else:
             openai_tools: list[dict] = []
             for t in tools:
@@ -188,6 +198,13 @@ class LangchainAgent(Agent):
                 return cls(**data)
         
         def _execute_toolcall(tool_call: ToolCall) -> str:
+            if not self._tools:
+                FormalError(
+                    "toolcall failed: no tools registered for agent."
+                )
+                current.RESULT.harderror_count += 1
+                return ""
+            
             tool_map: Dict[str, Callable] = {}
             for t in self._tools:
                 if not hasattr(t, "_tool_meta"):
@@ -217,8 +234,12 @@ class LangchainAgent(Agent):
         memory = self.memory
 
         memory.add_message(Role.USER, message)
+        try:
+            result = self._llm.invoke(memory.get_history(self.runner.backend) + [{"role": Role.USER.value, "content": hint}])
+        except Exception as e:
+            FormalError(f"llm call failed: {str(e)}\nRETRY WITH A VALID ANSWER")
+            return
 
-        result = self._llm.invoke(memory.get_history(self.runner.backend) + [{"role": Role.USER.value, "content": hint}])
         if VERBOSE_BACKEND: console.json_dump(result)
 
         reply = result.content
@@ -227,6 +248,9 @@ class LangchainAgent(Agent):
             reply = ""
 
         console.pretty(console.bullet(f"[{self.name}] {reply}", color=console.Color.YELLOW))
+
+        if self._tools is None:
+            return
 
         valid_toolcall = False
         for raw in result.tool_calls:

@@ -68,8 +68,8 @@ class Model(Enum):
                     name="Deepseek-Coder-V2-16B-Q8",
                     tag="deepseek-coder_16b_q8",
                     location=Location.LOCAL,
-                    backend=Backend.OLLAMA,
-                    agent_backend=AgentBackend.LANGCHAIN,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
                     kind=ModelKind.HYBRID,
                     source=SourceHuggingface(
                         repo_id="lmstudio-community/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
@@ -83,8 +83,8 @@ class Model(Enum):
                     name="Deepseek-Coder-V2-16B-Q4",
                     tag="deepseek-coder_16b_q4",
                     location=Location.LOCAL,
-                    backend=Backend.OLLAMA,
-                    agent_backend=AgentBackend.LANGCHAIN,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
                     kind=ModelKind.HYBRID,
                     source=SourceHuggingface(
                         repo_id="lmstudio-community/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
@@ -106,6 +106,36 @@ class Model(Enum):
                         filename="DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf",
                         local_dir="data/model/"
                         #https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF/blob/main/DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf
+                    ),
+                )
+
+                NEMOTRON_14B_Q8 = ModelSpec(
+                    name="Nemotron-Qwen2.4-14B-Q8",
+                    tag="nemotron_qwen_14B",
+                    location=Location.LOCAL,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="bartowski/nvidia_OpenReasoning-Nemotron-14B-GGUF",
+                        filename="nvidia_OpenReasoning-Nemotron-14B-Q4_0.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/bartowski/nvidia_OpenReasoning-Nemotron-14B-GGUF
+                    ),
+                )
+
+                NEMOTRON_14B_Q4 = ModelSpec(
+                    name="Nemotron-Qwen2.4-14B-Q4",
+                    tag="nemotron_qwen_14B",
+                    location=Location.LOCAL,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="bartowski/nvidia_OpenReasoning-Nemotron-14B-GGUF",
+                        filename="nvidia_OpenReasoning-Nemotron-14B-Q8_0.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/bartowski/nvidia_OpenReasoning-Nemotron-14B-GGUF
                     ),
                 )
 
@@ -256,6 +286,71 @@ class Model(Enum):
                 source=SourceOllama(
                     model_id="gpt-oss:20b",
                     #https://ollama.com/library/gpt-oss
+                ),
+            )
+
+            #DEEPSEEK_R1_14B = ModelSpec(
+            #    name="DEEPSEEK-R1_14B",
+            #    tag="deepseek-r1_14B",
+            #    location=Location.LOCAL,
+            #    backend=Backend.OLLAMA,
+            #    agent_backend=AgentBackend.LANGCHAIN,
+            #    kind=ModelKind.HYBRID,
+            #    source=SourceOllama(
+            #        model_id="deepseek-r1:14b",
+            #        #https://ollama.com/library/gpt-oss
+            #    ),
+            #)
+
+            DOLPHIN3_8B = ModelSpec(
+                name="Dolphin3-8B",
+                tag="dolphin3_8b",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceOllama(
+                    model_id="dolphin3:8b",
+                    #https://ollama.com/library/dolphin3
+                ),
+            )
+
+            COGITO_8B = ModelSpec(
+                name="Cogito-8B",
+                tag="cogito_8b",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceOllama(
+                    model_id="cogito:8b",
+                    #https://ollama.com/library/cogito
+                ),
+            )
+
+            COGITO_14B = ModelSpec(
+                name="Cogito-14B",
+                tag="cogito_14b",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceOllama(
+                    model_id="cogito:8b",
+                    #https://ollama.com/library/cogito
+                ),
+            )
+
+            EXAONE_32B = ModelSpec(
+                name="Exaone_32B",
+                tag="exaone_32b",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceOllama(
+                    model_id="exaone-deep:32b",
+                    #https://ollama.com/library/exaone-deep
                 ),
             )
 

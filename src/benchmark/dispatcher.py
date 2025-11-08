@@ -17,6 +17,7 @@ class Run:
     level: Level
     reruns: int
     optimal_steps_multiplier: float
+    realisator: Model = None
 
 class Dispatcher:
     def __init__(self, cache):
@@ -39,8 +40,11 @@ class Dispatcher:
 
             self.cache.get(run.model) # load model before starting timer
 
+            if(run.realisator is not None):
+                self.cache.get(run.realisator)
+
             start_time = time.time()
-            game.run_level(self.cache, run.model, run.level, run.optimal_steps_multiplier)
+            game.run_level(self.cache, run.model, run.level, run.optimal_steps_multiplier, run.realisator)
             end_time = time.time()
             result.time_s = end_time - start_time
 
