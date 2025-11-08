@@ -14,7 +14,7 @@ from enviroment.interaction import Depth, ObserverPerception
 from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
-from llm.memory.memory import Memory, Role
+from llm.memory.memory import Role
 from llm.model import Model
 from llm.runner import Runner
 
@@ -337,7 +337,7 @@ class SingleAgentTeam(AgentTeam):
     agent: Agent
 
     def __init__(self, task: str, entity: AgentEntity, runner: Runner):
-        agent_mem = Memory()
+        agent_mem = runner.new_memory()
         agent_mem.add_message(Role.SYSTEM, task)
         self.agent = Agent.build(runner, entity=entity, memory=agent_mem)
 
@@ -361,11 +361,11 @@ class TwoAgentTeam(AgentTeam):
     def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner):
         self.imaginator = imaginator
         self.realisator = realisator
-        img_mem = Memory()
+        img_mem = imaginator.new_memory()
         img_mem.add_message(Role.SYSTEM, task)
         self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
 
-        real_mem = Memory()
+        real_mem = realisator.new_memory()
         real_mem.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Only one at a time. if you want to do another reply with '#next'")
         self.realisator = Agent.build(realisator, entity=entity, memory=real_mem, name="realisator")
 
@@ -379,7 +379,7 @@ class TwoAgentTeam(AgentTeam):
 
         self.realisator.register_tools(TOOLS)
 
-        self.realisator.memory = Memory()
+        self.realisator.memory = self.realisator.runner.new_memory()
         self.realisator.memory.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Only one at a time. if you want to do another reply with '#next'")
 
         keep_alive = True
