@@ -59,13 +59,34 @@ class Entity:
 
     def _distance_to_actor(self, actor_entity: "Entity") -> float | None:
         # Returns Euclidean distance if both positions exist, else None.
-        ownPos = actor_entity.room.get_root_entity(self).pos
-
-        if actor_entity is None or ownPos is None or actor_entity.pos is None:
+        if actor_entity is None:
             return None
-        dx = (ownPos.x - actor_entity.pos.x)
-        dy = (ownPos.y - actor_entity.pos.y)
-        return (dx * dx + dy * dy) ** 0.5
+
+        actor_room = actor_entity.room
+        root_entity = actor_room.get_root_entity(self) if actor_room else None
+
+        if (
+            root_entity is None
+            or root_entity.pos is None
+            or actor_entity.pos is None
+        ):
+            return None
+
+        return root_entity.pos.distanceTo(actor_entity.pos)
+
+    @staticmethod
+    def _format_position_for_agent(pos: Position, room: Room | None) -> str:
+        active_config = getattr(config, "CONFIG", None)
+
+        if room is None or active_config is None:
+            return f"({pos.x:.1f}, {pos.y:.1f})"
+
+        mapped = pos.map(room)
+        if mapped.type == config.PositionType.CHESSBOARD:
+            return mapped.toString()
+        if mapped.type == config.PositionType.ROOMLESS:
+            return mapped.toString()
+        return f"({mapped.x:.1f}, {mapped.y:.1f})"
 
     def _ensure_in_range(self, actor_entity: "Entity") -> None:
         # Enforce max interaction radius.
@@ -123,8 +144,8 @@ class Entity:
     def enter(self, room: Room):
         if self.room is None:
             assert room.isPosInRoom(self.pos), (
-                f"Position: ({self.pos.x, self.pos.y}) from {self.name} does not fit in Room:{room.name}"
-                f" ({room.extend_x,room.extend_y})"
+                f"Position: {self._format_position_for_agent(self.pos, room)} from {self.name} "
+                f"does not fit in Room:{room.name} ({room.extend_x,room.extend_y})"
             )
 
             room.entities.add(self)
@@ -746,7 +767,8 @@ class AgentEntity(Entity):
             raise HardException(
                 "You are not currently inside a room.",
                 console_message=(
-                    f"Agent '{self.readable_id}' attempted to move to position ({pos.x:.1f}, {pos.y:.1f}) without being in a room."
+                    f"Agent '{self.readable_id}' attempted to move to position "
+                    f"{self._format_position_for_agent(pos, room)} without being in a room."
                 ),
                 hint="Ensure the agent has entered a room before moving.",
                 context={
@@ -758,7 +780,7 @@ class AgentEntity(Entity):
             raise SoftException(
                 f"You can't move past the walls of {room.name}.",
                 console_message=(
-                    f"Requested position ({pos.x:.1f}, {pos.y:.1f}) lies outside room "
+                    f"Requested position {self._format_position_for_agent(pos, room)} lies outside room "
                     f"'{room.name}' with bounds x<= {room.extend_x}, y<= {room.extend_y}."
                 ),
                 hint="Stay within the room dimensions reported in the observation.",
