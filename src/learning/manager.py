@@ -127,7 +127,7 @@ class LearningManager:
     """Coordinates dynamic and persistent learnings across episodes."""
 
     def __init__(self, repository: Optional[LearningRepository] = None) -> None:
-        storage_path = Path("resources/learnings.json")
+        storage_path = Path("learnings.json")
         self.repository = repository or LearningRepository(storage_path)
         self.enabled: bool = False
         self._episode: Optional[EpisodeContext] = None
