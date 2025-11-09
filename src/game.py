@@ -521,9 +521,10 @@ class SingleAgentTeam(AgentTeam):
                 agent_mem.add_message(
                     Role.SYSTEM,
                     (
-                        "Reflection prompts arrive in batches—use `list_learning_suggestions` when notified, evaluate "
-                        "whether a high-quality, generalisable learning exists, persist it with `store_meta_learning`, "
-                        "and keep usefulness scores up to date via `rate_meta_learning`."
+                        "Review prompts arrive in batches. Call `list_learning_suggestions` to read them, decide if a "
+                        "transferable lesson exists, and when you commit to one call `store_meta_learning` with "
+                        "persistence='post_episode' plus the review id in `source`. Immediately follow up with "
+                        "`rate_meta_learning` using the core/useful/niche/retire labels so the catalog stays ranked."
                     ),
                 )
 
@@ -561,9 +562,9 @@ class TwoAgentTeam(AgentTeam):
                 img_mem.add_message(
                     Role.SYSTEM,
                     (
-                        "Reflection prompts are batched; when they appear, analyse whether a transferable insight exists, "
-                        "note it in the plan with 'LEARNING:' including context and a suggested rating label (core/useful/" 
-                        "niche/retire) so the realisator can act on it."
+                        "You curate the review process. When a review prompt arrives, decide whether a durable lesson "
+                        "exists. If you want the realisator to act, add 'LEARNING:' lines that summarise the takeaway, "
+                        "cite the review id, and suggest a rating label (core/useful/niche/retire)."
                     ),
                 )
 
@@ -615,8 +616,9 @@ class TwoAgentTeam(AgentTeam):
             if suggestion.id in self._known_suggestions:
                 continue
             note = (
-                f"[REFLECTION:{suggestion.id}] {suggestion.content} "
-                "Summarize as 'LEARNING:' lines so the realisator can persist them."
+                f"[REVIEW:{suggestion.id}] {suggestion.content} "
+                "Decide whether an enduring lesson exists. If it does, write 'LEARNING:' lines with the takeaway, "
+                "a rating hint, and the source id so the realisator knows which tools to call."
             )
             if self.imaginator.memory:
                 self.imaginator.memory.add_message(Role.SYSTEM, note)
@@ -639,10 +641,10 @@ class TwoAgentTeam(AgentTeam):
                 mem.add_message(
                     Role.SYSTEM,
                     (
-                        "Whenever reflection prompts are announced or LEARNING notes appear, call `list_learning_suggestions`, "
-                        "condense them into short, general lessons that drop specific ids or raw metrics, persist them with "
-                        "`store_meta_learning` (use persistence='post_episode' and include the prompt id via the `source` "
-                        "argument), and keep usefulness labels current via `rate_meta_learning`."
+                        "When the imaginator provides LEARNING notes or references a review id, call `list_learning_suggestions` "
+                        "to reread the prompt, then execute the memory tools: store the lesson with "
+                        "`store_meta_learning` (persistence='post_episode', source=<review id>) and immediately follow with "
+                        "`rate_meta_learning`. Do not invent new lessons without their approval."
                     ),
                 )
                 mem.add_message(
@@ -657,10 +659,10 @@ class TwoAgentTeam(AgentTeam):
             mem.add_message(
                 Role.SYSTEM,
                 (
-                    "You are in a dedicated learning phase. Ignore environment manipulation tools and focus on the memory "
-                    "tools only. Review all pending reflection prompts, derive at most two-sentence guidance that generalises "
-                    "beyond the current map, store each lesson with `store_meta_learning`, rate it, and conclude with a short "
-                    "summary of what you archived."
+                    "You are in a dedicated review window. Ignore environment tools and work through the pending review "
+                    "prompts. For each review, follow the imaginator's LEARNING directives (or craft a concise lesson if none "
+                    "exist), store it with `store_meta_learning` using the review id in `source`, rate it, and finish with a "
+                    "brief summary of the archived guidance."
                 ),
             )
 
@@ -686,13 +688,13 @@ class TwoAgentTeam(AgentTeam):
 
             suggestion_ids = ", ".join(sorted(s.id for s in pending))
             message = (
-                "Learning consolidation requested. Pending reflection prompt ids: "
-                f"{suggestion_ids if suggestion_ids else 'none'}."
+                "Learning consolidation requested. Pending review prompt ids: "
+                f"{suggestion_ids if suggestion_ids else 'none'}. Follow the imaginator's LEARNING directives for each." 
             )
             hint = (
-                "Call `list_learning_suggestions` to read each prompt, transform them into concise reusable guidance, "
-                "persist them with `store_meta_learning` (persistence='post_episode', include `source`), rate them, and "
-                "finish with a short textual summary of the archived lessons."
+                "Use `list_learning_suggestions` to reread each review, execute `store_meta_learning` with "
+                "persistence='post_episode' and the appropriate review id in `source`, rate every stored lesson via "
+                "`rate_meta_learning`, and conclude with a short textual summary of the archived guidance."
             )
             self.realisator.invoke(message, hint)
 
