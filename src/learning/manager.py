@@ -771,29 +771,69 @@ class LearningManager:
             else:
                 guidelines.append(base_message)
         if not guidelines:
-            outcome = "Succeeded" if success else "Did not succeed"
-            guidelines.append(f"Episode outcome: {outcome}. Continue refining strategies.")
+            has_manual_guideline = any(
+                item.metadata.get("category") == "guideline"
+                for item in self._episode.post_episode
+            )
+            if not has_manual_guideline:
+                outcome = "Succeeded" if success else "Did not succeed"
+                guidelines.append(
+                    f"Episode outcome: {outcome}. Continue refining strategies."
+                )
         return self._deduplicate(guidelines)
 
     def _build_summary(self, success: bool, run_result: Optional["RunResult"]) -> Optional[str]:
         if not self._episode:
             return None
-        lines: List[str] = [
-            "Critical reflection after episode:",
-            f"Outcome: {'success' if success else 'failure'}",
-        ]
+        lines: List[str] = ["Critical reflection after episode:"]
+        outcome_text = (
+            "The team succeeded in completing the objective."
+            if success
+            else "The objective remains unresolved; capture the blockers before retrying."
+        )
+        lines.append(outcome_text)
+
         if run_result is not None:
+            metrics: List[str] = []
+            toolcalls = getattr(run_result, "toolcall_count", None)
+            if toolcalls:
+                metrics.append(f"issued {toolcalls} tool calls")
+            observations = getattr(run_result, "observation_count", None)
+            if observations:
+                metrics.append(f"processed {observations} observations")
+            soft_errors = getattr(run_result, "softerror_count", None)
+            hard_errors = getattr(run_result, "harderror_count", None)
+            error_fragments: List[str] = []
+            if soft_errors:
+                error_fragments.append(f"{soft_errors} soft error{'s' if soft_errors != 1 else ''}")
+            if hard_errors:
+                error_fragments.append(f"{hard_errors} hard error{'s' if hard_errors != 1 else ''}")
+            if error_fragments:
+                metrics.append("encountered " + " and ".join(error_fragments))
+            if metrics:
+                lines.append("Run snapshot: " + ", ".join(metrics) + ".")
+
+        newly_archived = [
+            learning.content
+            for learning in self._episode.post_episode
+            if learning.metadata.get("category") == "guideline"
+            and learning.metadata.get("prompt_source")
+        ]
+        if not newly_archived:
+            newly_archived = [
+                learning.content
+                for learning in self._episode.dynamic
+            ]
+
+        if newly_archived:
+            lines.append("Captured guidance for future runs:")
+            for entry in newly_archived[:5]:
+                lines.append(f"- {entry}")
+        else:
             lines.append(
-                "Performance metrics: "
-                f"toolcalls={getattr(run_result, 'toolcall_count', 0)}, "
-                f"observations={getattr(run_result, 'observation_count', 0)}, "
-                f"soft_errors={getattr(run_result, 'softerror_count', 0)}, "
-                f"hard_errors={getattr(run_result, 'harderror_count', 0)}"
+                "No reusable guidance was recorded. Schedule a focused learning pass before the next attempt."
             )
-        if self._episode.dynamic:
-            lines.append("Key learnings observed during the episode:")
-            for learning in self._episode.dynamic:
-                lines.append(f"- {learning.content}")
+
         return "\n".join(lines)
 
     @staticmethod
