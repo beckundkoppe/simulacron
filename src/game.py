@@ -551,6 +551,7 @@ class TwoAgentTeam(AgentTeam):
     def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner, extra: Runner, learning_manager=None):
         self.imaginator = imaginator
         self.realisator = realisator
+        self._learning_manager = learning_manager
         img_mem = SummarizingMemory(model=extra)
         img_mem.add_message(Role.SYSTEM, task)
 
@@ -568,20 +569,7 @@ class TwoAgentTeam(AgentTeam):
 
         self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
 
-        real_mem = Memory()
-        real_mem.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls. Execute'")
-
-        if learning_manager is not None:
-            learning_manager.apply_persistent_learnings(real_mem)
-            if learning_manager.enabled:
-                real_mem.add_message(
-                    Role.SYSTEM,
-                    (
-                        "Consult `list_learning_suggestions` for batched prompts, capture only broadly useful meta "
-                        "learnings with `store_meta_learning`, and record usefulness with `rate_meta_learning` using the "
-                        "core/useful/niche/retire scale."
-                    ),
-                )
+        real_mem = self._build_realisator_memory()
 
         self.realisator = Agent.build(realisator, entity=entity, memory=real_mem, name="realisator")
         self._known_suggestions: Set[str] = set()
@@ -599,8 +587,7 @@ class TwoAgentTeam(AgentTeam):
         imagination = self.imaginator.invoke(observations, "Give best next action (short)")
 
         _update_move_tool_description()
-        self.realisator.memory = Memory()
-        self.realisator.memory.add_message(Role.SYSTEM, "Realise the plans you are given with the available toolcalls.")
+        self._reset_realisator_memory()
 
         keep_alive = True
         while keep_alive:
@@ -618,6 +605,7 @@ class TwoAgentTeam(AgentTeam):
 
         process_action_results(self.imaginator)
         self._broadcast_new_suggestions()
+        self._run_learning_phase()
 
         current.AGENT = None
 
@@ -633,6 +621,89 @@ class TwoAgentTeam(AgentTeam):
             if self.imaginator.memory:
                 self.imaginator.memory.add_message(Role.SYSTEM, note)
             self._known_suggestions.add(suggestion.id)
+
+    def _build_realisator_memory(self, *, learning_mode: bool = False) -> Memory:
+        mem = Memory()
+        mem.add_message(
+            Role.SYSTEM,
+            (
+                "You are the realisator. Execute the imaginator's plans with precise tool calls, "
+                "and keep your replies minimal unless you must ask for clarification."
+            ),
+        )
+
+        learning_manager = self._learning_manager
+        if learning_manager is not None:
+            learning_manager.apply_persistent_learnings(mem)
+            if learning_manager.enabled:
+                mem.add_message(
+                    Role.SYSTEM,
+                    (
+                        "Whenever reflection prompts are announced or LEARNING notes appear, call `list_learning_suggestions`, "
+                        "condense them into short, general lessons that drop specific ids or raw metrics, persist them with "
+                        "`store_meta_learning` (use persistence='post_episode' and include the prompt id via the `source` "
+                        "argument), and keep usefulness labels current via `rate_meta_learning`."
+                    ),
+                )
+                mem.add_message(
+                    Role.SYSTEM,
+                    (
+                        "Keep the learning memory tidy: merge duplicates, retire obsolete advice, and summarise outcomes in "
+                        "plain language paragraphs rather than numeric tables."
+                    ),
+                )
+
+        if learning_mode:
+            mem.add_message(
+                Role.SYSTEM,
+                (
+                    "You are in a dedicated learning phase. Ignore environment manipulation tools and focus on the memory "
+                    "tools only. Review all pending reflection prompts, derive at most two-sentence guidance that generalises "
+                    "beyond the current map, store each lesson with `store_meta_learning`, rate it, and conclude with a short "
+                    "summary of what you archived."
+                ),
+            )
+
+        return mem
+
+    def _reset_realisator_memory(self, *, learning_mode: bool = False) -> None:
+        self.realisator.memory = self._build_realisator_memory(learning_mode=learning_mode)
+
+    def _run_learning_phase(self) -> None:
+        learning_manager = self._learning_manager or get_learning_manager()
+        if learning_manager is None or not learning_manager.enabled:
+            return
+
+        attempts = 0
+        while attempts < 2:
+            pending = learning_manager.get_pending_suggestions()
+            if not pending:
+                break
+
+            attempts += 1
+            self._reset_realisator_memory(learning_mode=True)
+            self.realisator.register_tools(TOOLS)
+
+            suggestion_ids = ", ".join(sorted(s.id for s in pending))
+            message = (
+                "Learning consolidation requested. Pending reflection prompt ids: "
+                f"{suggestion_ids if suggestion_ids else 'none'}."
+            )
+            hint = (
+                "Call `list_learning_suggestions` to read each prompt, transform them into concise reusable guidance, "
+                "persist them with `store_meta_learning` (persistence='post_episode', include `source`), rate them, and "
+                "finish with a short textual summary of the archived lessons."
+            )
+            self.realisator.invoke(message, hint)
+
+        if learning_manager.get_pending_suggestions():
+            console.pretty(
+                console.bullet(
+                    "[learning] Reflection prompts remain pending after the consolidation pass.",
+                    color=console.Color.YELLOW,
+                )
+            )
+
 
 def run_level(level: Level, optimal_steps_multilier: float, cache, main_model, realisator = None, extra_model = None):
     if(realisator is None):
