@@ -78,7 +78,7 @@ In another console, inside the simulacron folder, run:
 ./start
 ```
 
-This launches the main simulation executable.
+This launches the main executable.
 
 ## Repository Structure
 
