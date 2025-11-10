@@ -21,7 +21,7 @@
 On Arch-Linux to install Ollama run:
 
 ```bash
-# AMF-GPU and CPU-only
+# AMD-GPU and CPU-only
 paru -S ollama
 
 # For NVIDIA GPU acceleration (CUDA)
