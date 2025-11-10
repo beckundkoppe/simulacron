@@ -4,7 +4,7 @@
    <img alt="" src="resources/banner.png" width="512" />
 </p>
 
-**Simulacron** is a story engine that uses large language models to simulate interactive worlds and characters for research purposes.
+**Simulacron** is an engine that enables large language models to control agents in a simulate interactive world for research purposes.
 
 ## Features
 
