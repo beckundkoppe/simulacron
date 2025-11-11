@@ -1,33 +1,14 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 import json
-from typing import Optional, Set
-
+from agent.agent import Agent
 import config
 from config import PositionType
-from advanced.agent import Agent
-from advanced.tool import tool
-from enviroment import current
-from enviroment.action import ActionTry, ActionType
-from enviroment.exception import HardException, SoftException
+import current
+from enviroment.entity import AgentEntity
 from enviroment.levels.level import Level, LevelSpec
-from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
-from debug import console
-from enviroment.entity import AgentEntity, Entity
-from enviroment.interaction import Depth, ObserverPerception
+from util import console
+from enviroment.perception import DetailLevel
 from enviroment.position import Position
 from enviroment.room import Room
-from enviroment.world import World
-from learning.manager import LearningEvent, LearningSuggestion, get_learning_manager
-from llm.cache import Cache
-from llm.memory.memory import Memory, Role, SummarizingMemory
-from llm.model import Model
-from llm.runner import Runner
-
-
-def _active_position_type() -> PositionType:
-    configuration = getattr(config, "CONFIG", None)
-    return getattr(configuration, "position_type", PositionType.RELATIVE)
 
 
 def _position_payload(pos: Position, room: Room) -> tuple[str, object]:
@@ -42,35 +23,9 @@ def _position_payload(pos: Position, room: Room) -> tuple[str, object]:
     return ("relative", {"x": mapped.x, "y": mapped.y})
 
 
-def _update_move_tool_description() -> None:
-    mode = _active_position_type()
-    if mode == PositionType.CHESSBOARD:
-        args_desc = (
-            "        x (str): the file letter (a-h) of the destination square.\n"
-            "        y (str): the rank (1-8) of the destination square.\n"
-        )
-        mode_hint = "Current coordinate mode: chessboard (files a-h, ranks 1-8)."
-    else:
-        args_desc = (
-            "        x (float): the x coordinate inside the current room.\n"
-            "        y (float): the y coordinate inside the current room.\n"
-        )
-        mode_hint = "Current coordinate mode: relative floating point coordinates."
+def observe(observer: AgentEntity) -> str:
+    room = observer.room
 
-    description = (
-        "The human moves to a position.\n\n"
-        f"    {mode_hint}\n"
-        "\n"
-        "    Args:\n"
-        f"{args_desc}"
-    )
-
-    move_to_position.__doc__ = description
-    if hasattr(move_to_position, "_tool_meta"):
-        move_to_position._tool_meta["description"] = description
-
-
-def observe(room: Room, observer: AgentEntity) -> str:
     position_format, position_value = _position_payload(observer.pos, room)
     data = {}
     data["you_are_in_room"] = {
@@ -82,630 +37,95 @@ def observe(room: Room, observer: AgentEntity) -> str:
         }
     }
     data["your_inventory"] = observer.get_inventory()
-    data["your_observation"] = room.perceive(observer, Depth.OMNISCIENT)
+    data["your_observation"] = room.perceive(observer, DetailLevel.OMNISCIENT)
     return json.dumps(data)
 
-def trycatch(action, success_msg):
-    try:
-        msg = ""
-        message = action() #message is None <--------
-        if message is None:
-            msg = success_msg
-        else:
-            msg = message
-
-        Success(msg)
-        current.RESULT.toolcall_count += 1
-    except SoftException as s:
-        agent_msg = getattr(s, "agent_message", str(s))
-        console_msg = getattr(s, "console_message", agent_msg)
-        ActionNotPossible(
-            agent_msg,
-            console_msg,
-            hint=getattr(s, "hint", None),
-            context=getattr(s, "context", None),
-        )
-        current.RESULT.softerror_count += 1
-    except HardException as h:
-        agent_msg = getattr(h, "agent_message", str(h))
-        console_msg = getattr(h, "console_message", agent_msg)
-        FormalError(
-            agent_msg,
-            console_msg,
-            hint=getattr(h, "hint", None),
-            context=getattr(h, "context", None),
-        )
-        current.RESULT.harderror_count += 1
-    except Exception as e:
-        agent_msg = getattr(e, "agent_message", str(e))
-        console_msg = getattr(e, "console_message", agent_msg)
-        FormalError(
-            agent_msg,
-            console_msg,
-            hint=getattr(e, "hint", None),
-            context=getattr(e, "context", None),
-        )
-        current.RESULT.harderror_count += 1
-
-
-def _inform_agents_about_suggestion(suggestion: Optional[LearningSuggestion], *agents) -> None:
-    if suggestion is None:
-        return
-
-    console.pretty(
-        console.bullet(
-            f"[reflection] {suggestion.id}: {suggestion.content}",
-            color=console.Color.GREEN,
-        )
-    )
-
-    advisory = (
-        f"[REFLECTION:{suggestion.id}] {suggestion.content} "
-        "Use `list_learning_suggestions` to review and `store_meta_learning` to capture the distilled lesson."
-    )
-
-    for agent in agents:
-        if agent is None:
-            continue
-        memory = getattr(agent, "memory", None)
-        if memory is None:
-            continue
-        memory.add_message(Role.SYSTEM, advisory)
-
-
-def check_id(readable_id: str):
-    for entity in World.entities:
-        if entity.readable_id == readable_id:
-            return entity
-
-    agent_entity = getattr(current.AGENT, "entity", None)
-    room = agent_entity.room if agent_entity and agent_entity.room else None
-    available_ids: list[str] = []
-    if room:
-        for ent in room.entities:
-            if ent and ent.readable_id:
-                available_ids.append(ent.readable_id)
-
-    raise HardException(
-        f"No object named '{readable_id}' is available in your current room.",
-        console_message=(
-            f"Lookup failed for '{readable_id}'. Room "
-            f"'{room.name if room else 'unknown'}' currently exposes: "
-            f"{', '.join(sorted(available_ids)) or 'no interactive objects'}."
-        ),
-        hint="Check your latest observation for the correct identifier or move closer to the target.",
-        context={
-            "requested_id": readable_id,
-            "room": room.readable_id if room else None,
-            "available_ids": sorted(available_ids),
-        },
-    )
-
-@tool
-def move_to_position(x: str, y: str) -> str:
-    """The human moves to a position."""
-
-    def _perform_move():
-        agent = getattr(current.AGENT, "entity", None)
-        if agent is None:
-            raise HardException(
-                "No agent entity is available to perform the movement.",
-                console_message="move_to_position was invoked without an active agent entity.",
-            )
-
-        room = agent.room
-        try:
-            position = Position.from_input(x, y, room)
-        except ValueError as exc:
-            raise HardException(
-                "The provided coordinates could not be interpreted.",
-                console_message=(
-                    f"Failed to parse coordinates x='{x}', y='{y}' with mode "
-                    f"{_active_position_type().name.lower()}: {exc}"
-                ),
-                hint="Consult the observation field 'position_format' for the expected coordinate style.",
-            ) from exc
-
-        return agent.move_to_position(position)
-
-    trycatch(_perform_move, "moved succesfully")
-
-    return ""
-
-@tool
-def move_to_object(object_id: str) -> str:
-    """The human moves to a position.
-
-    Args:
-        object_id (str): the id of the object to move to
-    """
-
-    trycatch(lambda: current.AGENT.entity.move_to_object(check_id(object_id)), "moved succesfully")
-
-    return ""
-        
-@tool
-def take_from(what_id: str, from_id: str) -> str:
-    """The human picks up an item A from a object B and adds it to their inventory. Only use this, when you are nearby B.
-    
-    Args:
-        what_id (str): the id of item A to be taken.
-        from_id (str): the id of object B from which the item is taken or 'FLOOR' for the floor
-    """
-    
-    if(from_id.upper() == "FLOOR"):
-        trycatch(lambda: current.AGENT.entity.take(check_id(what_id)), f"collected {what_id}")
-
-    else:
-        trycatch(lambda: current.AGENT.entity.take_from(check_id(what_id), check_id(from_id)), f"collected {what_id} from {from_id}")
-
-    return ""
-
-@tool
-def drop_to(what_id: str, to_id: str) -> str:
-    """The human drops an item A from their inventory into or onto another object B. Only use this, when you are nearby B.
-    
-    Args:
-        what_id (str): the the id of the item A to be dropped.
-        to_id (str): the id of the object B where the item is placed or 'FLOOR' for the floor
-    """
-
-    if(to_id.upper() == "FLOOR"):
-        trycatch(lambda: current.AGENT.entity.drop(check_id(what_id)), f"dropped {what_id}")
-    else:
-        trycatch(lambda: current.AGENT.entity.drop_into(check_id(what_id), check_id(to_id)), f"dropped {what_id} into {to_id}")
-
-    return ""
-
-@tool
-def interact_with_object(object_id: str, operator: str) -> str:
-    """The agent interacts with an object using a specific operator.
-    
-    Args:
-        object_id (str): the the id of the item A to be dropped.
-        operator (str): The action to perform. Allowed values: OPEN, CLOSE, GO_THROUGH.
-    """
-
-    def helper():
-        if(operator.upper() == "OPEN"):
-            action = ActionTry(ActionType.OPEN)
-        elif (operator.upper() == "CLOSE"):
-            action = ActionTry(ActionType.CLOSE)
-        elif (operator.upper() == "GO_THROUGH"):
-            action = ActionTry(ActionType.USE)
-        else:
-            raise HardException("unknown operator for this action: {operator}")
-        
-        return check_id(object_id).on_interact(current.AGENT.entity, action)
-    
-    trycatch(helper, f"succeded with {operator} {object_id}")
-
-    return ""
-
-@tool
-def interact_with_object_using_item(object_id: str, using_id: str, operator: str) -> str:
-    """The agent uses an item from inventory to interact with an object.
-
-    Args:
-        object_id (str): The id of the object to interact with.
-        using_id (str): The id of the item to use from inventory.
-        operator (str): The action to perform. Allowed values: LOCK, UNLOCK.
-    """
-
-    def helper():
-        if(operator.upper() == "LOCK"):
-            action = ActionTry(ActionType.LOCK, check_id(using_id))
-        elif (operator.upper() == "UNLOCK"):
-            action = ActionTry(ActionType.UNLOCK, check_id(using_id))
-        else:
-            raise HardException("unknown operator for this action: {operator}")
-
-        return check_id(object_id).on_interact(current.AGENT.entity, action)
-
-    trycatch(helper, f"succeded with {operator} {object_id}")
-
-    return ""
-
-
-@tool
-def list_learning_suggestions() -> str:
-    """List reflection prompts awaiting conversion into explicit meta learnings."""
-
-    learning_manager = get_learning_manager()
-    suggestions = learning_manager.get_pending_suggestions()
-    if not suggestions:
-        return "No pending reflection prompts."
-
-    lines = [
-        "Pending reflection prompts (capture insights with store_meta_learning and rate them via rate_meta_learning):",
-    ]
-    for suggestion in suggestions:
-        lines.append(f"- {suggestion.id}: {suggestion.content}")
-    return "\n".join(lines)
-
-
-@tool
-def store_meta_learning(
-    content: str,
-    category: str = "guideline",
-    persistence: str = "dynamic",
-    source: str = "",
-) -> str:
-    """Persist a meta-level learning. Persistence can be 'dynamic' or 'post_episode'."""
-
-    learning_manager = get_learning_manager()
-    normalized_source = source.strip() or None
-    return learning_manager.save_learning(
-        content=content,
-        category=category,
-        persistence=persistence,
-        source=normalized_source,
-    )
-
-
-@tool
-def rate_meta_learning(content: str, label: str, score: Optional[float] = None, rationale: str = "") -> str:
-    """Update the usefulness rating of an existing learning (labels: core, useful, niche, retire)."""
-
-    learning_manager = get_learning_manager()
-    rationale_text = rationale.strip() or None
-    return learning_manager.rate_learning(
-        content=content,
-        label=label,
-        score=score,
-        rationale=rationale_text,
-    )
-
-
-def process_formal_errors(agent) -> bool:
-    """Process FormalError results from the result buffer and clear them.
-    
-    Returns:
-        True if any FormalError was found and processed, False otherwise.
-    """
-    has_error = False
-    to_remove = []
-    
-    for result in Resultbuffer.buffer:
-        if not isinstance(result, FormalError):
-            continue
-
-        has_error = True
-        to_remove.append(result)
-        prefix = "[FORMAL ERROR]"
-        color = console.Color.RED
-        role = Role.SYSTEM
-
-        agent_msg = f"{prefix} {result.agent_message}"
-        if result.hint:
-            agent_msg = f"{agent_msg} Hint: {result.hint}"
-
-        if agent is not None:
-            if agent.memory:
-                agent.memory.add_message(role, agent_msg)
-
-        learning_manager = get_learning_manager()
-        suggestion = learning_manager.register_event(
-            LearningEvent.FORMAL_ERROR,
-            result.agent_message,
-            hint=result.hint,
-            context=result.context,
-        )
-        _inform_agents_about_suggestion(suggestion, agent)
-
-        console_lines = [
-            console.bullet(
-                f"[toolcall] {prefix} {result.console_message}",
-                color=color,
-            )
-        ]
-        if result.hint:
-            console_lines.append(
-                console.bullet(
-                    f"\nHint: {result.hint}",
-                    color=console.Color.CYAN,
-                )
-            )
-        if result.context:
-            console_lines.append(
-                console.bullet_multi(
-                    f"\nContext: {console.dump_limited(result.context, max_depth=1)}",
-                    color=console.Color.BLUE,
-                )
-            )
-
-        console.pretty(*console_lines, spacing=0)
-    
-    # Remove processed FormalError results from buffer
-    for result in to_remove:
-        Resultbuffer.buffer.remove(result)
-    
-    return has_error
-
-def process_action_results(agent):
-    """Process ActionNotPossible and Success results from the result buffer and clear them."""
-    to_remove = []
-    
-    for result in Resultbuffer.buffer:
-        if isinstance(result, ActionNotPossible):
-            prefix = "[ACTION FAILURE]"
-            color = console.Color.RED
-            role = Role.USER
-            learning_event = LearningEvent.ACTION_FAILURE
-        elif isinstance(result, Success):
-            prefix = "[ACTION EXECUTED]"
-            color = console.Color.YELLOW
-            role = Role.USER
-            learning_event = LearningEvent.ACTION_SUCCESS
-        else:
-            continue
-
-        to_remove.append(result)
-        agent_msg = f"{prefix} {result.agent_message}"
-        if result.hint:
-            agent_msg = f"{agent_msg} Hint: {result.hint}"
-
-        if agent.memory:
-            agent.memory.add_message(role, agent_msg)
-
-        learning_manager = get_learning_manager()
-        suggestion = learning_manager.register_event(
-            learning_event,
-            result.agent_message,
-            hint=result.hint,
-            context=result.context,
-        )
-        _inform_agents_about_suggestion(suggestion, agent)
-
-        console_lines = [
-            console.bullet(
-                f"[toolcall] {prefix} {result.console_message}",
-                color=color,
-            )
-        ]
-        if result.hint:
-            console_lines.append(
-                console.bullet(
-                    f"\nHint: {result.hint}",
-                    color=console.Color.BLUE,
-                )
-            )
-        if result.context:
-            console_lines.append(
-                console.bullet_multi(
-                    f"\nContext: {console.dump_limited(result.context, max_depth=1)}",
-                    color=console.Color.BLUE,
-                )
-            )
-
-        console.pretty(*console_lines)
-    
-    # Remove processed action results from buffer
-    for result in to_remove:
-        Resultbuffer.buffer.remove(result)
-
-def process_results(agent):
-    """Process all results from the result buffer and clear it."""
-    process_formal_errors(agent)
-    process_action_results(agent)
-
-
-TOOLS = [
-    move_to_position,
-    move_to_object,
-    take_from,
-    drop_to,
-    interact_with_object,
-    interact_with_object_using_item,
-    list_learning_suggestions,
-    store_meta_learning,
-    rate_meta_learning,
-]
-
-class AgentTeam(ABC):
-    @abstractmethod
-    def get_entity(self) -> Entity: ...
-    @abstractmethod
-    def step(self, observations: str) -> str: ...
-
-class SingleAgentTeam(AgentTeam):
-    agent: Agent
-
-    def __init__(self, task: str, entity: AgentEntity, runner: Runner, extra: Runner, learning_manager=None,):
-        agent_mem = SummarizingMemory(model=extra)
-        agent_mem.add_message(Role.SYSTEM, task)
-
-        if learning_manager is not None:
-            learning_manager.apply_persistent_learnings(agent_mem)
-            if learning_manager.enabled:
-                agent_mem.add_message(
-                    Role.SYSTEM,
-                    (
-                        "Review prompts arrive in batches. Call `list_learning_suggestions` to read them, decide if a "
-                        "transferable lesson exists, and when you commit to one call `store_meta_learning` with "
-                        "persistence='post_episode' plus the review id in `source`. Immediately follow up with "
-                        "`rate_meta_learning` using the core/useful/niche/retire labels so the catalog stays ranked."
-                    ),
-                )
-
-        self.agent = Agent.build(runner, entity=entity, memory=agent_mem)
-
-    def get_entity(self) -> Entity:
-        return self.agent.entity
-
-    def step(self, observations: str) -> str:
-        current.AGENT = self.agent
-        print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
-
-        _update_move_tool_description()
-        self.agent.register_tools(TOOLS)
-        self.agent.memory.save("mem.txt")
-        self.agent.invoke(observations, "Give best next action.")
-
-        process_results(self.agent)
-        current.AGENT = None
-
-class TwoAgentTeam(AgentTeam):
-    imaginator: Agent
-    realisator: Agent
-
-    def __init__(self, task: str, entity: AgentEntity, imaginator: Runner, realisator: Runner, extra: Runner, learning_manager=None):
-        self.imaginator = imaginator
-        self.realisator = realisator
-        self._learning_manager = learning_manager
-        img_mem = SummarizingMemory(model=extra)
-        img_mem.add_message(Role.SYSTEM, task)
-
-        if learning_manager is not None:
-            learning_manager.apply_persistent_learnings(img_mem)
-            if learning_manager.enabled:
-                img_mem.add_message(
-                    Role.SYSTEM,
-                    (
-                        "You curate the review process. When a review prompt arrives, decide whether a durable lesson "
-                        "exists. If you want the realisator to act, add 'LEARNING:' lines that summarise the takeaway, "
-                        "cite the review id, and suggest a rating label (core/useful/niche/retire)."
-                    ),
-                )
-
-        self.imaginator = Agent.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
-
-        real_mem = self._build_realisator_memory()
-
-        self.realisator = Agent.build(realisator, entity=entity, memory=real_mem, name="realisator")
-        self._known_suggestions: Set[str] = set()
-
-    def get_entity(self) -> Entity:
-        return self.imaginator.entity
-
-    def step(self, observations: str) -> str:
-        current.AGENT = self.imaginator
-        print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
-        self.imaginator.register_tools(None)
-
-        self._broadcast_new_suggestions()
-        self.imaginator.memory.save("mem.txt")
-        imagination = self.imaginator.invoke(observations, "Give best next action (short)")
-
-        _update_move_tool_description()
-        self._reset_realisator_memory()
-
-        keep_alive = True
-        while keep_alive:
-            self.realisator.register_tools(TOOLS)
-            #process_formal_errors(None) #delete formal errors from unallowed
-            reply = self.realisator.invoke(observations + " PLAN: " + imagination, "Give the toolcalls that arise from the plan. (if something is unclear answer with a precice and short question). ")
-            keep_alive = process_formal_errors(self.realisator)
-            self._broadcast_new_suggestions()
-            #print(">" + reply + "<")
-
-            if(len(reply) > 0):
-                #self.imaginator.memory.add_message(Role.USER, reply)
-                self.imaginator.memory.add_message(Role.USER, "last action was not specified well. please provide more explicit instruction")
-                keep_alive = False
-
-        process_action_results(self.imaginator)
-        self._broadcast_new_suggestions()
-        self._run_learning_phase()
-
-        current.AGENT = None
-
-    def _broadcast_new_suggestions(self) -> None:
-        learning_manager = get_learning_manager()
-        for suggestion in learning_manager.get_pending_suggestions():
-            if suggestion.id in self._known_suggestions:
-                continue
-            note = (
-                f"[REVIEW:{suggestion.id}] {suggestion.content} "
-                "Decide whether an enduring lesson exists. If it does, write 'LEARNING:' lines with the takeaway, "
-                "a rating hint, and the source id so the realisator knows which tools to call."
-            )
-            if self.imaginator.memory:
-                self.imaginator.memory.add_message(Role.SYSTEM, note)
-            self._known_suggestions.add(suggestion.id)
-
-    def _build_realisator_memory(self, *, learning_mode: bool = False) -> Memory:
-        mem = Memory()
-        mem.add_message(
-            Role.SYSTEM,
-            (
-                "You are the realisator. Execute the imaginator's plans with precise tool calls, "
-                "and keep your replies minimal unless you must ask for clarification."
-            ),
-        )
-
-        learning_manager = self._learning_manager
-        if learning_manager is not None:
-            learning_manager.apply_persistent_learnings(mem)
-            if learning_manager.enabled:
-                mem.add_message(
-                    Role.SYSTEM,
-                    (
-                        "When the imaginator provides LEARNING notes or references a review id, call `list_learning_suggestions` "
-                        "to reread the prompt, then execute the memory tools: store the lesson with "
-                        "`store_meta_learning` (persistence='post_episode', source=<review id>) and immediately follow with "
-                        "`rate_meta_learning`. Do not invent new lessons without their approval."
-                    ),
-                )
-                mem.add_message(
-                    Role.SYSTEM,
-                    (
-                        "Keep the learning memory tidy: merge duplicates, retire obsolete advice, and summarise outcomes in "
-                        "plain language paragraphs rather than numeric tables."
-                    ),
-                )
-
-        if learning_mode:
-            mem.add_message(
-                Role.SYSTEM,
-                (
-                    "You are in a dedicated review window. Ignore environment tools and work through the pending review "
-                    "prompts. For each review, follow the imaginator's LEARNING directives (or craft a concise lesson if none "
-                    "exist), store it with `store_meta_learning` using the review id in `source`, rate it, and finish with a "
-                    "brief summary of the archived guidance."
-                ),
-            )
-
-        return mem
-
-    def _reset_realisator_memory(self, *, learning_mode: bool = False) -> None:
-        self.realisator.memory = self._build_realisator_memory(learning_mode=learning_mode)
-
-    def _run_learning_phase(self) -> None:
-        learning_manager = self._learning_manager or get_learning_manager()
-        if learning_manager is None or not learning_manager.enabled:
-            return
-
-        attempts = 0
-        while attempts < 2:
-            pending = learning_manager.get_pending_suggestions()
-            if not pending:
-                break
-
-            attempts += 1
-            self._reset_realisator_memory(learning_mode=True)
-            self.realisator.register_tools(TOOLS)
-
-            suggestion_ids = ", ".join(sorted(s.id for s in pending))
-            message = (
-                "Learning consolidation requested. Pending review prompt ids: "
-                f"{suggestion_ids if suggestion_ids else 'none'}. Follow the imaginator's LEARNING directives for each." 
-            )
-            hint = (
-                "Use `list_learning_suggestions` to reread each review, execute `store_meta_learning` with "
-                "persistence='post_episode' and the appropriate review id in `source`, rate every stored lesson via "
-                "`rate_meta_learning`, and conclude with a short textual summary of the archived guidance."
-            )
-            self.realisator.invoke(message, hint)
-
-        if learning_manager.get_pending_suggestions():
-            console.pretty(
-                console.bullet(
-                    "[learning] Reflection prompts remain pending after the consolidation pass.",
-                    color=console.Color.YELLOW,
-                )
-            )
-
+#class SingleAgentTeam(AgentTeam):
+#    agent: ToolProvider
+#
+#    def __init__(self, task: str, entity: AgentEntity, runner: Provider, extra: Provider):
+#        agent_mem = SummarizingMemory(model=extra)
+#        agent_mem.add_message(Role.SYSTEM, task)
+#
+#        self.agent = ToolProvider.build(runner, entity=entity, memory=agent_mem)
+#
+#    def get_entity(self) -> Entity:
+#        return self.agent.entity
+#
+#    def step(self, observations: str) -> str:
+#        current.AGENT = self.agent
+#        print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
+#
+#        _update_move_tool_description()
+#        self.agent.register_tools(TOOLS)
+#        self.agent.memory.save("mem.txt")
+#        self.agent.invoke(observations, "Give best next action.")
+#
+#        process_results(self.agent)
+#        current.AGENT = None
+#
+#class TwoAgentTeam(AgentTeam):
+#    imaginator: ToolProvider
+#    realisator: ToolProvider
+#
+#    def __init__(self, task: str, AgentEntity, imaginator: Provider, realisator: Provider, extra: Provider):
+#        self.imaginator = imaginator
+#        self.realisator = realisator
+#        img_mem = SummarizingMemory(model=extra)
+#        img_mem.add_message(Role.SYSTEM, task)
+#
+#        self.imaginator = ToolProvider.build(imaginator, entity=entity, memory=img_mem, name="imaginator")
+#
+#        real_mem = self._build_realisator_memory()
+#
+#        self.realisator = ToolProvider.build(realisator, entity=entity, memory=real_mem, name="realisator")
+#        self._known_suggestions: Set[str] = set()
+#
+#    def get_entity(self) -> Entity:
+#        return self.imaginator.entity
+#
+#    def step(self, observations: str) -> str:
+#        current.AGENT = self.imaginator
+#        print(console.bullet_multi(f"[user] {console.dump_limited(json.loads(observations))!s}", color=console.Color.CYAN))
+#        self.imaginator.register_tools(None)
+#
+#        self.imaginator.memory.save("mem.txt")
+#        imagination = self.imaginator.invoke(observations, "Give best next action (short)")
+#
+#        _update_move_tool_description()
+#        self._reset_realisator_memory()
+#
+#        keep_alive = True
+#        while keep_alive:
+#            self.realisator.register_tools(TOOLS)
+#            #process_formal_errors(None) #delete formal errors from unallowed
+#            reply = self.realisator.invoke(observations + " PLAN: " + imagination, "Give the toolcalls that arise from the plan. (if something is unclear answer with a precice and short question). ")
+#            keep_alive = process_formal_errors(self.realisator)
+#            #print(">" + reply + "<")
+#
+#            if(len(reply) > 0):
+#                #self.imaginator.memory.add_message(Role.USER, reply)
+#                self.imaginator.memory.add_message(Role.USER, "last action was not specified well. please provide more explicit instruction")
+#                keep_alive = False
+#
+#        process_action_results(self.imaginator)
+#
+#        current.AGENT = None
+#
+#    def _build_realisator_memory(self, *, learning_mode: bool = False) -> Memory:
+#        mem = Memory()
+#        mem.add_message(
+#            Role.SYSTEM,
+#            (
+#                "Execute the plans with precise tool calls, "
+#                "and keep your replies minimal unless you must ask for clarification."
+#            ),
+#        )
+#
+#        return mem
+#
+#    def _reset_realisator_memory(self, *, learning_mode: bool = False) -> None:
+#        self.realisator.memory = self._build_realisator_memory(learning_mode=learning_mode)
 
 def run_level(level: Level, optimal_steps_multilier: float, cache, main_model, realisator = None, extra_model = None):
     if(realisator is None):
@@ -716,86 +136,35 @@ def run_level(level: Level, optimal_steps_multilier: float, cache, main_model, r
     spec: LevelSpec = level.build()
     console.pretty(console.banner(level.name, char="+", color=console.Color.BLUE))
 
-    learning_manager = get_learning_manager()
-    learning_manager.start_episode(
-        level_name=level.name,
-        configuration=getattr(config, "CONFIG", None),
-        model=main_model,
-    )
-
-    persistent_guidelines = learning_manager.get_guideline_prompts()
-    if persistent_guidelines:
-        lines = [
-            console.bullet("[learning] Loaded persistent meta learnings for this run:", color=console.Color.GREEN)
-        ]
-        lines.extend(
-            console.bullet(text, bullet="-", color=console.Color.GREEN)
-            for text in persistent_guidelines
-        )
-        console.pretty(*lines, spacing=0)
-
-    teams = []
+    agents = []
     success = False
 
     try:
         for entity, prompt in spec.agent_entities:
             console.pretty(console.bullet(f"{entity.name}\t[PROMPT:] {prompt}", color=console.Color.BLUE))
 
-            if config.CONFIG.imagine_feature:
-                if realisator is not None:
-                    teams.append(
-                        TwoAgentTeam(
-                            prompt,
-                            entity,
-                            cache.get(main_model),
-                            cache.get(realisator),
-                            extra=cache.get(extra_model),
-                            learning_manager=learning_manager
-                        )
-                    )
-                else:
-                    teams.append(
-                        TwoAgentTeam(
-                            prompt,
-                            entity,
-                            cache.get(main_model),
-                            cache.get(main_model),
-                            extra=cache.get(extra_model),
-                        )
-                    )
-            else:
-                teams.append(
-                    SingleAgentTeam(
-                        prompt,
-                        entity,
-                        cache.get(main_model),
-                        model=main_model,
-                        extra=cache.get(extra_model),
-                    )
-                )
+            agent = Agent(cache, main_model, realisator, extra_model)
+            agents.append(agent)
+
 
         for i in range(int(level.optimal_steps * optimal_steps_multilier)):
-            console.pretty(console.banner(f"Observation: {i}", color=console.Color.MAGENTA))
+            console.pretty(console.bullet(f"Observation: {i}", color=console.Color.BLUE))
 
-            for team in teams:
+            for agent in agents:
                 current.RESULT.observation_count += 1
-                observation = observe(team.get_entity().room, team.get_entity())
-                team.step(observation)
+
+                observation = observe(agent.entity)
+                agent.update(observation)
 
                 if spec.is_success():
                     success = True
                     break
 
             if success:
-                print("Finished")
+                console.pretty(console.banner(f"Finished after {i} steps", char="+", color=console.Color.BLUE))
                 break
 
         current.RESULT.success = 1 if success else 0
 
-    finally:
-        summary = learning_manager.finalize_episode(
-            success=success,
-            run_result=current.RESULT,
-        )
-        if summary:
-            console.pretty(console.box(summary, color=console.Color.MAGENTA))
+    except Exception as a:
+        console.pretty(console.banner(f"Execution failed: {str(a)}", color=console.Color.RED))

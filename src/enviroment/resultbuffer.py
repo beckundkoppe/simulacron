@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+import current
+
 
 class Resultbuffer:
     buffer: List["Result"] = []
@@ -39,6 +41,8 @@ class FormalError(Result):
     ) -> None:
         super().__init__(agent_message, console_message, hint=hint, context=context)
 
+        current.RESULT.harderror_count += 1
+
 
 class ActionNotPossible(Result):
     def __init__(
@@ -50,6 +54,8 @@ class ActionNotPossible(Result):
         context: Dict[str, Any] | None = None,
     ) -> None:
         super().__init__(agent_message, console_message, hint=hint, context=context)
+
+        current.RESULT.softerror_count += 1
 
 
 class Success(Result):

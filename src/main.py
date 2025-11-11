@@ -2,7 +2,7 @@
 
 from benchmark.benchresult import RunResult
 from benchmark.dispatcher import Dispatcher, Run
-from config import Configuration, PerceptionType, PlanType, PositionType
+from config import AgentConfiguration, Configuration, ObserveType, PerceptionType, PlanType, PositionType, ReflectType
 from enviroment.levels.level import Levels
 import game
 from llm.cache import Cache
@@ -27,7 +27,15 @@ def main():
     #TEST#############################
 
     dispatcher = Dispatcher(cache)
-    config = Configuration(PerceptionType.FULL, PositionType.RELATIVE, True, True, PlanType.REPLAN, 0.0, "test")
+
+    agent_config = AgentConfiguration(
+        imaginator = False,
+        observe    = ObserveType.ON,
+        reflect    = ReflectType.ON,
+        plan       = PlanType.OFF
+    )
+
+    config = Configuration(PerceptionType.ALL, PositionType.CHESSBOARD, agent=agent_config, temperature=0.0, name="test")
 
     result1: RunResult = dispatcher.run_single(Run(
         config,

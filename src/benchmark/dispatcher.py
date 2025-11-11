@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 import time
 from benchmark.benchresult import RunResult
-from enviroment import current
+import current
 from enviroment.world import World
 import game
 import config
 from config import Configuration
 from enviroment.levels.level import Level
-from llm import cache
 from llm.model import Model
 
 @dataclass(frozen=True)
@@ -32,7 +31,7 @@ class Dispatcher:
     def run_single(self, run: Run):
         results = []
 
-        config.CONFIG = run.configuration
+        config.ACTIVE_CONFIG = run.configuration
         for i in range(run.reruns):
             print(f"Rerun: {i+1}")
             World.clear()

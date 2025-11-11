@@ -4,76 +4,56 @@ from enviroment.position import Position
 
 class Table(ContainerEntity):
     """Generic table entity."""
-    def __init__(self, pos: Position | None = None, material: str | None = None, description: str | None = None):
+    def __init__(self, pos: Position | None = None, description: str | None = None):
         super().__init__(
             name="table",
             pos=pos,
-            material=material,
             description=description,
-            uniqueness=0.6,
-            prominence=0.8,
-            visibility=1.0,
         )
 
 
 class Shelf(ContainerEntity):
     """Generic shelf with open compartments."""
-    def __init__(self, pos: Position | None = None, material: str | None = None, description: str | None = None):
+    def __init__(self, pos: Position | None = None, description: str | None = None):
         super().__init__(
             name="shelf",
             pos=pos,
-            material=material,
             description=description,
-            uniqueness=0.5,
-            prominence=0.9,
-            visibility=0.9,
         )
 
 
 class Chest(AdvancedContainerEntity):
     """Generic storage chest."""
-    def __init__(self, pos: Position | None = None, material: str | None = None, description: str | None = None):
+    def __init__(self, pos: Position | None = None, description: str | None = None):
         super().__init__(
             name="chest",
             pos=pos,
-            material=material,
             description=description,
-            uniqueness=0.5,
-            prominence=0.8,
             is_open=False,
             is_locked=False,
-            visibility=0.8,
             visibility_closed=0.0,
         )
 
 class Box(ContainerEntity):
     """Generic storage box."""
-    def __init__(self, pos: Position | None = None, material: str | None = None, description: str | None = None):
+    def __init__(self, pos: Position | None = None, description: str | None = None):
         super().__init__(
             name="chest",
             pos=pos,
-            material=material,
             description=description,
-            uniqueness=0.5,
-            prominence=0.8,
-            visibility=0.7,
         )
 
 
 
 class Cabinet(AdvancedContainerEntity):
     """Generic cabinet with doors."""
-    def __init__(self, pos: Position | None = None, material: str | None = None, description: str | None = None):
+    def __init__(self, pos: Position | None = None, description: str | None = None):
         super().__init__(
             name="cabinet",
             pos=pos,
-            material=material,
             description=description,
-            uniqueness=0.6,
-            prominence=0.9,
             is_open=False,
             is_locked=False,
-            visibility=0.9,
             visibility_closed=0.0,
         )
 
@@ -85,7 +65,6 @@ class WoodenTable(Table):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="oak wood",
             description="A sturdy oak table with carved legs and a few burn marks from candles."
         )
 
@@ -95,7 +74,6 @@ class IronTable(Table):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="forged iron",
             description="An iron table with riveted joints, cold to the touch and faintly humming with resonance."
         )
 
@@ -107,7 +85,6 @@ class WoodenShelf(Shelf):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="pine wood",
             description="An open shelf of rough pine planks, filled with dust and faint smell of resin."
         )
 
@@ -117,7 +94,6 @@ class MetalShelf(Shelf):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="steel",
             description="A steel shelf with industrial precision, polished surfaces reflecting dim light."
         )
 
@@ -129,13 +105,12 @@ class PaperBox(Box):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="cardboard",
             description=(
                 "A plain cardboard box with slightly frayed edges. "
                 "The lid bends easily when pressed, and it carries faint marks from tape and labels."
             ),
         )
-        openable = OpenableCapability(self, initially_open=False, visibility_when_closed=0.3)
+        openable = OpenableCapability(self, initially_open=False, visibility_closed=0.3)
         self.add_capability(openable)
 
         # Slightly more generic and less prominent visually than a wooden chest
@@ -148,7 +123,6 @@ class WoodenChest(Chest):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="oak wood reinforced with iron bands",
             description="An old chest with darkened oak panels and a heavy iron lockplate."
         )
 
@@ -158,7 +132,6 @@ class IronChest(Chest):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="forged iron",
             description="A compact chest of black iron, its hinges groaning faintly when moved."
         )
 
@@ -170,7 +143,6 @@ class WoodenCabinet(Cabinet):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="varnished walnut",
             description="A tall walnut cabinet with two panel doors, faint scent of polish and dust within."
         )
 
@@ -180,6 +152,5 @@ class IronCabinet(Cabinet):
     def __init__(self, pos: Position | None = None):
         super().__init__(
             pos=pos,
-            material="riveted iron",
             description="A heavy iron cabinet, painted grey, its surface chipped and marked by years of use."
         )

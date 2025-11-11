@@ -8,7 +8,7 @@ from enviroment.exception import SoftException
 
 if TYPE_CHECKING:
     from enviroment.entity import Entity
-    from enviroment.interaction import Depth, ObserverPerception, PerceptionEnviroment
+    from enviroment.perception import DetailLevel, ObserverPerception, PerceptionEnviroment
 
 
 class Capability(ABC):
@@ -30,7 +30,7 @@ class Capability(ABC):
         self,
         observer: ObserverPerception,
         env: PerceptionEnviroment,
-        depth: Depth,
+        depth: DetailLevel,
         info: dict[str, object],
     ) -> None:
         """Allow the capability to enrich the perception output."""
@@ -42,15 +42,14 @@ class OpenableCapability(Capability):
     def __init__(
         self,
         owner: Entity,
-        *,
         initially_open: bool = True,
-        visibility_when_closed: float = 0.0,
+        visibility_closed: float = 0.0,
     ) -> None:
         super().__init__(owner)
         self.is_open = initially_open
-        self.visibility_when_closed = visibility_when_closed
+        self.visibility_when_closed = visibility_closed
 
-    def on_interact(self, actor_entity: Entity, action: ActionTry) -> str | None:
+    def on_interact(self, actor: Entity, action: ActionTry) -> str | None:
         if action.type == ActionType.OPEN:
             if self.is_open:
                 return "already open"
@@ -93,12 +92,12 @@ class OpenableCapability(Capability):
 
     def on_perceive(
         self,
-        observer: ObserverPerception,
         env: PerceptionEnviroment,
-        depth: Depth,
+        depth: DetailLevel,
         info: dict[str, object],
     ) -> None:
-        info["state"] = "open" if self.is_open else "closed"
+        if info:
+            info["state"] = "open" if self.is_open else "closed"
 
 
 class LockableCapability(Capability):
@@ -107,7 +106,6 @@ class LockableCapability(Capability):
     def __init__(
         self,
         owner: Entity,
-        *,
         initially_locked: bool = False,
         allowed_keys: Iterable["Entity"] | None = None,
     ) -> None:
@@ -182,12 +180,12 @@ class LockableCapability(Capability):
 
     def on_perceive(
         self,
-        observer: ObserverPerception,
         env: PerceptionEnviroment,
-        depth: Depth,
+        depth: DetailLevel,
         info: dict[str, object],
     ) -> None:
-        info["lock_state"] = "locked" if self.is_locked else "unlocked"
+        if info:
+            info["lock_state"] = "locked" if self.is_locked else "unlocked"
 
 
 class UsableCapability(Capability):
@@ -210,10 +208,9 @@ class UsableCapability(Capability):
 
     def on_perceive(
         self,
-        observer: ObserverPerception,
         env: PerceptionEnviroment,
-        depth: Depth,
+        depth: DetailLevel,
         info: dict[str, object],
     ) -> None:
-        if self._perception_tag:
+        if info and self._perception_tag:
             info.setdefault("capabilities", []).append(self._perception_tag)

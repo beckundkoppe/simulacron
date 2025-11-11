@@ -2,10 +2,7 @@ import ast
 from enum import Enum
 import json
 import re
-import textwrap
 from typing import Optional
-
-from debug.settings import DEBUG_LIMITED
 
 ansi_re = re.compile(r"\x1b\[[0-9;]*m")
 

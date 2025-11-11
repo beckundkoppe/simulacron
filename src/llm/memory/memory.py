@@ -8,7 +8,7 @@ from llm.model import Backend
 if TYPE_CHECKING:
     from llm.cache import Cache
     from llm.model import Model
-    from llm.runner import Runner
+    from llm.provider import Provider
 
 
 def _approximate_token_count(text: str) -> int:
@@ -31,9 +31,6 @@ class Role(Enum):
     USER        = "user"
     ASSISTANT   = "assistant"
     TOOL        = "tool"
-
-    def to_string(self, backend: Backend) -> tuple[str, str, str]:
-        return self.value, "", ""
 
 class Memory(ABC):
     def __init__(self) -> None:
@@ -89,14 +86,14 @@ class Memory(ABC):
             data = json.load(f)
         self._history = [(Role[name], msg) for name, msg in data]
     
-    def get_history(self, backend: Backend) -> List[dict[str, str]]:
+    def get_history(self) -> List[dict[str, str]]:
         """
         Export the history in the format required by the target backend,
         preserving all ANSI colors or markdown.
         """
         messages: List[dict[str, str]] = []
         for role, msg in self._history:
-            role_str, front, end = role.to_string(backend)
+            role_str, front, end = role.to_string()
 
             if not isinstance(msg, str):
                 msg = str(msg)
@@ -193,7 +190,6 @@ class SummarizingMemory(Memory):
         max_tokens: int = 4096,
         trigger_ratio: float = 0.9,
         preserve_recent: int = 6,
-        *,
         model = None,
         summary_instructions: Optional[str] = None,
     ) -> None:
@@ -205,7 +201,7 @@ class SummarizingMemory(Memory):
         self.trigger_ratio = trigger_ratio
         self.preserve_recent = max(2, preserve_recent)
         self._model = model
-        self._summary_runner: Optional["Runner"] = None
+        self._summary_runner: Optional["Provider"] = None
         self._summary_instructions = summary_instructions or (
             "You compress conversations into short, factual summaries. "
             "Keep goals, decisions, and unresolved questions. "
@@ -295,14 +291,14 @@ class SummarizingMemory(Memory):
     def _summarize_with_llm(
         self,
         messages: List[Tuple[Role, str]],
-        runner: "Runner",
+        runner: "Provider",
         limit: int,
     ) -> str:
         formatted = self._format_messages(messages)
         memory = _SilentMemory()
         instructions = self._summary_instructions.format(limit=limit)
         memory.add_message(Role.SYSTEM, instructions)
-        summary = runner.invoke(formatted, memory=memory)
+        summary = runner.invoke(formatted, override=memory)
         return summary.strip()
 
     def _fallback_summary(self, messages: List[Tuple[Role, str]], limit: int) -> str:

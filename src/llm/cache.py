@@ -1,15 +1,13 @@
+import config
 from llm.model import Model
-from llm.runner import Runner
-import debug.console as console
+from llm.provider import Provider
 
 class Cache():
     def __init__(self) -> None:
-        self._runners: dict[Model, Runner] = {}
+        self._providers: dict[Model, Provider] = {}
 
-    def get(self, model: Model) -> Runner:
-        if model not in self._runners:
-            self._runners[model] = Runner.build(model)
-            console.pretty(
-                console.banner(f"[LLM STARTED] {model!s}", color=console.Color.GREEN),
-            )
-        return self._runners[model]
+    def get(self, model: Model) -> Provider:
+        if model not in self._providers:
+            self._providers[model] = Provider.build(model, config.ACTIVE_CONFIG.temperature)
+
+        return self._providers[model]

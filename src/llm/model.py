@@ -458,18 +458,18 @@ class Model(Enum):
                 ),
             )
 
-            #DEEPSEEK_R1_14B = ModelSpec(
-            #    name="DEEPSEEK-R1_14B",
-            #    tag="deepseek-r1_14B",
-            #    location=Location.LOCAL,
-            #    backend=Backend.OLLAMA,
-            #    agent_backend=AgentBackend.LANGCHAIN,
-            #    kind=ModelKind.HYBRID,
-            #    source=SourceOllama(
-            #        model_id="deepseek-r1:14b",
-            #        #https://ollama.com/library/gpt-oss
-            #    ),
-            #)
+            DEEPSEEK_R1_QWEN_14B = ModelSpec(
+                name="Deepseek-R1-Qwen-Distill-14B",
+                tag="deepseek_qwen_14B",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceOllama(
+                    model_id="deepseek-r1:14b-qwen-distill-q8_0",
+                    #https://ollama.com/library/deepseek-r1/tags
+                ),
+            )
 
             DOLPHIN3_8B = ModelSpec(
                 name="Dolphin3-8B",

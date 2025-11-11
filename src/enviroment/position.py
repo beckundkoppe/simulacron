@@ -1,10 +1,9 @@
 import math
 from typing import TYPE_CHECKING
-
 from config import PositionType
 import config
 
-if TYPE_CHECKING:  # pragma: no cover - only for type checking
+if TYPE_CHECKING:
     from enviroment.room import Room
 
 class Position:
@@ -69,9 +68,9 @@ class Position:
         if not (self.type is None):
             raise ValueError("position cant only be mapped once")
 
-        if config.CONFIG.position_type == PositionType.ROOMLESS:
+        if config.ACTIVE_CONFIG.position == PositionType.ROOMLESS:
             return Position(0.0, 0.0, type=PositionType.ROOMLESS)
-        elif config.CONFIG.position_type == PositionType.CHESSBOARD:
+        elif config.ACTIVE_CONFIG.position == PositionType.CHESSBOARD:
             # Map room → 8x8 chessboard (0..7)
             chess_x = (self.x / room.extend_x) * 8.0
             chess_y = (self.y / room.extend_y) * 8.0

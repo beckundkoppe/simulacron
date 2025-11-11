@@ -2,15 +2,31 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 
+class ObserveType(Enum):
+    OFF      = auto(),
+    ON       = auto(),
+    MEMORIZE = auto(),
+
+class ReflectType(Enum):
+    OFF   = auto(),
+    ON    = auto(),
+    LEARN = auto(),
+
 class PlanType(Enum):
-    OFF     = auto(),
-    PLAN    = auto(),
-    REPLAN  = auto(),
+    OFF    = auto(),
+    PLAN   = auto(),
+    REPLAN = auto(),
+
+@dataclass(frozen=True)
+class AgentConfiguration:
+    imaginator: bool
+    observe: ObserveType
+    reflect: ReflectType
+    plan: PlanType
 
 class PerceptionType(Enum):
-    FULL        = auto(),
+    ALL        = auto(),
     DISTANCE    = auto(),
-    SENSE       = auto(),
 
 class PositionType(Enum):
     ROOMLESS    = auto(),
@@ -20,13 +36,16 @@ class PositionType(Enum):
 @dataclass(frozen=True)
 class Configuration:
     perception: PerceptionType
-    position_type: PositionType
-    imagine_feature: bool
-    learning_feature: bool
-    planning_feature: PlanType
+    position: PositionType
+    agent: AgentConfiguration
     temperature: float
     name: str
     
-CONFIG = None
+ACTIVE_CONFIG: Configuration = None
 
-DISTANCE = 4.0
+PERCEPTION_DISTANCE: float = 4.0
+INTERACTION_DISTANCE: float = 1.5
+
+DEPTH_FAKTOR: int = 1
+# faktor=1 => 10 depth steps visible
+# faktor=2 => 5 depth steps visible

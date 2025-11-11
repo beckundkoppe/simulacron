@@ -3,10 +3,8 @@ import ast
 from dataclasses import dataclass
 import inspect
 import json
-import re
 from typing import Any, Callable, Dict, Optional, Sequence
 
-from advanced.heuristic import parse_toolcall_json, parse_toolcalls_fallback
 from ollama import Tool
 from langchain_community.chat_models import ChatOpenAI
 from llama_cpp_agent.llm_agent import LlamaCppAgent
@@ -14,47 +12,41 @@ from llama_cpp_agent.providers.llama_cpp_python import LlamaCppPythonProvider
 from llama_cpp_agent.llm_output_settings import LlmStructuredOutputSettings
 from llama_cpp_agent.chat_history.basic_chat_history import BasicChatHistory, BasicChatHistoryStrategy, Roles
 
-
-from enviroment import current
-from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
-from debug.settings import VERBOSE_BACKEND
+import debug
+from enviroment.resultbuffer import FormalError
 from llm.memory.memory import Memory, Role
-from llm.runner import LangchainRunner, LlamaCppRunner, Runner
-import debug.console as console
+from llm.provider import LangchainLocalProvider, LlamaCppProvider, Provider
+from util import console
 
-class Agent(ABC):
+class ToolProvider(Provider):
     @abstractmethod
-    def invoke(self, message: str, hint: str = "") -> str: ...
+    def invoke(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str: ...
 
     @abstractmethod
-    def register_tools(self, tools: Sequence[Callable]) -> None: ...
+    def register_tools(self, tools: Sequence[Callable] = None) -> None: ...
 
-    def build(runner: Runner, memory: Optional[Memory] = None, entity = None, name: str = "assistant"):
-        if isinstance(runner, LlamaCppRunner):
-            agent = LlamaAgent(runner, memory)
-        elif isinstance(runner, LangchainRunner):
-            agent = LangchainAgent(runner, memory)
+    def build(provider: Provider) -> "ToolProvider":
+        if isinstance(provider, LlamaCppProvider):
+            toolprovider = LlamaToolprovider(provider)
+        elif isinstance(provider, LangchainLocalProvider):
+            toolprovider = LangchainToolprovider(provider)
         else:
-            raise ValueError("Unsupported configuration")
+            raise ValueError("Unsupported ToolProvider configuration")
 
-        agent.entity = entity
-        agent.name = name
+        toolprovider.provider = provider
 
-        return agent
+        return toolprovider
     
-class LlamaAgent(Agent):
-    def __init__(self, runner: Runner, memory: Optional[Memory] = None):
-        assert isinstance(runner, LlamaCppRunner)
-        self.runner = runner
-        self.provider = LlamaCppPythonProvider(runner._llm)
-        self.agent = LlamaCppAgent(self.provider)
+class LlamaToolprovider(ToolProvider):
+    def __init__(self, name: str, provider: Provider, memory: Optional[Memory] = None):
+        self.name = name
+        self.provider = provider
+        self.memory = memory
+        self.instance = LlamaCppAgent(LlamaCppPythonProvider(provider.llm), debug_output=debug.VERBOSE_LLAMACPPAGENT)
         self._output_settings = None
-        self.memory = memory or runner.new_memory()
-        self.tools: Sequence[Callable] = None
+        self._tools: Sequence[Callable] = None
 
     def register_tools(self, tools: Sequence[Callable]) -> None:
-        """Register the given functions as LLM tools."""
-
         if tools is None:
             self._output_settings = None
             return
@@ -72,15 +64,15 @@ class LlamaAgent(Agent):
             allow_parallel_function_calling=True,
         )
 
-    def invoke(self, message: str, hint: str = "") -> str:
-        memory = self.memory
+    def invoke(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str:
+        mem = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
 
         history = BasicChatHistory(
             chat_history_strategy=BasicChatHistoryStrategy.last_k_messages,
             llm_provider=self.provider
         )
 
-        for m in memory.get_history(self.runner.backend):
+        for m in mem.get_history():
             role_str = m["role"].lower()
             msg      = m["content"]
 
@@ -97,41 +89,33 @@ class LlamaAgent(Agent):
 
             history.add_message({"role": r, "content": msg})
             
-        reply = self.agent.get_chat_response(
-            message=message + " " + hint,
+        reply = self.instance.get_chat_response(
+            message=message,
             chat_history=history,
             structured_output_settings=self._output_settings,
-            print_output=VERBOSE_BACKEND
+            print_output=debug.VERBOSE_LLAMACPPAGENT
         )
 
-        if isinstance(reply, str):
-            reply = re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL)
-        else:
-            return ""
+        clean_reply = Provider._clean_reply(reply)
+        self._invoke_post(reply=clean_reply, override=override, append=append)
 
-        console.pretty(console.bullet(f"[{self.name}] {reply}", color=console.Color.YELLOW))
+        return clean_reply
 
-        memory.add_message(Role.USER, message)
-        memory.add_message(Role.ASSISTANT, reply)
-
-        return reply
-
-class LangchainAgent(Agent):
-    def __init__(self, runner: Runner, memory: Optional[Memory] = None):
-        assert isinstance(runner, LangchainRunner)
-        self.runner = runner
-        self._llm = runner.llm
-        self.memory = memory or runner.new_memory()
-        self._tools = None
+class LangchainToolprovider(ToolProvider):
+    def __init__(self, name: str, provider: Provider, memory: Optional[Memory] = None):
+        self.name = name
+        self.provider = provider
+        self.memory = memory
+        self.instance = provider.llm
 
     def register_tools(self, tools: Sequence[Callable]) -> None:
         self._tools = tools
 
         if tools is None:
-            self._llm = self.runner.llm.bind_tools([])
+            self.instance = self.instance.bind_tools([])
             return
 
-        if(isinstance(self._llm, ChatOpenAI)):
+        if(isinstance(self.instance, ChatOpenAI)):
             general_tools = [
                 # requires _tool_meta from explicit @tool decoration
                 Tool.from_function(
@@ -141,7 +125,7 @@ class LangchainAgent(Agent):
                 )
                 for t in tools
             ]
-            self._llm = self.runner.llm.bind_tools(general_tools)
+            self.instance = self.provider.llm.bind_tools(general_tools)
         else:
             openai_tools: list[dict] = []
             for t in tools:
@@ -160,9 +144,11 @@ class LangchainAgent(Agent):
                     }
                 })
             
-            self._llm = self.runner.llm.bind_tools(openai_tools)
+            self.instance = self.provider.llm.bind_tools(openai_tools)
 
-    def invoke(self, message: str, hint: str = "") -> str:
+    def invoke(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str:
+        mem = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
+
         @dataclass
         class ToolCall:
             name: str
@@ -179,9 +165,7 @@ class LangchainAgent(Agent):
                     elif("action" in raw):
                         data["name"] = raw["action"]
                     else:
-                        console.pretty(
-                            console.bullet(f"LLM IS FUCKING STUPID (wrong key for name): {data}", color=console.Color.RED),
-                        )
+                        raise Exception("wrong key for name")
 
                     data["id"] = ""
                     data["type"] = "tool_call"
@@ -193,9 +177,7 @@ class LangchainAgent(Agent):
                     elif("parameters" in raw):
                         data["args"] = raw["parameters"]
                     else:
-                        console.pretty(
-                            console.bullet(f"LLM IS FUCKING STUPID (wrong key for args): {data}", color=console.Color.RED),
-                        )
+                        raise Exception("wrong key for args")
                 else:
                     data = raw
 
@@ -203,10 +185,7 @@ class LangchainAgent(Agent):
         
         def _execute_toolcall(tool_call: ToolCall) -> str:
             if not self._tools:
-                FormalError(
-                    "toolcall failed: no tools registered for agent."
-                )
-                current.RESULT.harderror_count += 1
+                FormalError("toolcall failed: no tools registered for agent.")
                 return ""
             
             tool_map: Dict[str, Callable] = {}
@@ -231,71 +210,48 @@ class LangchainAgent(Agent):
                     tool_map[name](**filtered_args)                    
             else:
                 raise Exception("unknown tool")
-
+            
+        def _try_execute(raw: str) -> bool:
+            try:
+                tc = ToolCall.from_raw(raw, False)
+                _execute_toolcall(tc)
+                return True
+            except Exception as e:
+                FormalError(f"toolcall failed: {str(e)}\n{raw}" + """For toolcalls, use the following syntax: {"name": "<tool_name>", "args": {"<arg_key>": "<arg_value>"}}""")
+                return False
 
         #-------------------------
 
-        memory = self.memory
-
-        memory.add_message(Role.USER, message)
         try:
-            result = self._llm.invoke(memory.get_history(self.runner.backend) + [{"role": Role.USER.value, "content": hint}])
+            result = self.instance.invoke(mem.get_history(self.provider.backend))
         except Exception as e:
-            FormalError(f"llm call failed: {str(e)}\nRETRY WITH A VALID ANSWER")
+            FormalError(f"no valid reply")
             return ""
 
-        if VERBOSE_BACKEND: console.json_dump(result)
+        if debug.VERBOSE_LANGCHAIN: console.json_dump(result)
 
-        reply = result.content
+        clean_reply = Provider._clean_reply(result.content)
 
-        if not isinstance(reply, str):
-            reply = ""
+        if self._tools is not None:
+            valid_toolcall = False
+            for raw in result.tool_calls:
+                if _try_execute(raw) is True:
+                    valid_toolcall = True
 
-        console.pretty(console.bullet(f"[{self.name}] {reply}", color=console.Color.YELLOW))
+            if(not valid_toolcall):
+                parsing_options = [ ast.literal_eval, json.loads ]
 
-        if self._tools is None:
-            return reply
-
-        valid_toolcall = False
-        for raw in result.tool_calls:
-            try:
-                tc = ToolCall.from_raw(raw, False)
-                ret = _execute_toolcall(tc)
-                valid_toolcall = True
-            except Exception as e:
-                FormalError(f"toolcall failed: {str(e)}\n{raw}" + """For toolcalls, use the following syntax: {"name": "<tool_name>", "args": {"<arg_key>": "<arg_value>"}}""")
-                current.RESULT.harderror_count += 1
-
-
-        if(not valid_toolcall):
-            try:
-                data = ast.literal_eval(reply)
-            except:
-                try:
-                    data = json.loads(reply)
-                except:
+                for parse in parsing_options:
                     try:
-                        data = parse_toolcall_json(reply)
+                        data = parse(clean_reply)
+                        break
                     except:
-                        try:
-                            data = parse_toolcalls_fallback(reply)
-                        except:
-                            data = None
+                        data = None
+                        continue
 
-            if data is not None:
-                try:
-                    tc = ToolCall.from_raw(data, True)
-                    ret = _execute_toolcall(tc)
-                except Exception as e:
-                    FormalError(f"toolcall failed: {str(e)}\n{data}"+"""For toolcalls, use the following syntax: {"name": "<tool_name>", "args": {"<arg_key>": "<arg_value>"}}""")
-                    current.RESULT.harderror_count += 1
+                if data is not None:
+                    _try_execute(data)
 
+        self._invoke_post(reply=clean_reply, override=override, append=append)
 
-        memory.add_message(Role.ASSISTANT, reply)
-
-        return reply
-
-
-
-
-
+        return clean_reply

@@ -8,13 +8,13 @@ BASE_TEMP = 0.0
 
 def baseline() -> List[Configuration]:
     return [
-        Configuration(PerceptionType.FULL,     PositionType.ROOMLESS, False, False, PlanType.OFF, BASE_TEMP, "baseline-roomless-full"),
+        Configuration(PerceptionType.ALL,     PositionType.ROOMLESS, False, False, PlanType.OFF, BASE_TEMP, "baseline-roomless-full"),
 
-        Configuration(PerceptionType.FULL,     PositionType.RELATIVE, False, False, PlanType.OFF, BASE_TEMP, "baseline-relative-full"),
+        Configuration(PerceptionType.ALL,     PositionType.RELATIVE, False, False, PlanType.OFF, BASE_TEMP, "baseline-relative-full"),
         Configuration(PerceptionType.DISTANCE, PositionType.RELATIVE, False, False, PlanType.OFF, BASE_TEMP, "baseline-relative-distance"),
         Configuration(PerceptionType.SENSE,    PositionType.RELATIVE, False, False, PlanType.OFF, BASE_TEMP, "baseline-relative-sense"),
 
-        Configuration(PerceptionType.FULL,     PositionType.CHESSBOARD, False, False, PlanType.OFF, BASE_TEMP, "baseline-chessboard-full"),
+        Configuration(PerceptionType.ALL,     PositionType.CHESSBOARD, False, False, PlanType.OFF, BASE_TEMP, "baseline-chessboard-full"),
         Configuration(PerceptionType.DISTANCE, PositionType.CHESSBOARD, False, False, PlanType.OFF, BASE_TEMP, "baseline-chessboard-distance"),
         Configuration(PerceptionType.SENSE,    PositionType.CHESSBOARD, False, False, PlanType.OFF, BASE_TEMP, "baseline-chessboard-sense"),
     ]
@@ -23,7 +23,7 @@ def feature_imagine() -> List[Configuration]:
     configs: List[Configuration] = []
 
     configs.extend([
-        Configuration(PerceptionType.FULL,  PositionType.CHESSBOARD, True, False, PlanType.OFF, BASE_TEMP, "imagine-full"),
+        Configuration(PerceptionType.ALL,  PositionType.CHESSBOARD, True, False, PlanType.OFF, BASE_TEMP, "imagine-full"),
         Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, True, False, PlanType.OFF, BASE_TEMP, "imagine-partial"),
     ])
 
@@ -33,7 +33,7 @@ def feature_learning() -> List[Configuration]:
     configs: List[Configuration] = []
 
     configs.extend([
-        Configuration(PerceptionType.FULL,  PositionType.CHESSBOARD, False, True, PlanType.OFF, BASE_TEMP, "feature-learning-full"),
+        Configuration(PerceptionType.ALL,  PositionType.CHESSBOARD, False, True, PlanType.OFF, BASE_TEMP, "feature-learning-full"),
         Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, False, True, PlanType.OFF, BASE_TEMP, "feature-learning-partial"),
     ])
 
@@ -43,9 +43,9 @@ def feature_planning() -> List[Configuration]:
     configs: List[Configuration] = []
 
     configs.extend([
-        Configuration(PerceptionType.FULL,  PositionType.CHESSBOARD, False, False, PlanType.PLAN, BASE_TEMP,   "feature-planning-full"),
+        Configuration(PerceptionType.ALL,  PositionType.CHESSBOARD, False, False, PlanType.PLAN, BASE_TEMP,   "feature-planning-full"),
         Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, False, False, PlanType.PLAN, BASE_TEMP,   "feature-planning-partial"),
-        Configuration(PerceptionType.FULL,  PositionType.CHESSBOARD, False, False, PlanType.REPLAN, BASE_TEMP, "feature-replanning-full"),
+        Configuration(PerceptionType.ALL,  PositionType.CHESSBOARD, False, False, PlanType.REPLAN, BASE_TEMP, "feature-replanning-full"),
         Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, False, False, PlanType.REPLAN, BASE_TEMP, "feature-replanning-partial"),
     ])
 

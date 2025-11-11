@@ -1,6 +1,5 @@
 from enviroment.blueprints.blueprints import Chest, IronChest, PaperBox, Shelf, Table, WoodenCabinet, WoodenChest, WoodenShelf, WoodenTable
 from enviroment.entity import AdvancedContainerEntity, AgentEntity, ConnectorEntity, ContainerEntity, Entity
-from enviroment.interaction import ObserverPerception
 from enviroment.levels.data import LevelSpec
 from enviroment.position import Position
 from enviroment.room import Room
@@ -16,8 +15,7 @@ def build_easy(detailed_instruction: bool) -> LevelSpec:
     main = Room("main", 4, 4)
     chamber = Room.chamber()
 
-    perception = ObserverPerception()
-    tron = AgentEntity("tron", perception, pos=Position(0.0, 0.0))
+    tron = AgentEntity("tron", pos=Position(0.0, 0.0))
     tron.enter(main)
 
     key = Entity("key", Position(3.0, 1.0), is_collectible=True)
