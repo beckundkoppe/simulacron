@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+import re
 from typing import Iterable, List, Tuple, Optional, TYPE_CHECKING
 import json
 
+import config
 from llm.model import Backend
 
 if TYPE_CHECKING:
@@ -10,15 +12,11 @@ if TYPE_CHECKING:
     from llm.model import Model
     from llm.provider import Provider
 
-
 def _approximate_token_count(text: str) -> int:
-    """Return a rough token count for a text snippet."""
-    # Using whitespace splitting provides a cheap lower bound that does not
-    # require a backend specific tokenizer. We still ensure a minimum of one
-    # token so that empty or whitespace-only messages do not break the
-    # heuristics that depend on the value.
-    tokens = len(text.split())
-    return max(1, tokens)
+    """Heuristic token estimator that roughly matches LLM tokenization behavior."""
+    tokens = re.findall(r"\w+|[^\w\s]", text, re.UNICODE)
+    return max(1, len(tokens))
+
 
 class MemoryType(str, Enum):
     SIMPLE = "simple"
@@ -31,6 +29,9 @@ class Role(Enum):
     USER        = "user"
     ASSISTANT   = "assistant"
     TOOL        = "tool"
+
+    def to_string(self) -> str:
+        return self.value
 
 class Memory(ABC):
     def __init__(self) -> None:
@@ -93,14 +94,14 @@ class Memory(ABC):
         """
         messages: List[dict[str, str]] = []
         for role, msg in self._history:
-            role_str, front, end = role.to_string()
+            role_str = role.to_string()
 
             if not isinstance(msg, str):
                 msg = str(msg)
 
             messages.append({
                 "role": role_str,
-                "content": front + msg + end
+                "content": msg
             })
         return messages
     
@@ -142,7 +143,7 @@ class Memory(ABC):
         """
         Pretty-print the two most recent conversation messages with colorised bullets.
         """
-        from debug.console import pretty, bullet, debug_separator, Color
+        from util.console import pretty, bullet, debug_separator, Color
 
         color = Color.RED if is_agent else Color.BLUE
         lines: list[str] = [debug_separator(color=color)]
@@ -187,7 +188,7 @@ class SummarizingMemory(Memory):
 
     def __init__(
         self,
-        max_tokens: int = 4096,
+        max_tokens: int = config.Backend._n_context - config.Backend._n_context * 0.2,
         trigger_ratio: float = 0.9,
         preserve_recent: int = 6,
         model = None,
@@ -215,7 +216,6 @@ class SummarizingMemory(Memory):
             self.max_tokens,
             trigger_ratio=self.trigger_ratio,
             preserve_recent=self.preserve_recent,
-            cache=self._cache,
             model=self._model,
             summary_instructions=self._summary_instructions,
         )

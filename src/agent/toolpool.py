@@ -1,7 +1,6 @@
 from enum import Enum, auto
-from typing import Callable, Sequence
 from enviroment.action import ActionTry, ActionType
-from helper import trycatch, check_id
+from agent.helper import trycatch, check_id
 import current
 from enviroment.entity import AgentEntity
 from enviroment.exception import HardException
@@ -10,7 +9,7 @@ from llm.tool import tool
 from llm.toolprovider import ToolProvider
 
 def _get_agent() -> AgentEntity:
-    agent: AgentEntity = current.Entity
+    agent: AgentEntity = current.ENTITY
 
     if agent is None:
         raise Exception("No agent entity is available to perform the movement.")
@@ -19,7 +18,12 @@ def _get_agent() -> AgentEntity:
 
 @tool
 def move_to_position(x: str, y: str) -> str:
-    """The human moves to a position."""
+    """The human moves to a position.
+
+    Args:
+        x (float): the x position
+        y (float): the y position
+    """
 
     def _perform_move():
         agent = _get_agent()
@@ -36,7 +40,6 @@ def move_to_position(x: str, y: str) -> str:
                 hint="Consult the observation field 'position_format' for the expected coordinate style.",
             )
     
-
         return agent.move_to_position(position)
 
     trycatch(_perform_move, "moved succesfully")
@@ -65,12 +68,14 @@ def take_from(what_id: str, from_id: str) -> str:
         what_id (str): the id of item A to be taken.
         from_id (str): the id of object B from which the item is taken or 'FLOOR' for the floor
     """
+
+    agent: AgentEntity = current.ENTITY
     
     if(from_id.upper() == "FLOOR"):
-        trycatch(lambda: current.AGENT.entity.take(check_id(what_id)), f"collected {what_id}")
+        trycatch(lambda: agent.take(check_id(what_id)), f"collected {what_id}")
 
     else:
-        trycatch(lambda: current.AGENT.entity.take_from(check_id(what_id), check_id(from_id)), f"collected {what_id} from {from_id}")
+        trycatch(lambda: agent.take_from(check_id(what_id), check_id(from_id)), f"collected {what_id} from {from_id}")
 
     return ""
 
@@ -83,10 +88,12 @@ def drop_to(what_id: str, to_id: str) -> str:
         to_id (str): the id of the object B where the item is placed or 'FLOOR' for the floor
     """
 
+    agent: AgentEntity = current.ENTITY
+
     if(to_id.upper() == "FLOOR"):
-        trycatch(lambda: current.AGENT.entity.drop(check_id(what_id)), f"dropped {what_id}")
+        trycatch(lambda: agent.drop(check_id(what_id)), f"dropped {what_id}")
     else:
-        trycatch(lambda: current.AGENT.entity.drop_into(check_id(what_id), check_id(to_id)), f"dropped {what_id} into {to_id}")
+        trycatch(lambda: agent.drop_into(check_id(what_id), check_id(to_id)), f"dropped {what_id} into {to_id}")
 
     return ""
 
@@ -99,6 +106,8 @@ def interact_with_object(object_id: str, operator: str) -> str:
         operator (str): The action to perform. Allowed values: OPEN, CLOSE, GO_THROUGH.
     """
 
+    agent: AgentEntity = current.ENTITY
+
     def helper():
         if(operator.upper() == "OPEN"):
             action = ActionTry(ActionType.OPEN)
@@ -109,7 +118,7 @@ def interact_with_object(object_id: str, operator: str) -> str:
         else:
             raise HardException("unknown operator for this action: {operator}")
         
-        return check_id(object_id).on_interact(current.AGENT.entity, action)
+        return check_id(object_id).on_interact(agent, action)
     
     trycatch(helper, f"succeded with {operator} {object_id}")
 
@@ -125,6 +134,8 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
         operator (str): The action to perform. Allowed values: LOCK, UNLOCK.
     """
 
+    agent: AgentEntity = current.ENTITY
+
     def helper():
         if(operator.upper() == "LOCK"):
             action = ActionTry(ActionType.LOCK, check_id(using_id))
@@ -133,7 +144,7 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
         else:
             raise HardException("unknown operator for this action: {operator}")
 
-        return check_id(object_id).on_interact(current.AGENT.entity, action)
+        return check_id(object_id).on_interact(agent, action)
 
     trycatch(helper, f"succeded with {operator} {object_id}")
 

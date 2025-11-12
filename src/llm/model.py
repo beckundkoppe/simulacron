@@ -54,7 +54,20 @@ class ModelSpec:
     backend: Backend
     agent_backend: AgentBackend
     kind: ModelKind
-    source: Union[SourceFile, SourceLink, SourceHuggingface, SourceRemote]
+    source: Union[SourceFile, SourceLink, SourceHuggingface, SourceOllama, SourceRemote]
+
+    def __hash__(self):
+        return hash((self.name, self.tag, self.backend, self.kind))
+    
+    def __eq__(self, other):
+        if not isinstance(other, ModelSpec):
+            return False
+        return (
+            self.name == other.name
+            and self.tag == other.tag
+            and self.backend == other.backend
+            and self.kind == other.kind
+        )
 
 class Model(Enum):
     # ----------------------------------------------------------
@@ -119,7 +132,7 @@ class Model(Enum):
                     kind=ModelKind.HYBRID,
                     source=SourceHuggingface(
                         repo_id="bartowski/nvidia_OpenReasoning-Nemotron-14B-GGUF",
-                        filename="nvidia_OpenReasoning-Nemotron-14B-Q4_0.gguf",
+                        filename="nvidia_OpenReasoning-Nemotron-14B-Q8_0.gguf",
                         local_dir="data/model/"
                         #https://huggingface.co/bartowski/nvidia_OpenReasoning-Nemotron-14B-GGUF
                     ),
@@ -134,7 +147,7 @@ class Model(Enum):
                     kind=ModelKind.HYBRID,
                     source=SourceHuggingface(
                         repo_id="bartowski/nvidia_OpenReasoning-Nemotron-14B-GGUF",
-                        filename="nvidia_OpenReasoning-Nemotron-14B-Q8_0.gguf",
+                        filename="nvidia_OpenReasoning-Nemotron-14B-Q4_0.gguf",
                         local_dir="data/model/"
                         #https://huggingface.co/bartowski/nvidia_OpenReasoning-Nemotron-14B-GGUF
                     ),
@@ -215,6 +228,36 @@ class Model(Enum):
                     filename="Phi-4-mini-reasoning-BF16.gguf",
                     local_dir="data/model/"
                     #https://huggingface.co/unsloth/Phi-4-mini-reasoning-GGUF
+                ),
+            )
+
+            ARCH_AGENT_3B = ModelSpec(
+                name="Arch-Agent-3B",
+                tag="arch_agent_3b",
+                location=Location.LOCAL,
+                backend=Backend.LLAMACPP,
+                agent_backend=AgentBackend.LLAMACPPAGENT,
+                kind=ModelKind.TOOL,
+                source=SourceHuggingface(
+                    repo_id="Mungert/Arch-Agent-3B-GGUF",
+	                filename="Arch-Agent-3B-bf16.gguf",
+                    local_dir="data/model/"
+                    #https://huggingface.co/Mungert/Arch-Agent-3B-GGUF
+                ),
+            )
+
+            ARCH_AGENT_3B_Q6 = ModelSpec(
+                name="Arch-Agent-3B-Q6",
+                tag="arch_agent_3b_q6",
+                location=Location.LOCAL,
+                backend=Backend.LLAMACPP,
+                agent_backend=AgentBackend.LLAMACPPAGENT,
+                kind=ModelKind.TOOL,
+                source=SourceHuggingface(
+                    repo_id="Mungert/Arch-Agent-3B-GGUF",
+	                filename="Arch-Agent-3B-q6_k_m.gguf",
+                    local_dir="data/model/"
+                    #https://huggingface.co/Mungert/Arch-Agent-3B-GGUF
                 ),
             )
 

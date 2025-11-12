@@ -12,16 +12,15 @@ from llm.model import Model
 @dataclass(frozen=True)
 class Run:
     configuration: Configuration
-    model: Model
+    main_model: Model
     level: Level
     reruns: int
     optimal_steps_multiplier: float
-    realisator: Model = None
+    imaginator: Model = None
     extra_model: Model = None
 
 class Dispatcher:
-    def __init__(self, cache):
-        self.cache = cache
+    def __init__(self):
         self.queued_runs: list[Run] = []
         self.average_time = 30.0
 
@@ -35,16 +34,16 @@ class Dispatcher:
         for i in range(run.reruns):
             print(f"Rerun: {i+1}")
             World.clear()
-            result = RunResult(run.model.value.tag, run.configuration.name, run.level.name, run.level.optimal_steps)
+            result = RunResult(run.main_model.value.tag, run.configuration.name, run.level.name, run.level.optimal_steps)
             current.RESULT = result
 
-            self.cache.get(run.model) # load model before starting timer
+            #self.cache.get(run.main_model) # load model before starting timer
 
-            if(run.realisator is not None):
-                self.cache.get(run.realisator)
+            #if(run.imaginator is not None):
+                #self.cache.get(run.imaginator)
 
             start_time = time.time()
-            game.run_level(run.level, run.optimal_steps_multiplier, self.cache, run.model, run.realisator, run.extra_model)
+            game.run_level(run.level, run.optimal_steps_multiplier, run.main_model, run.imaginator, run.extra_model)
             end_time = time.time()
             result.time_s = end_time - start_time
 

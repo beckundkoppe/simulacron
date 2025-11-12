@@ -28,9 +28,9 @@ class Capability(ABC):
 
     def on_perceive(
         self,
-        observer: ObserverPerception,
+        observer:Entity,
         env: PerceptionEnviroment,
-        depth: DetailLevel,
+        level: DetailLevel,
         info: dict[str, object],
     ) -> None:
         """Allow the capability to enrich the perception output."""
@@ -92,6 +92,7 @@ class OpenableCapability(Capability):
 
     def on_perceive(
         self,
+        observer:Entity,
         env: PerceptionEnviroment,
         depth: DetailLevel,
         info: dict[str, object],
@@ -180,6 +181,7 @@ class LockableCapability(Capability):
 
     def on_perceive(
         self,
+        observer:Entity,
         env: PerceptionEnviroment,
         depth: DetailLevel,
         info: dict[str, object],
@@ -208,6 +210,7 @@ class UsableCapability(Capability):
 
     def on_perceive(
         self,
+        observer:Entity,
         env: PerceptionEnviroment,
         depth: DetailLevel,
         info: dict[str, object],

@@ -177,17 +177,15 @@ class Entity:
             },
         )
 
-    def on_perceive(self, env: PerceptionEnviroment, depth: DetailLevel) -> dict[str, object]:
+    def on_perceive(self, observer:"Entity", env: PerceptionEnviroment, depth: DetailLevel) -> dict[str, object]:
     
         self.info: dict[str, object] = {}
 
-        name = Datum(self, key="name", value=self.name)
-        material = Datum(self, key="material", value=self.material)
-        description = Datum(self, key="description", value=self.description)
-        id = Datum(self, "id", self.readable_id)
+        name = Datum(key="name", value=self.name, info=self.info)
+        description = Datum(key="description", value=self.description, info=self.info)
+        id = Datum(key="id", value=self.readable_id, info=self.info)
 
         all_datums: list[Datum] = [name]
-        if (self.material): all_datums.append(material)
         if (self.description): all_datums.append(description)
         all_datums.append(id)
 
@@ -258,7 +256,7 @@ class ContainerEntity(Entity):
                 return True
         return False
     
-    def on_perceive(self, observer: ObserverPerception, env: PerceptionEnviroment, detail: DetailLevel) -> dict[str, object]:
+    def on_perceive(self, observer:Entity, env: PerceptionEnviroment, detail: DetailLevel) -> dict[str, object]:
         info = super().on_perceive(observer, env, detail)
 
         if(not self.is_any_perceived):
@@ -266,7 +264,7 @@ class ContainerEntity(Entity):
 
         count = len(self.children)
 
-        if detail.value <= DetailLevel.MINIMAL.value:
+        if detail <= DetailLevel.BAD:
             info["contents_count"] = "unknown"
             return info
 
@@ -280,14 +278,14 @@ class ContainerEntity(Entity):
         else:
             info["contents_count"] = f"contains {count_str} items"
 
-        if openable and openable.is_open:
-            if detail.value >= DetailLevel.NORMAL.value and self.children:
+        if (openable and openable.is_open) or not openable:
+            if detail >= DetailLevel.NORMAL and self.children:
                 child_detail = detail.reduce()
                 info["contents"] = [
                     child.on_perceive(observer, env, child_detail)
                     for child in self.children
                 ]
-        elif detail.value >= DetailLevel.NORMAL.value:
+        elif detail >= DetailLevel.NORMAL:
             info["contents"] = ["empty"]
         else:
             info["contents"] = ["unknown"]

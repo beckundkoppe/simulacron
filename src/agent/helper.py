@@ -53,8 +53,8 @@ def check_id(readable_id: str):
         if entity.readable_id == readable_id:
             return entity
 
-    agent_entity = getattr(current.AGENT, "entity", None)
-    room = agent_entity.room if agent_entity and agent_entity.room else None
+    entity = current.ENTITY
+    room = entity.room if entity and entity.room else None
     available_ids: list[str] = []
     if room:
         for ent in room.entities:
@@ -76,7 +76,7 @@ def check_id(readable_id: str):
         },
     )
 
-def process_formal_errors(agent) -> bool:
+def process_formal_errors(memory) -> bool:
     """Process FormalError results from the result buffer and clear them.
     
     Returns:
@@ -99,9 +99,8 @@ def process_formal_errors(agent) -> bool:
         if result.hint:
             agent_msg = f"{agent_msg} Hint: {result.hint}"
 
-        if agent is not None:
-            if agent.memory:
-                agent.memory.add_message(role, agent_msg)
+        if memory:
+            memory.add_message(role, agent_msg)
 
         console_lines = [
             console.bullet(
@@ -132,8 +131,12 @@ def process_formal_errors(agent) -> bool:
     
     return has_error
 
-def process_action_results(agent):
+def process_action_results(memory):
+    to_remove = []
+
     for result in Resultbuffer.buffer:
+        to_remove.append(result)
+
         if isinstance(result, ActionNotPossible):
             prefix = "[ACTION FAILURE]"
             color = console.Color.RED
@@ -149,8 +152,8 @@ def process_action_results(agent):
         if result.hint:
             agent_msg = f"{agent_msg} Hint: {result.hint}"
 
-        if agent.memory:
-            agent.memory.add_message(role, agent_msg)
+        if memory:
+            memory.add_message(role, agent_msg)
 
         console_lines = [
             console.bullet(
@@ -175,7 +178,10 @@ def process_action_results(agent):
 
         console.pretty(*console_lines)
 
-def process_results(agent):
+    for result in to_remove:
+        Resultbuffer.buffer.remove(result)
+
+def process_results(memory):
     """Process all results from the result buffer and clear it."""
-    process_formal_errors(agent)
-    process_action_results(agent)
+    process_formal_errors(memory)
+    process_action_results(memory)

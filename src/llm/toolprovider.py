@@ -15,34 +15,40 @@ from llama_cpp_agent.chat_history.basic_chat_history import BasicChatHistory, Ba
 import debug
 from enviroment.resultbuffer import FormalError
 from llm.memory.memory import Memory, Role
-from llm.provider import LangchainLocalProvider, LlamaCppProvider, Provider
+from llm.model import AgentBackend, Model, SourceOllama, SourceRemote
+from llm.prepare import prepare_model_source
+from llm.provider import LangchainLocalProvider, LangchainRemoteProvider, LlamaCppProvider, Provider
 from util import console
 
 class ToolProvider(Provider):
+    def _init(self, name: str, model: Model, memory: Optional[Memory] = None) -> None:
+        super()._init(name, model, memory)
+
+        self.instance = None
+
     @abstractmethod
     def invoke(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str: ...
 
     @abstractmethod
     def register_tools(self, tools: Sequence[Callable] = None) -> None: ...
 
-    def build(provider: Provider) -> "ToolProvider":
-        if isinstance(provider, LlamaCppProvider):
-            toolprovider = LlamaToolprovider(provider)
-        elif isinstance(provider, LangchainLocalProvider):
-            toolprovider = LangchainToolprovider(provider)
+    def build(name: str, model: Model, memory: Optional[Memory] = None) -> "ToolProvider":
+        if model.value.agent_backend is AgentBackend.LLAMACPPAGENT:
+            toolprovider = LlamaToolprovider(name, model, memory)
+        elif model.value.agent_backend is AgentBackend.LANGCHAIN:
+            return LangchainToolprovider(name, model=model, memory=memory)
         else:
             raise ValueError("Unsupported ToolProvider configuration")
-
-        toolprovider.provider = provider
 
         return toolprovider
     
 class LlamaToolprovider(ToolProvider):
-    def __init__(self, name: str, provider: Provider, memory: Optional[Memory] = None):
-        self.name = name
-        self.provider = provider
-        self.memory = memory
-        self.instance = LlamaCppAgent(LlamaCppPythonProvider(provider.llm), debug_output=debug.VERBOSE_LLAMACPPAGENT)
+    def __init__(self, name: str,  model: Model, memory: Optional[Memory] = None):
+        super()._init(name, model, memory)
+
+        LlamaCppProvider._init(self, name, model, memory)
+
+        self.instance = LlamaCppAgent(LlamaCppPythonProvider(self.llm), debug_output=debug.VERBOSE_LLAMACPPAGENT)
         self._output_settings = None
         self._tools: Sequence[Callable] = None
 
@@ -69,7 +75,7 @@ class LlamaToolprovider(ToolProvider):
 
         history = BasicChatHistory(
             chat_history_strategy=BasicChatHistoryStrategy.last_k_messages,
-            llm_provider=self.provider
+            llm_provider=self.llm
         )
 
         for m in mem.get_history():
@@ -92,8 +98,9 @@ class LlamaToolprovider(ToolProvider):
         reply = self.instance.get_chat_response(
             message=message,
             chat_history=history,
+            #system_prompt=transient,
             structured_output_settings=self._output_settings,
-            print_output=debug.VERBOSE_LLAMACPPAGENT
+            print_output=debug.VERBOSE_LLAMACPPAGENT,
         )
 
         clean_reply = Provider._clean_reply(reply)
@@ -102,11 +109,17 @@ class LlamaToolprovider(ToolProvider):
         return clean_reply
 
 class LangchainToolprovider(ToolProvider):
-    def __init__(self, name: str, provider: Provider, memory: Optional[Memory] = None):
-        self.name = name
-        self.provider = provider
-        self.memory = memory
-        self.instance = provider.llm
+    def __init__(self, name: str, model: Model, memory: Optional[Memory] = None):
+        super()._init(name, model, memory)
+
+        src = model.value.source
+
+        if isinstance(src, SourceOllama):
+            LangchainLocalProvider._init(self, name, model, memory)
+        elif isinstance(src, SourceRemote):
+            LangchainRemoteProvider._init(self, name, model, memory)
+        else:
+            raise ValueError("Unsupported LangchainToolProvider configuration")
 
     def register_tools(self, tools: Sequence[Callable]) -> None:
         self._tools = tools
@@ -125,7 +138,7 @@ class LangchainToolprovider(ToolProvider):
                 )
                 for t in tools
             ]
-            self.instance = self.provider.llm.bind_tools(general_tools)
+            self.instance = self.llm.bind_tools(general_tools)
         else:
             openai_tools: list[dict] = []
             for t in tools:
@@ -144,7 +157,7 @@ class LangchainToolprovider(ToolProvider):
                     }
                 })
             
-            self.instance = self.provider.llm.bind_tools(openai_tools)
+            self.instance = self.llm.bind_tools(openai_tools)
 
     def invoke(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str:
         mem = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
@@ -223,7 +236,7 @@ class LangchainToolprovider(ToolProvider):
         #-------------------------
 
         try:
-            result = self.instance.invoke(mem.get_history(self.provider.backend))
+            result = self.instance.invoke(mem.get_history())
         except Exception as e:
             FormalError(f"no valid reply")
             return ""

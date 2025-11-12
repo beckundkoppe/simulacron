@@ -43,7 +43,7 @@ class Room:
                 light_level=self.light_level,
             )
 
-            perception_data = target.on_perceive(observer.perception, env, depth)
+            perception_data = target.on_perceive(observer, env, depth)
 
             if isinstance(perception_data, dict):
                 perceptions.append(perception_data)

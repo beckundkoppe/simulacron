@@ -15,9 +15,6 @@ from llm.model import (
 def prepare_model_source(model: Model) -> None:
     """
     Ensure the model file is locally available if needed.
-    Returns:
-        - SourcePath  : local model file is ready
-        - SourceRemote: remote endpoint info
     """
     src = model.value.source
 
