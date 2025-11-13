@@ -67,7 +67,6 @@ class Agent:
 
     def _imgagination_realisation_step(self, context, task: str, tools: ToolGroup):
         imaginator = Provider.build("imaginator", self.imaginator_model, memory=self.main_memory)
-        imaginator.memory.add_message(Role.SYSTEM, "You are an advanced AI.")
         imagination = imaginator.invoke(context, task)
         self.main_memory.save("main_memory.txt")
 
@@ -79,20 +78,21 @@ class Agent:
         for i in range(0, 3):
             if correction is None:
                 assert i == 0, "Imaginator failed"
-                ctx = "PLAN: " + imagination
+                ctx = context + " PLAN: " + imagination
             else:
-                ctx = correction
+                ctx = context + " PLAN: " + imagination + correction
 
             retry = ""
             for i in range(0, 3):
-                #imaginator.memory.add_message(Role.SYSTEM, "Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a precice and short question.")
-                #reply = realisator.invoke(ctx, retry + "Give the toolcalls")
-                reply = realisator.invoke("What actions are available?")
+                realisator.memory.add_message(Role.SYSTEM, "Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a precice and short question.")
+                reply = realisator.invoke(ctx, retry)
+                #reply = realisator.invoke("What actions are available?")
 
                 if process_formal_errors(realisator.memory):
                     #helper = Provider.build("helper", self.imaginator_model, memory=self.main_memory)
                     #why = helper.invoke("Precise instruction how to prevent the error. (short)", override=realisator.memory, append=False)
-                    retry = "Retry with corrected version: "
+                    #retry = "Retry with corrected version: "
+                    pass
                 else:
                     break;
 

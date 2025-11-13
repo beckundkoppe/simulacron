@@ -139,11 +139,11 @@ def process_action_results(memory):
 
         if isinstance(result, ActionNotPossible):
             prefix = "[ACTION FAILURE]"
-            color = console.Color.RED
+            color = console.Color.YELLOW
             role = Role.USER
         elif isinstance(result, Success):
             prefix = "[ACTION EXECUTED]"
-            color = console.Color.YELLOW
+            color = console.Color.GREEN
             role = Role.USER
         else:
             continue

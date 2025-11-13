@@ -488,6 +488,19 @@ class Model(Enum):
                     ),
                 )
 
+            XLAM2_8B_Q8 = ModelSpec(
+                name="xLAM-2-8B-Q8",
+                tag="xlam2_8b",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.TOOL,
+                source=SourceOllama(
+                    model_id="robbiemu/Salesforce_Llama-xLAM-2:8b-fc-r-q8_0",
+                    #https://ollama.com/robbiemu/Salesforce_Llama-xLAM-2/tags
+                ),
+            )
+
             MAGISTRAL_SMALL_24B = ModelSpec(
                 name="Magistral-Small-24B-Q4",
                 tag="magistral_small_24B",
@@ -520,7 +533,7 @@ class Model(Enum):
                 location=Location.LOCAL,
                 backend=Backend.OLLAMA,
                 agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.HYBRID,
+                kind=ModelKind.INSTRUCT,
                 source=SourceOllama(
                     model_id="dolphin3:8b",
                     #https://ollama.com/library/dolphin3

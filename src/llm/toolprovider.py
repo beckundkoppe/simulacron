@@ -3,6 +3,7 @@ import ast
 from dataclasses import dataclass
 import inspect
 import json
+import re
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from ollama import Tool
@@ -238,7 +239,7 @@ class LangchainToolprovider(ToolProvider):
         try:
             result = self.instance.invoke(mem.get_history())
         except Exception as e:
-            FormalError(f"no valid reply")
+            FormalError(f"no valid reply: " + str(e))
             return ""
 
         if debug.VERBOSE_LANGCHAIN: console.json_dump(result)
@@ -252,7 +253,7 @@ class LangchainToolprovider(ToolProvider):
                     valid_toolcall = True
 
             if(not valid_toolcall):
-                parsing_options = [ ast.literal_eval, json.loads ]
+                parsing_options = [ ast.literal_eval, json.loads, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
 
                 for parse in parsing_options:
                     try:
@@ -268,3 +269,107 @@ class LangchainToolprovider(ToolProvider):
         self._invoke_post(reply=clean_reply, override=override, append=append)
 
         return clean_reply
+
+#interact_with_object_using_item, args: {'object_id': 'door_6', 'using_id': 'key_4'}
+def _parse_heuristic_1(cmd: str):
+    # Extract name and argument section
+    name, rest = cmd.split(",", 1)
+    name = name.strip()
+    
+    # Isolate the argument dict
+    args_str = rest.split(":", 1)[1].strip()
+    if args_str.startswith("{") and args_str.endswith("}"):
+        args_str = args_str[1:-1]
+
+    # Split top-level args
+    raw_args = []
+    depth = 0
+    current = []
+    for ch in args_str:
+        if ch == "," and depth == 0:
+            raw_args.append("".join(current).strip())
+            current = []
+        else:
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+            current.append(ch)
+    if current:
+        raw_args.append("".join(current).strip())
+
+    # Convert key:value pairs into dicts
+    parsed_args = []
+    for arg in raw_args:
+        key, val = arg.split(":", 1)
+        key = key.strip().strip("'\"")
+        val = val.strip().strip("'\"")
+        parsed_args.append({"name": key, "value": val})
+
+    return [
+        {"name": name, "args": parsed_args}
+    ]
+
+#{"name":"interact_with_object","arguments":{ "object_id": "door_6", "operator": "GO_THROUGH" } }
+#{"name":"interact_with_object","args":{"object_id":"door_6","operator":"GO_THROUGH"}}
+def _parse_flexible_json(cmd: str):
+    # Normalize single quotes to double quotes for JSON
+    normalized = re.sub(r"'", '"', cmd)
+
+    # Parse JSON
+    data = json.loads(normalized)
+
+    # Accept both "args" and "arguments"
+    arg_container = data.get("args", None)
+    if arg_container is None:
+        arg_container = data.get("arguments", {})
+
+    # Build list-style args
+    args_list = [{"name": k, "value": v} for k, v in arg_container.items()]
+
+    return [{"name": data["name"], "args": args_list}]
+
+#interact_with_object("door_6", "GO_THROUGH")
+def _parse_call_syntax(cmd: str):
+    # Extract name and argument list
+    match = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*", cmd)
+    if not match:
+        raise ValueError("Invalid function call syntax")
+    
+    func_name = match.group(1)
+    raw_args = match.group(2).strip()
+
+    # Split arguments respecting quotes
+    args = []
+    current = []
+    depth = 0
+    in_string = False
+    string_char = None
+
+    for ch in raw_args:
+        if ch in ("'", '"'):
+            if not in_string:
+                in_string = True
+                string_char = ch
+            elif string_char == ch:
+                in_string = False
+        if ch == "," and not in_string and depth == 0:
+            args.append("".join(current).strip())
+            current = []
+        else:
+            current.append(ch)
+    if current:
+        args.append("".join(current).strip())
+
+    # Clean and normalize values
+    cleaned = []
+    for a in args:
+        a = a.strip()
+        if (a.startswith('"') and a.endswith('"')) or (a.startswith("'") and a.endswith("'")):
+            a = a[1:-1]
+        cleaned.append(a)
+
+    # Convert into required structure
+    arg_dicts = [{"name": f"arg{i}", "value": val} for i, val in enumerate(cleaned)]
+
+    return [{"name": func_name, "args": arg_dicts}]

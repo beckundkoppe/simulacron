@@ -499,12 +499,6 @@ class AgentEntity(Entity):
                     f"Attempted to take non-collectible '{item.readable_id}' from container "
                     f"'{container.readable_id}'."
                 ),
-                hint="Only collectible items can be removed from containers.",
-                context={
-                    "item": item.readable_id,
-                    "container": container.readable_id,
-                    "action": "take_from",
-                },
             )
 
         agent_room = self.room
@@ -517,13 +511,6 @@ class AgentEntity(Entity):
                     f"'{container.readable_id}' located in "
                     f"'{container_room.name if container_room else 'unknown'}'."
                 ),
-                hint="Move to the room that holds the container before interacting with it.",
-                context={
-                    "agent": self.readable_id,
-                    "agent_room": agent_room.readable_id if agent_room else None,
-                    "container": container.readable_id,
-                    "container_room": container_room.readable_id if container_room else None,
-                },
             )
         if not container.contains_entity(item):
             raise HardException(
@@ -531,16 +518,6 @@ class AgentEntity(Entity):
                 console_message=(
                     f"Removal failed; container '{container.readable_id}' does not hold '{item.readable_id}'."
                 ),
-                hint="Check the container contents from your observation before taking an item.",
-                context={
-                    "container": container.readable_id,
-                    "requested_item": item.readable_id,
-                    "contents": [
-                        child.readable_id
-                        for child in getattr(container, "children", [])
-                        if getattr(child, "readable_id", None)
-                    ],
-                },
             )
 
         item.is_collectible = False
