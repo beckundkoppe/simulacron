@@ -38,8 +38,8 @@ def main():
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        main_model               = Model.Local.Ollama.Granite.GRANITE4_3B,
-        imaginator               = Model.Local.Ollama.DOLPHIN3_8B,
+        main_model               = Model.Local.Ollama.Qwen3.VANILLA_8B,
+        imaginator               = Model.Remote.MISTRAL_SMALL_24B,
         level                    = Levels.DETAILED_INSTRUCT.POTATO_EASY.value,
         reruns                   = 10,
         optimal_steps_multiplier = 3.0,

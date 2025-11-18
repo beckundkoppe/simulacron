@@ -184,7 +184,7 @@ class _SilentMemory(Memory):
 class SummarizingMemory(Memory):
     """Memory that compresses older messages when the context nears exhaustion."""
 
-    _SUMMARY_PREFIX = "[conversation-summary]"
+    _SUMMARY_PREFIX = "[summary]"
 
     def __init__(
         self,
@@ -286,38 +286,20 @@ class SummarizingMemory(Memory):
         except Exception:
             pass
 
-        return self._fallback_summary(messages, summary_limit)
+        return None #throw old away
 
     def _summarize_with_llm(
         self,
         messages: List[Tuple[Role, str]],
-        runner: "Provider",
+        provider: "Provider",
         limit: int,
     ) -> str:
         formatted = self._format_messages(messages)
         memory = _SilentMemory()
         instructions = self._summary_instructions.format(limit=limit)
         memory.add_message(Role.SYSTEM, instructions)
-        summary = runner.invoke(formatted, override=memory)
+        summary = provider.invoke(formatted, override=memory)
         return summary.strip()
-
-    def _fallback_summary(self, messages: List[Tuple[Role, str]], limit: int) -> str:
-        parts: List[str] = []
-        for role, msg in messages:
-            clean_msg = " ".join(str(msg).split())
-            if not clean_msg:
-                continue
-            parts.append(f"{role.value}: {clean_msg}")
-
-        if not parts:
-            return ""
-
-        words = " ".join(parts).split()
-        if len(words) <= limit:
-            return " ".join(words)
-
-        truncated = " ".join(words[:limit]) + " ..."
-        return truncated
 
     def _format_messages(self, messages: List[Tuple[Role, str]]) -> str:
         lines: List[str] = []

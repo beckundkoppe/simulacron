@@ -78,9 +78,9 @@ class Agent:
         for i in range(0, 3):
             if correction is None:
                 assert i == 0, "Imaginator failed"
-                ctx = context + " PLAN: " + imagination
+                ctx = context + ". What to do next: " + imagination
             else:
-                ctx = context + " PLAN: " + imagination + correction
+                ctx = context + ". What to do next: " + imagination + correction
 
             retry = ""
             for i in range(0, 3):

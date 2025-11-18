@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import re
 from typing import Optional
+from langchain_openai import ChatOpenAI
 
 import debug
 from llm.cache import Cache
@@ -84,7 +85,7 @@ class Provider(ABC):
         if isinstance(src, SourceOllama):
             return LangchainLocalProvider(name, model=model,memory=memory)
         elif isinstance(src, SourceRemote):
-            raise NotImplementedError
+            return LangchainRemoteProvider(name, model=model,memory=memory)
         elif isinstance(src, SourceFile) or isinstance(src, SourceLink) or isinstance(src, SourceHuggingface):
             return LlamaCppProvider(name, model=model, memory=memory)
         else:
@@ -147,5 +148,11 @@ class LangchainRemoteProvider(LangchainProvider):
         self._init(name, model, memory)
 
     def _init(self, name: str, model: Model, memory: Optional[Memory] = None):
-        #self._runner = ChatOpenAI(model=model, openai_api_base=api_base)
-        raise NotImplementedError
+        src = model.value.source
+
+        self.llm = ChatOpenAI(
+
+            model=src.model_id,
+            base_url=src.endpoint_url,
+            api_key="none"
+        )

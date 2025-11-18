@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union
+from typing import Optional, Union
 
 class Backend(Enum):
     LLAMACPP    = "llamacpp",
@@ -39,6 +39,7 @@ class SourceOllama:
 class SourceRemote:
     endpoint_url: str
     model_id: str
+    api_key: Optional[str] = None
 
 class ModelKind(Enum):
     INSTRUCT        = "instruct"
@@ -154,8 +155,8 @@ class Model(Enum):
                 )
 
                 VANILLA_8B = ModelSpec(
-                    name="Qwen3-14B",
-                    tag="qwen3_14b",
+                    name="Qwen3-8B",
+                    tag="qwen3_8b",
                     location=Location.LOCAL,
                     backend=Backend.LLAMACPP,
                     agent_backend=AgentBackend.LLAMACPPAGENT,
@@ -545,60 +546,60 @@ class Model(Enum):
     # ----------------------------------------------------------
     class Remote(Enum):
             # institut
-            GPT_OSS_20B = ModelSpec(
-                name="GPT-OSS-20B",
-                tag="gpt_oss_20b",
-                location=Location.REMOTE,
-                backend=Backend.OTHER,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.HYBRID,
-                source=SourceRemote(
-                    endpoint_url="",
-                    model_id="",
-                ),
-            )
+            #GPT_OSS_20B = ModelSpec(
+            #    name="GPT-OSS-20B",
+            #    tag="gpt_oss_20b",
+            #    location=Location.REMOTE,
+            #    backend=Backend.OTHER,
+            #    agent_backend=AgentBackend.LANGCHAIN,
+            #    kind=ModelKind.HYBRID,
+            #    source=SourceRemote(
+            #        endpoint_url="http://127.0.0.1:11434/v1",
+            #        model_id="deepseek-r1:70b-llama-distill-fp16",
+            #    ),
+            #)
 
             # institut
-            PHI4_PLUS = ModelSpec(
-                name="Phi-4-reasoning-plus-14B" ,
-                tag="phi4_plus_14b",
+            MISTRAL_SMALL_24B = ModelSpec(
+                name="Mistral-Small-24B" ,
+                tag="mistral_small_24b",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
                 agent_backend=AgentBackend.LANGCHAIN,
                 kind=ModelKind.HYBRID,
                 source=SourceRemote(
-                    endpoint_url="",
-                    model_id="",
+                    endpoint_url="http://127.0.0.1:11444/v1",
+                    model_id="hf.co/bartowski/huihui-ai_Mistral-Small-24B-Instruct-2501-abliterated-GGUF:Q4_K_M",
                 ),
             )
 
             # openai
-            GPT4 = ModelSpec(
-                name="OpenAI-GPT-4",
-                tag="gpt4",
-                location=Location.REMOTE,
-                backend=Backend.OTHER,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.HYBRID,
-                source=SourceRemote(
-                    endpoint_url="https://api.openai.com/v1",
-                    model_id="gpt-4",
-                ),
-            )
-
-            # openai
-            GPT5 = ModelSpec(
-                name="OpenAI-GPT-5",
-                tag="gpt5",
-                location=Location.REMOTE,
-                backend=Backend.OTHER,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.HYBRID,
-                source=SourceRemote(
-                    endpoint_url="https://api.openai.com/v1",
-                    model_id="gpt-5",
-                ),
-            )
+            #GPT4 = ModelSpec(
+            #    name="OpenAI-GPT-4",
+            #    tag="gpt4",
+            #    location=Location.REMOTE,
+            #    backend=Backend.OTHER,
+            #    agent_backend=AgentBackend.LANGCHAIN,
+            #    kind=ModelKind.HYBRID,
+            #    source=SourceRemote(
+            #        endpoint_url="https://api.openai.com/v1",
+            #        model_id="gpt-4",
+            #    ),
+            #)
+#
+            ## openai
+            #GPT5 = ModelSpec(
+            #    name="OpenAI-GPT-5",
+            #    tag="gpt5",
+            #    location=Location.REMOTE,
+            #    backend=Backend.OTHER,
+            #    agent_backend=AgentBackend.LANGCHAIN,
+            #    kind=ModelKind.HYBRID,
+            #    source=SourceRemote(
+            #        endpoint_url="https://api.openai.com/v1",
+            #        model_id="gpt-5",
+            #    ),
+            #)
 
     class Embedding(Enum):
         QWEN3_8B = ModelSpec(

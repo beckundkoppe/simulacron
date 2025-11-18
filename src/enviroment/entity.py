@@ -280,7 +280,7 @@ class ContainerEntity(Entity):
 
         if (openable and openable.is_open) or not openable:
             if detail >= DetailLevel.NORMAL and self.children:
-                child_detail = detail.reduce()
+                child_detail = DetailLevel.reduce(detail)
                 info["contents"] = [
                     child.on_perceive(observer, env, child_detail)
                     for child in self.children
