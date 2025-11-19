@@ -227,7 +227,6 @@ class Memory(ABC):
         mem = Memory()
         mem.append_message(Role.USER, data)
         summarizer = Provider.build("summarizer", current.EXTRA_MODEL, memory=mem)
-        mem.debug_print()
         summary = summarizer.call("Summarize in few short sentences. (no 'summary:' or similar)")
         
         return (Type.SUMMARY, Role.USER, summary)
