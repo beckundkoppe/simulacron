@@ -2,41 +2,36 @@
   [
     "GOAL",
     "SYSTEM",
-    "Goal: Find the potato and place it on the table."
+    "Find the potato and place it on the table."
   ],
   [
     "SUMMARY",
     "USER",
-    "\n\nUser is near an unlocked door at (4.0,4.0), holding a key and diamond. The door requires \"GO_THROUGH\" to traverse, not \"USE.\" The shelf is dusty and resin-scented, while the table is empty. The door's purpose as an exit remains unclear."
-  ],
-  [
-    "ACTIVE_OBSERVATION",
-    "USER",
-    "\n\nYou observe a door at your location, an open shelf nearby, and an empty table. The unlocked shelf and the key in your inventory hint at possible interactions."
-  ],
-  [
-    "FEEDBACK",
-    "USER",
-    "[ACTION EXECUTED] Went through door_8 into chamber"
-  ],
-  [
-    "REFLECT",
-    "USER",
-    "\n\nYou have exited the main room through **door_8** into a new chamber. This action changes your current location to the chamber, which is not described in the original room data. The effect of this action is:  \n- **Location Update**: You are now in a new chamber (unspecified details).  \n- **Inventory**: Your inventory remains unchanged (key_4 and diamond_6 are still with you).  \n- **Next Steps**: Explore the chamber to discover its contents, objects, or challenges.  \n\nWould you like to describe the chamber's environment or interact with anything within it?"
+    "\n\nYou moved to the open shelf at (1,1), revealing an unknown item. The key remains on the table at (0,4), and the door at (4,4) is accessible. Your inventory is still empty, allowing you to pick up either the shelf's item or the key next."
   ],
   [
     "OBSERVATION",
     "USER",
-    "{\"you_are_in_room\": {\"name\": \"chamber\", \"your_pos\": {\"x\": 0.0, \"y\": 1.0}, \"room_size\": {\"extend_x\": 1.0, \"extend_y\": 3.0}}, \"your_inventory\": [{\"name\": \"key\", \"id\": \"key_4\"}, {\"name\": \"diamond\", \"id\": \"diamond_6\"}], \"your_observation\": [{\"name\": \"chest\", \"description\": \"A plain cardboard box with slightly frayed edges. The lid bends easily when pressed, and it carries faint marks from tape and labels.\", \"id\": \"chest_12\", \"position\": \"(0.0,0.0)\", \"state\": \"closed\", \"contents_count\": \"contains 1\", \"contents\": [\"empty\"]}, {\"name\": \"door\", \"id\": \"door_9\", \"position\": \"(0.0,1.0)\"}, {\"name\": \"shelf\", \"description\": \"An open shelf of rough pine planks, filled with dust and faint smell of resin.\", \"id\": \"shelf_14\", \"position\": \"(0.0,2.0)\", \"contents_count\": \"contains 1\", \"contents\": [{\"name\": \"chest\", \"description\": \"A compact chest of black iron, its hinges groaning faintly when moved.\", \"id\": \"chest_13\", \"state\": \"closed\", \"lock_state\": \"locked\", \"contents_count\": \"contains 1\", \"contents\": [\"empty\"]}]}]}"
+    "{\"you_are_in_room\": {\"name\": \"main\", \"your_pos\": {\"x\": 1.0, \"y\": 1.0}, \"room_size\": {\"extend_x\": 4.0, \"extend_y\": 4.0}}, \"your_inventory\": [], \"your_observation\": [{\"name\": \"table\", \"description\": \"A sturdy oak table with carved legs and a few burn marks from candles.\", \"id\": \"table_5\", \"position\": \"(0.0,4.0)\", \"contents_count\": \"contains 1\", \"contents\": [{\"name\": \"key\", \"id\": \"key_4\"}]}, {\"name\": \"door\", \"id\": \"door_8\", \"position\": \"(4.0,4.0)\"}, {\"name\": \"shelf\", \"description\": \"An open shelf of rough pine planks, filled with dust and faint smell of resin.\", \"id\": \"shelf_7\", \"position\": \"(1.0,1.0)\", \"state\": \"open\", \"lock_state\": \"unlocked\", \"contents_count\": \"contains 1\", \"contents\": [{\"name\": \"diamond\", \"id\": \"diamond_6\"}]}]}"
   ],
   [
     "ACTIVE_OBSERVATION",
     "USER",
-    "\n\nYou observe a door at your level, a cardboard chest (openable), and a locked iron chest on a shelf. The key in your inventory might unlock the iron chest, while the diamond could be valuable. The shelf’s resin smell and the door’s position hint at hidden clues."
+    "\n\nYou observe a sturdy oak table with a key, an open shelf holding a diamond, and a door. The shelf is unlocked and accessible, making the diamond visible. The key might be useful for opening something else."
+  ],
+  [
+    "FEEDBACK",
+    "USER",
+    "[ACTION EXECUTED] collected diamond_6 from shelf_7"
+  ],
+  [
+    "REFLECT",
+    "USER",
+    "\n\nThe action of collecting **diamond_6** from **shelf_7** has the following effects:  \n1. **Diamond_6** is now in your inventory.  \n2. The **shelf_7** no longer contains any items (its `contents_count` is now \"contains 0\").  \n3. The shelf's state remains **open** and **unlocked**, as the action only removed the diamond.  \n\nYour inventory now includes the diamond, and the shelf is empty. Let me know if you'd like to interact with other objects! 🌟"
   ],
   [
     "PLAN",
     "USER",
-    "\n\n**Updated Plan to Reach the Goal:**\n\n1. **Explore the New Chamber**:  \n   - Search the chamber for the **potato** (it may be hidden in a container, on a shelf, or near the door).  \n   - Check for interactable objects (e.g., locked chests, drawers, or shelves) using your **key** if needed.  \n\n2. **Retrieve the Potato**:  \n   - Once located, use `interact_with_object(..., operator=\"TAKE\")` to pick up the potato.  \n\n3. **Return to the Main Room’s Table**:  \n   - Use `interact_with_object(..., operator=\"GO_THROUGH\")` to re-enter the main room via the door (if necessary).  \n   - Navigate to the **table** at (0.0,4.0).  \n\n4. **Place the Potato on the Table**:  \n   - Use `interact_with_object(..., operator=\"PLACE\")` to put the potato on the table.  \n\n**Key Notes**:  \n- The **key** and **diamond** may unlock or interact with objects in the chamber.  \n- If the chamber has no potato, revisit the main room’s **shelf** or **table** to confirm the potato’s location.  \n\nProceed step by step, and describe the chamber’s contents to refine the plan! 🥔🪑"
+    "\n\n**Updated Plan to Reach the Goal:**  \n1. **Pick up the unknown item** from the opened shelf (shelf_7) at (1.0,1.0).  \n   - Assume this item is the **potato** (since it’s the only unlocated item besides the key).  \n2. **Move to the table** (table_5) at (0.0,4.0).  \n3. **Place the potato on the table** to complete the goal.  \n\n**Next Action:**  \n- Pick up the unknown item from the shelf.  \n\nThis plan prioritizes retrieving the potato from the shelf, as it’s the only unlocated item. If the unknown item isn’t the potato, further exploration (e.g., checking the door or table) may be needed."
   ]
 ]

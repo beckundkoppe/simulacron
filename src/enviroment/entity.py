@@ -285,8 +285,6 @@ class ContainerEntity(Entity):
                     child.on_perceive(observer, env, child_detail)
                     for child in self.children
                 ]
-        elif detail >= DetailLevel.NORMAL:
-            info["contents"] = ["empty"]
         else:
             info["contents"] = ["unknown"]
 
