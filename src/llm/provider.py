@@ -37,24 +37,30 @@ class Provider(ABC):
     @abstractmethod
     def invoke(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str: ...
 
-    def _invoke_pre(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> Memory:
-        assert isinstance(message, str), "message ist no string"
+    def call(self, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None) -> str:
+        return self.invoke(message=None, transient=transient, role=role, override=override, append=False)
 
-        console.pretty(console.bullet(f"[{role.to_string()}] {message + (" " + transient if transient is not None else "")}", color=console.Color.CYAN))
+    def _invoke_pre(self, message: Optional[str] = None, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> Memory:
+        if message is None:
+            msg = ""
+        else:
+            msg = message
+
+        assert isinstance(msg, str), "message ist no string"
+
+        console.pretty(console.bullet(f"[{role.to_string()}] {msg + (" " + transient if transient is not None else "")}", color=console.Color.CYAN))
 
         if override is not None:
             mem = override
         else:
             mem = self.memory
 
-        if append:
-            mem.add_message(role, message)
+        if append and message:
+            mem.append_message(role, message)
 
         temp = mem.copy()
         if transient is not None:
-            temp.add_message(role, transient)
-
-        console.pretty()
+            temp.append_message(role, transient)
 
         return temp
 
@@ -63,7 +69,11 @@ class Provider(ABC):
             return re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL)
         else:
             return ""
-
+        
+    def _hard_clean_reply(reply: str) -> str:
+        if "<think>" in reply and "</think>" not in reply:
+            return ""
+        return reply
     def _invoke_post(self, reply: str, override: Optional[Memory] = None, append: bool = True) -> None:
         assert isinstance(reply, str)
 
@@ -71,13 +81,13 @@ class Provider(ABC):
 
         if override is not None:
             if append and len(reply) > 0:
-                override.add_message(Role.ASSISTANT, reply)
+                override.append_message(Role.ASSISTANT, reply)
         else:
             if not self.has_memory:
                 self.memory = Memory()
             else:
                 if append and len(reply) > 0:
-                    self.memory.add_message(Role.ASSISTANT, reply)
+                    self.memory.append_message(Role.ASSISTANT, reply)
 
     def build(name: str, model: Model, memory: Optional[Memory] = None) -> "Provider":
         src = model.value.source
@@ -105,9 +115,19 @@ class LlamaCppProvider(Provider):
     def invoke(self, message: str, transient: Optional[str] = None,  role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str:
         temp = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
 
+
+        #response_format={"type": "text"}
         reply = self.llm.create_chat_completion(temp.get_history())["choices"][0]["message"]["content"]
 
+        clean_reply = Provider._hard_clean_reply(reply)
+
+        if len(clean_reply) <= 0:
+            hist = temp.get_history()
+            hist[-1]["content"] = hist[-1]["content"] + " /nothink"
+            reply = self.llm.create_chat_completion(hist)["choices"][0]["message"]["content"]
+
         clean_reply = Provider._clean_reply(reply)
+
         self._invoke_post(reply=clean_reply, override=override, append=append)
 
         return clean_reply

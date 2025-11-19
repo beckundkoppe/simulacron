@@ -72,8 +72,7 @@ def build_medium(detailed_instruction) -> LevelSpec:
     main = Room("main", 4, 4)
     chamber = Room.chamber()
 
-    perception = ObserverPerception()
-    tron = AgentEntity("tron", perception, pos=Position(0.0, 0.0))
+    tron = AgentEntity("tron", pos=Position(0.0, 0.0))
     tron.enter(main)
 
     # Main room:
@@ -140,8 +139,7 @@ def build_hard(detailed_instruction) -> LevelSpec:
     main = Room("main", 4, 4)
     chamber = Room.chamber()
     
-    perception = ObserverPerception()
-    tron = AgentEntity("tron", perception, pos=Position(0.0, 0.0))
+    tron = AgentEntity("tron", pos=Position(0.0, 0.0))
     tron.enter(main)
 
     # Main room:
@@ -152,7 +150,7 @@ def build_hard(detailed_instruction) -> LevelSpec:
     table.add_child(key)
 
     diamond_main = Entity("diamond", Position(0.0, 0.0), is_collectible=True)
-    chest_fake = AdvancedContainerEntity(name="shelf", pos=Position(1.0,1.0),is_open=False, is_locked=False, material="pine wood", description="An open shelf of rough pine planks, filled with dust and faint smell of resin.")
+    chest_fake = AdvancedContainerEntity(name="shelf", pos=Position(1.0,1.0),is_open=False, is_locked=False, description="An open shelf of rough pine planks, filled with dust and faint smell of resin.")
     chest_fake.enter(main)
     chest_fake.add_child(diamond_main)
 
@@ -172,7 +170,7 @@ def build_hard(detailed_instruction) -> LevelSpec:
     shelf_fake.enter(chamber)
     shelf_fake.add_child(diamond)
 
-    chest = AdvancedContainerEntity("chest", is_locked=True, is_open=False, material="forged iron", description="A compact chest of black iron, its hinges groaning faintly when moved.")
+    chest = AdvancedContainerEntity("chest", is_locked=True, is_open=False, description="A compact chest of black iron, its hinges groaning faintly when moved.")
     chest.register_key(key)
     chest.add_child(potato)
 

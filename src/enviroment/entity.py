@@ -368,10 +368,10 @@ class ConnectorEntity(Entity):
 
         if(action.type == ActionType.UNLOCK):
             if(not self.is_locked):
-                return "already unlocked"
+                return f"{self.readable_id} is already unlocked"
             if(action.item_1 in self.keys):
                 self.is_locked = False
-                return "unlocked"
+                return f"unlocked {self.readable_id}"
 
             key_id = getattr(action.item_1, "readable_id", None)
 
@@ -408,7 +408,7 @@ class ConnectorEntity(Entity):
         if(action.type == ActionType.USE):
             if not self.is_locked:
                 actor_entity.use_connector(self)
-                return "went through"
+                return f"Went through {self.readable_id} into {self.otherDoor.room.name}"
             
         super().on_interact(actor_entity, action)
 

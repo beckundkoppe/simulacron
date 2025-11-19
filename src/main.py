@@ -31,16 +31,16 @@ def main():
         imaginator = ImaginatorType.QUESTION,
         observe    = ObserveType.ON,
         reflect    = ReflectType.ON,
-        plan       = PlanType.OFF
+        plan       = PlanType.PLAN
     )
 
     config = Configuration(PerceptionType.ALL, PositionType.RELATIVE, agent=agent_config, temperature=0.0, name="test", seed=-1)
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        main_model               = Model.Local.Ollama.Qwen3.VANILLA_8B,
-        imaginator               = Model.Remote.MISTRAL_SMALL_24B,
-        level                    = Levels.DETAILED_INSTRUCT.POTATO_EASY.value,
+        main_model               = Model.Local.LlamaCpp.Qwen.VANILLA_8B,
+        #imaginator               = Model.Remote.MISTRAL_SMALL_24B,
+        level                    = Levels.VAGUE_INSTRUCT.POTATO_HARD.value,
         reruns                   = 10,
         optimal_steps_multiplier = 3.0,
         #extra_model              = Model.Local.Ollama.DOLPHIN3_8B,

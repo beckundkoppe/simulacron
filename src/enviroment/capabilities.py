@@ -52,7 +52,7 @@ class OpenableCapability(Capability):
     def on_interact(self, actor: Entity, action: ActionTry) -> str | None:
         if action.type == ActionType.OPEN:
             if self.is_open:
-                return "already open"
+                return f"{self.owner.readable_id} is already open"
             lockable = self.owner.get_capability(LockableCapability)
             if lockable and lockable.is_locked:
                 raise SoftException(
@@ -67,11 +67,11 @@ class OpenableCapability(Capability):
                     },
                 )
             self.is_open = True
-            return "opened"
+            return f"opened {self.owner.readable_id}"
 
         if action.type == ActionType.CLOSE:
             if not self.is_open:
-                return "already closed"
+                return f"{self.owner.readable_id} already closed"
             lockable = self.owner.get_capability(LockableCapability)
             if lockable and lockable.is_locked:
                 raise SoftException(
@@ -86,7 +86,7 @@ class OpenableCapability(Capability):
                     },
                 )
             self.is_open = False
-            return "closed"
+            return f"{self.owner.readable_id} is closed"
 
         return None
 
@@ -124,7 +124,7 @@ class LockableCapability(Capability):
     def on_interact(self, actor_entity: Entity, action: ActionTry) -> str | None:
         if action.type == ActionType.UNLOCK:
             if not self.is_locked:
-                return "already unlocked"
+                return f"{self.owner.readable_id} is already unlocked"
             if not self._has_key(action):
                 key_id = getattr(action.item_1, "readable_id", None)
                 raise SoftException(
@@ -140,7 +140,7 @@ class LockableCapability(Capability):
                     },
                 )
             self.is_locked = False
-            return "unlocked"
+            return f"{self.owner.readable_id} unlocked"
 
         if action.type == ActionType.LOCK:
             if self.is_locked:
@@ -175,7 +175,7 @@ class LockableCapability(Capability):
                 )
 
             self.is_locked = True
-            return "locked"
+            return f"{self.owner.readable_id} is locked"
 
         return None
 

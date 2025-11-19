@@ -225,9 +225,9 @@ class LangchainToolprovider(ToolProvider):
             else:
                 raise Exception("unknown tool")
             
-        def _try_execute(raw: str) -> bool:
+        def _try_execute(raw: str, heuristic: bool = False) -> bool:
             try:
-                tc = ToolCall.from_raw(raw, False)
+                tc = ToolCall.from_raw(raw, heuristic)
                 _execute_toolcall(tc)
                 return True
             except Exception as e:
@@ -264,7 +264,7 @@ class LangchainToolprovider(ToolProvider):
                         continue
 
                 if data is not None:
-                    _try_execute(data)
+                    _try_execute(data, True)
 
         self._invoke_post(reply=clean_reply, override=override, append=append)
 

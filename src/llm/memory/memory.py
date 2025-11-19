@@ -1,22 +1,16 @@
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import Enum, auto
 import re
 from typing import Iterable, List, Tuple, Optional, TYPE_CHECKING
 import json
 
 import config
+import current
 from llm.model import Backend
 
 if TYPE_CHECKING:
     from llm.cache import Cache
     from llm.model import Model
-    from llm.provider import Provider
-
-def _approximate_token_count(text: str) -> int:
-    """Heuristic token estimator that roughly matches LLM tokenization behavior."""
-    tokens = re.findall(r"\w+|[^\w\s]", text, re.UNICODE)
-    return max(1, len(tokens))
-
 
 class MemoryType(str, Enum):
     SIMPLE = "simple"
@@ -33,67 +27,79 @@ class Role(Enum):
     def to_string(self) -> str:
         return self.value
 
+class Type(Enum):
+    GOAL        = auto()
+    FEEDBACK    = auto()
+    ACTIVE_OBSERVATION = auto()
+    OBSERVATION = auto()
+    CURRENT_OBSERVATION = auto()
+    REFLECT     = auto()
+    PLAN        = auto()
+    SUMMARY     = auto()
+
 class Memory(ABC):
-    def __init__(self) -> None:
-        self._history: List[Tuple[Role, str]] = []
+    def __init__(self, goal = None, path = None) -> None:
+        self._goal: str = goal
+        self.path = path
+        self._history: List[Tuple[Type, Role, str]] = []
 
     def copy(self) -> "Memory":
         """
         Return a deep copy of the memory, including its history.
         """
         import copy
-        new_copy = self.__class__()
+        new_copy = self.__class__(self._goal, self.path)
         new_copy._history = copy.deepcopy(self._history)
         return new_copy
 
     def __str__(self) -> str:
-        return json.dumps(self.get_history(Backend.OTHER), ensure_ascii=False, indent=2)
+        return json.dumps(self._get_history(Backend.OTHER), ensure_ascii=False, indent=2)
+    
+    def append(self, other: List[Tuple[Type, Role, str]]) -> None:
+        self._history.extend(other._history)
 
-    def add_message(self, role: Role, message: str) -> None:
-        """Append a new message to the conversation history."""
-        assert isinstance(role, Role), "role must be a Role enum"
+    def get_last_n(self, n: int):
+        return self._history[:-n]
+
+    def append_message(self, role: Role, message: str, type: Optional[Type] = None) -> None:
         if not isinstance(message, str):
             raise TypeError(f"Memory expects plain text messages, got {type(message).__name__}")
-        self._history.append((role, message))
+        self._history.append((type, role, message))
 
-    def prepend_message(self, role: Role, message: str) -> None:
-        """Insert a message at the beginning of the history."""
-        assert isinstance(role, Role), "role must be a Role enum"
+    def prepend_message(self, role: Role, message: str, type: Optional[Type] = None) -> None:
         if not isinstance(message, str):
             raise TypeError(f"Memory expects plain text messages, got {type(message).__name__}")
-        self._history.insert(0, (role, message))
+        
+        self._history.insert(0, (type, role, message))
 
-    def extend_at_top(self, entries: "Iterable[tuple[Role, str]]") -> None:
-        """Prepend multiple messages while preserving their order."""
+    def save(self):
+        if(self.path): self._store(self.path)
 
-        # Materialise the iterable once so that we can insert in reverse order
-        batch = list(entries)
-        for role, message in reversed(batch):
-            self.prepend_message(role, message)
+    def _store(self, path: str) -> None:
+        self._save(path, self._history)
 
-    def save(self, path: str) -> None:
+    def _save(self, path: str, history) -> None:
         """Persist the memory to a JSON file."""
         with open(path, "w", encoding="utf-8") as f:
             json.dump(
-                [(role.name, msg) for role, msg in self._history],
+                [(type.name if type is not None else "NONE", role.name, msg) for type, role, msg in history],
                 f,
                 ensure_ascii=False,
                 indent=2
             )
 
-    def load(self, path: str) -> None:
+    def _load(self, path: str):
         """Load the memory from a JSON file."""
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        self._history = [(Role[name], msg) for name, msg in data]
-    
+        return [(Role[name], msg) for name, msg in data]
+
     def get_history(self) -> List[dict[str, str]]:
-        """
-        Export the history in the format required by the target backend,
-        preserving all ANSI colors or markdown.
-        """
+        return self._build_history(self._history)
+    
+    def _build_history(self, history) -> List[dict[str, str]]:
         messages: List[dict[str, str]] = []
-        for role, msg in self._history:
+        for type, role, msg in history:
             role_str = role.to_string()
 
             if not isinstance(msg, str):
@@ -109,7 +115,7 @@ class Memory(ABC):
         """
         Pretty-print the current conversation history with colorised bullets.
         """
-        from debug.console import pretty, bullet, debug_separator, Color
+        from util.console import pretty, bullet, debug_separator, Color
 
         color = Color.BLUE
 
@@ -117,7 +123,7 @@ class Memory(ABC):
 
         lines: list[str] = [debug_separator(color=color)]
 
-        for role, msg in self._history:
+        for type, role, msg in self._history:
             if role is Role.USER:
                 lines.append(
                     bullet(f"{msg!s}", bullet="[user]      ", color=Color.CYAN)
@@ -149,7 +155,7 @@ class Memory(ABC):
         lines: list[str] = [debug_separator(color=color)]
 
         # take only the two most recent messages
-        for role, msg in self._history[-2:]:
+        for type, role, msg in self._history[-2:]:
             if role is Role.USER:
                 lines.append(
                     bullet(f"{msg!s}", bullet="[user]      ", color=Color.CYAN)
@@ -170,140 +176,59 @@ class Memory(ABC):
         lines.append(debug_separator(color=color))
         pretty(*lines)
 
+    def get_token_count(self) -> int:
+        return Memory._approximate_token_count(self._history)
 
-class _SilentMemory(Memory):
-    """Memory variant that suppresses debug output for internal prompts."""
+    def _approximate_token_count(text: str) -> int:
+        """Heuristic token estimator that roughly matches LLM tokenization behavior."""
+        tokens = re.findall(r"\w+|[^\w\s]", text, re.UNICODE)
+        return max(1, len(tokens))
+    
+    def assure_max_token_count(self, max_count: int):
+        size = Memory._approximate_token_count(str(self._history))
 
-    def debug_print(self, is_agent: bool = False, name: Optional[str] = None) -> None:
-        return
+        while(size > max_count):
+            todo = min(size - max_count, int(config.Backend._n_context / 4))
 
-    def debug_print_recent(self, is_agent: bool = False, name: Optional[str] = None) -> None:
-        return
+            staged = []
 
+            his = self._history.copy()
+            his.reverse()
 
-class SummarizingMemory(Memory):
-    """Memory that compresses older messages when the context nears exhaustion."""
+            for x in his:
+                type, role, msg = x
+                todo -= Memory._approximate_token_count(role.to_string() + msg)
+                staged.append(x)
 
-    _SUMMARY_PREFIX = "[summary]"
+                if(todo < 0):
+                    break
 
-    def __init__(
-        self,
-        max_tokens: int = config.Backend._n_context - config.Backend._n_context * 0.2,
-        trigger_ratio: float = 0.9,
-        preserve_recent: int = 6,
-        model = None,
-        summary_instructions: Optional[str] = None,
-    ) -> None:
-        if max_tokens <= 0:
-            raise ValueError("max_tokens must be a positive integer")
+            for s in staged:
+                self._history.remove(s)
 
-        super().__init__()
-        self.max_tokens = int(max_tokens)
-        self.trigger_ratio = trigger_ratio
-        self.preserve_recent = max(2, preserve_recent)
-        self._model = model
-        self._summary_runner: Optional["Provider"] = None
-        self._summary_instructions = summary_instructions or (
-            "You compress conversations into short, factual summaries. "
-            "Keep goals, decisions, and unresolved questions. "
-            "Use at most {limit} words."
-        )
+            staged.reverse()
+            print(f"staged token for summary: {Memory._approximate_token_count(str(staged))}")
+            type, role, summary = self.summarize(staged)
 
-    def copy(self) -> "SummarizingMemory":
-        import copy
+            print(f"token after summary: {Memory._approximate_token_count(str((type, role, summary)))}")
+                        
+            self.prepend_message(role, summary, type)
+            
+            print(self._history)
 
-        new_copy = self.__class__(
-            self.max_tokens,
-            trigger_ratio=self.trigger_ratio,
-            preserve_recent=self.preserve_recent,
-            model=self._model,
-            summary_instructions=self._summary_instructions,
-        )
-        new_copy._history = copy.deepcopy(self._history)
-        new_copy._summary_runner = self._summary_runner
-        return new_copy
+            print(f"new memory token size: {Memory._approximate_token_count(str(self._history))}")
 
-    def add_message(self, role: Role, message: str) -> None:
-        super().add_message(role, message)
-        self._ensure_within_context()
+            size = Memory._approximate_token_count(str(self._history))
 
-    def _ensure_within_context(self) -> None:
-        if not self.max_tokens:
-            return
+    def summarize(self, messages: List[Tuple[Type, Role, str]]) -> Tuple[Type, Role, str]:
+        from llm.provider import Provider
 
-        current_tokens = sum(_approximate_token_count(msg) for _, msg in self._history)
-        threshold = int(self.max_tokens * self.trigger_ratio)
-        if current_tokens < threshold:
-            return
+        data = str(messages)
 
-        self._summarize_history()
-
-    def _summarize_history(self) -> None:
-        if len(self._history) <= self.preserve_recent:
-            return
-
-        head = self._history[:-self.preserve_recent]
-        tail = self._history[-self.preserve_recent:]
-
-        preserved_system: List[Tuple[Role, str]] = []
-        summarizable: List[Tuple[Role, str]] = []
-
-        for role, msg in head:
-            if role is Role.SYSTEM and msg.startswith(self._SUMMARY_PREFIX):
-                summarizable.append((role, msg[len(self._SUMMARY_PREFIX):].lstrip()))
-            elif role is Role.SYSTEM:
-                preserved_system.append((role, msg))
-            else:
-                summarizable.append((role, msg))
-
-        if not summarizable:
-            return
-
-        summary_text = self._build_summary(summarizable)
-        combined_summary = f"{self._SUMMARY_PREFIX} {summary_text}"
-
-        # Merge with existing summary if one exists in preserved_system
-        for i, (role, msg) in enumerate(preserved_system):
-            if role is Role.SYSTEM and msg.startswith(self._SUMMARY_PREFIX):
-                old_summary = msg[len(self._SUMMARY_PREFIX):].lstrip()
-                merged = f"{self._SUMMARY_PREFIX} {old_summary} {summary_text}"
-                preserved_system[i] = (Role.SYSTEM, merged)
-                break
-        else:
-            preserved_system.append((Role.SYSTEM, combined_summary))
-
-        self._history = preserved_system + tail
-
-
-    def _build_summary(self, messages: List[Tuple[Role, str]]) -> str:
-        if not messages:
-            return ""
-
-        summary_limit = max(32, self.max_tokens // 8)
-
-        try:
-            return self._summarize_with_llm(messages, self._model, summary_limit)
-        except Exception:
-            pass
-
-        return None #throw old away
-
-    def _summarize_with_llm(
-        self,
-        messages: List[Tuple[Role, str]],
-        provider: "Provider",
-        limit: int,
-    ) -> str:
-        formatted = self._format_messages(messages)
-        memory = _SilentMemory()
-        instructions = self._summary_instructions.format(limit=limit)
-        memory.add_message(Role.SYSTEM, instructions)
-        summary = provider.invoke(formatted, override=memory)
-        return summary.strip()
-
-    def _format_messages(self, messages: List[Tuple[Role, str]]) -> str:
-        lines: List[str] = []
-        for role, msg in messages:
-            clean_msg = " ".join(str(msg).split())
-            lines.append(f"{role.value.upper()}: {clean_msg}")
-        return "\n".join(lines)
+        mem = Memory()
+        mem.append_message(Role.USER, data)
+        summarizer = Provider.build("summarizer", current.EXTRA_MODEL, memory=mem)
+        mem.debug_print()
+        summary = summarizer.call("Summarize in few short sentences. (no 'summary:' or similar)")
+        
+        return (Type.SUMMARY, Role.USER, summary)

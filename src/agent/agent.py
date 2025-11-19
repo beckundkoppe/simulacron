@@ -3,31 +3,36 @@ from agent.toolpool import ToolGroup, register_tools
 import config
 import current
 from enviroment.entity import Entity
-from llm.cache import Cache
-from llm.memory.memory import Memory, Role, SummarizingMemory
+from llm.memory.memory import Memory, Role, Type
+from llm.memory.supermem import SuperMemory
 from llm.model import Model
 from llm.provider import Provider
 from llm.toolprovider import ToolProvider
 
 class Agent:
-    def __init__(self, goal: str, entity: Entity, imaginator_model: Model, realisator_model: Model, extra_model: Model):
+    def __init__(self, goal: str, entity: Entity, imaginator_model: Model, realisator_model: Model):
         self.goal = goal
         self.entity = entity
         self.imaginator_model = imaginator_model
         self.realisator_model = realisator_model
-        self.extra_model = extra_model
 
-        self.main_memory = SummarizingMemory(model=extra_model)
-
-        self.current_plan = "none yet."
+        self.goal = goal
+        self.main_memory = SuperMemory(goal=goal, path="main_memory.txt")
 
     def update(self, observation: str):
         current.ENTITY = self.entity
 
         self.plan()
+        self.main_memory.save()
+
         self.observe(observation)
+        self.main_memory.save()
+
         self.act(observation)
+        self.main_memory.save()
+
         self.reflect(observation)
+        self.main_memory.save()
 
         current.ENTITY = None
 
@@ -36,11 +41,20 @@ class Agent:
             return
         
         planner = Provider.build("planner", self.imaginator_model, memory=self.main_memory)
-        self.current_plan = planner.invoke("GOAL: " + self.goal,  "What are the steps to reach the goal? What ist the plan?", append=False)
+        plan = planner.invoke("MAIN GOAL: " + self.goal, "What are the steps to reach the goal? Make a short plan or update the existing one", append=False)
+        self.main_memory.add_plan(plan)
 
     def observe(self, observation: str):
+        self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
+
         if config.ACTIVE_CONFIG.agent.observe is config.PlanType.OFF:
             return
+        
+        mem = Memory()
+        mem.append_message(Role.USER, observation)
+        observer = Provider.build("observer", self.imaginator_model, memory=mem)
+        active_observation = observer.call("What do you observe? What is interesting? (short)")
+        self.main_memory.append_message(Role.USER, active_observation, Type.ACTIVE_OBSERVATION)
         
         self.memorize()
 
@@ -52,13 +66,21 @@ class Agent:
             self.provider = Provider.build("agent", self.realisator_model, memory=self.main_memory)
             raise NotImplementedError
         else:
-            self._imgagination_realisation_step(observation, " Give best next action to perform (short answer)", ToolGroup.ENV)
+            self._imgagination_realisation_step(observation, "Give best next action to perform (short answer)", ToolGroup.ENV)
 
     def reflect(self, observation: str):
-        process_action_results(self.main_memory)
+        result = process_action_results()
+        self.main_memory.append(result)
 
         if config.ACTIVE_CONFIG.agent.reflect is config.ReflectType.OFF:
             return
+        
+        mem = Memory()
+        mem.append_message(Role.USER, observation)
+        mem.append(result)
+        reflector = Provider.build("reflector", self.imaginator_model, memory=mem)
+        reflection = reflector.call("Reflect what effect the performed Actions had.")
+        self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
         
         self.learn()
 
@@ -67,11 +89,11 @@ class Agent:
 
     def _imgagination_realisation_step(self, context, task: str, tools: ToolGroup):
         imaginator = Provider.build("imaginator", self.imaginator_model, memory=self.main_memory)
-        imagination = imaginator.invoke(context, task)
-        self.main_memory.save("main_memory.txt")
 
-        realisator = ToolProvider.build("realisator", self.realisator_model, Memory())
-        register_tools(realisator, ToolGroup.ENV)
+        imagination = imaginator.call(task)
+
+        realisator = ToolProvider.build("realisator", self.realisator_model, Memory("Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a precice and short question."))
+        register_tools(realisator, tools)
 
         correction = None
 
@@ -84,7 +106,6 @@ class Agent:
 
             retry = ""
             for i in range(0, 3):
-                realisator.memory.add_message(Role.SYSTEM, "Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a precice and short question.")
                 reply = realisator.invoke(ctx, retry)
                 #reply = realisator.invoke("What actions are available?")
 
@@ -94,17 +115,15 @@ class Agent:
                     #retry = "Retry with corrected version: "
                     pass
                 else:
-                    break;
+                    break
 
             correction = None
 
             if config.ACTIVE_CONFIG.agent.imaginator is not config.ImaginatorType.QUESTION:
-                self.main_memory.add_message(Role.USER, "Last action was not specified well. Please provide more explicit instructions")
-                self.main_memory.save("main_memory.txt")
+                self.main_memory.append_message(Role.USER, "Last action was not specified well. Please provide more explicit instructions")
                 break
 
             if "Question" in reply:
-                correction = imaginator.invoke(reply + "Use explicit object IDs and absolute positions", task + " Provide an explicit and precice instruction", override=self.main_memory)
-                self.main_memory.save("main_memory.txt")
+                correction = imaginator.invoke(reply + "Use explicit object IDs and absolute positions", task + " Provide an explicit and precice instruction", append=False)
             else:
                 break

@@ -46,6 +46,8 @@ def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginat
     if(extra_model is None):
         extra_model = main_model
 
+    current.EXTRA_MODEL = extra_model
+
     spec: LevelSpec = level.build()
     console.pretty(console.banner(level.name, char="+", color=console.Color.BLUE))
 
@@ -56,7 +58,7 @@ def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginat
         for entity, prompt in spec.agent_entities:
             console.pretty(console.bullet(f"{entity.name}\t[PROMPT:] {prompt}", color=console.Color.BLUE))
 
-            agent = Agent(goal=prompt, entity=entity, imaginator_model=imaginator, realisator_model=main_model, extra_model=extra_model)
+            agent = Agent(goal=prompt, entity=entity, imaginator_model=imaginator, realisator_model=main_model)
             agents.append(agent)
 
 

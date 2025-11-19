@@ -2,7 +2,7 @@ import current
 from enviroment.exception import HardException, SoftException
 from enviroment.resultbuffer import ActionNotPossible, FormalError, Resultbuffer, Success
 from enviroment.world import World
-from llm.memory.memory import Role
+from llm.memory.memory import Memory, Role, Type
 from util import console
 
 
@@ -100,7 +100,7 @@ def process_formal_errors(memory) -> bool:
             agent_msg = f"{agent_msg} Hint: {result.hint}"
 
         if memory:
-            memory.add_message(role, agent_msg)
+            memory.append_message(role, agent_msg)
 
         console_lines = [
             console.bullet(
@@ -131,7 +131,8 @@ def process_formal_errors(memory) -> bool:
     
     return has_error
 
-def process_action_results(memory):
+def process_action_results() -> Memory:
+    memory = Memory()
     to_remove = []
 
     for result in Resultbuffer.buffer:
@@ -152,8 +153,7 @@ def process_action_results(memory):
         if result.hint:
             agent_msg = f"{agent_msg} Hint: {result.hint}"
 
-        if memory:
-            memory.add_message(role, agent_msg)
+        memory.append_message(role, agent_msg, Type.FEEDBACK)
 
         console_lines = [
             console.bullet(
@@ -180,6 +180,8 @@ def process_action_results(memory):
 
     for result in to_remove:
         Resultbuffer.buffer.remove(result)
+
+    return memory
 
 def process_results(memory):
     """Process all results from the result buffer and clear it."""
