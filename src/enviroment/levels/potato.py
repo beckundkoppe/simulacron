@@ -184,9 +184,9 @@ def build_hard(detailed_instruction) -> LevelSpec:
 
     instr = ""
     if detailed_instruction:
-        instr = "Goal: Retrieve the potato locked in the chest in the other room. Use the key on the table to unlock it, take the potato, and place it on the table."
+        instr = "Retrieve the potato locked in the chest in the other room. Use the key on the table to unlock it, take the potato, and place it on the table."
     else:
-        instr = "Goal: Find the potato and place it on the table."
+        instr = "Find the potato and place it on the table."
 
     return LevelSpec(
         agent_entities=[(

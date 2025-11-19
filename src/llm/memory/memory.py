@@ -188,25 +188,26 @@ class Memory(ABC):
         size = Memory._approximate_token_count(str(self._history))
 
         while(size > max_count):
-            todo = min(size - max_count, int(config.Backend._n_context / 4))
+            todo = min(max(size - max_count, (size - max_count) * 10), int(config.Backend._n_context / 4))
 
             staged = []
 
             his = self._history.copy()
-            his.reverse()
 
             for x in his:
                 type, role, msg = x
                 todo -= Memory._approximate_token_count(role.to_string() + msg)
                 staged.append(x)
 
-                if(todo < 0):
+                if(todo < 0) and len(staged) > 1:
                     break
+
+            if len(staged) <= 1:
+                raise Exception("context to small")
 
             for s in staged:
                 self._history.remove(s)
 
-            staged.reverse()
             print(f"staged token for summary: {Memory._approximate_token_count(str(staged))}")
             type, role, summary = self.summarize(staged)
 
@@ -214,8 +215,6 @@ class Memory(ABC):
                         
             self.prepend_message(role, summary, type)
             
-            print(self._history)
-
             print(f"new memory token size: {Memory._approximate_token_count(str(self._history))}")
 
             size = Memory._approximate_token_count(str(self._history))

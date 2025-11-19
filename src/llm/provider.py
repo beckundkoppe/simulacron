@@ -58,6 +58,9 @@ class Provider(ABC):
         if append and message:
             mem.append_message(role, message)
 
+
+        mem.get_history()
+
         temp = mem.copy()
         if transient is not None:
             temp.append_message(role, transient)

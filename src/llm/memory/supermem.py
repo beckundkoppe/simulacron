@@ -30,14 +30,6 @@ class SuperMemory(Memory):
         history_out.append((Type.GOAL, Role.SYSTEM, self._goal))
         ################
 
-        ##### SUMMARY #####
-        for x in self._history:
-            t, r, d = x
-            if t == Type.SUMMARY:
-                history_out.append(x)
-                break
-        ###################
-
         COUNT = 4
         n = COUNT
 
@@ -66,7 +58,7 @@ class SuperMemory(Memory):
         for x in self._history:
             if x not in recent_observations and not current_observation:  # exclude the recent observations
                 t, r, d = x
-                if t != Type.OBSERVATION and t != Type.SUMMARY:
+                if t != Type.OBSERVATION:
                     mini.append(x)
 
         ##### MINI HISTORY #####
