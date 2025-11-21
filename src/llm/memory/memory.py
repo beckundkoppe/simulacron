@@ -30,8 +30,8 @@ class Role(Enum):
 class Type(Enum):
     GOAL        = auto()
     FEEDBACK    = auto()
-    ACTIVE_OBSERVATION = auto()
     OBSERVATION = auto()
+    PERCEPTION = auto()
     CURRENT_OBSERVATION = auto()
     REFLECT     = auto()
     PLAN        = auto()
@@ -227,6 +227,6 @@ class Memory(ABC):
         mem = Memory()
         mem.append_message(Role.USER, data)
         summarizer = Provider.build("summarizer", current.EXTRA_MODEL, memory=mem)
-        summary = summarizer.call("Summarize in few short sentences. (no 'summary:' or similar)")
+        summary = summarizer.call("Summarize only the valuable parts in few short sentences. (no 'summary:' or similar).")
         
         return (Type.SUMMARY, Role.USER, summary)

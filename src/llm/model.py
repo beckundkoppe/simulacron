@@ -273,7 +273,7 @@ class Model(Enum):
                     kind=ModelKind.HYBRID,
                     source=SourceOllama(
                         model_id="qwen3-coder:30b",
-                        #https://ollama.com/library/qwen3
+                        #https://ollama.com/library/qwen3-coder
                     ),
                 )
 
@@ -570,6 +570,19 @@ class Model(Enum):
                 source=SourceRemote(
                     endpoint_url="http://127.0.0.1:11444/v1",
                     model_id="hf.co/bartowski/huihui-ai_Mistral-Small-24B-Instruct-2501-abliterated-GGUF:Q4_K_M",
+                ),
+            )
+
+            GEMMA3_27B_Q8 = ModelSpec(
+                name="Gemma3-27B-Q8" ,
+                tag="gemma3_27b_q8",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="http://127.0.0.1:8080/v1",
+                    model_id="",
                 ),
             )
 

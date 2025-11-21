@@ -113,6 +113,7 @@ class Entity:
     def _ensure_same_room(self, actor_entity: "Entity") -> None:
         actor_room = actor_entity.room if actor_entity else None
         target_room = self.room
+
         if not actor_room or not actor_room.contains_entity(self):
             raise HardException(
                 f"{self.readable_id} is not in your current room.",
@@ -155,6 +156,20 @@ class Entity:
         return False
 
     def on_interact(self, actor_entity, action: ActionTry) -> str:
+        #if self not in actor_entity.get_inventory():
+        #    raise SoftException(
+        #        "You can only drop items that are in your inventory.",
+        #        console_message=(
+        #            f"The object '{self.readable_id}' is not in your inventory."
+        #        ),
+        #        hint="Select an item from your inventory if you want to drop it.",
+        #        context={
+        #            "entity": self.readable_id,
+        #            "inventory": [e.readable_id for e in actor_entity.get_inventory()],
+        #        },
+        #    )
+
+
         self._ensure_same_room(actor_entity)
         self._ensure_in_range(actor_entity)
 
@@ -551,6 +566,16 @@ class AgentEntity(Entity):
 
     def move_to_object(self, target: Entity):
         room: Room | None = self.room
+
+        if target in self.inventory:
+            raise SoftException(
+                "You cannot move to an item that is inside your inventory.",
+                console_message=(
+                    f"The target '{target.readable_id}' is already in your inventory."
+                ),
+                hint="Choose an object in the room if you want to move toward it.",
+                context={"target": target.readable_id},
+            )
 
         if room is None:
             raise HardException(

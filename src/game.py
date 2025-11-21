@@ -23,21 +23,21 @@ def _position_payload(pos: Position, room: Room) -> tuple[str, object]:
     return ("relative", {"x": mapped.x, "y": mapped.y})
 
 
-def observe(observer: AgentEntity) -> str:
+def perceive_enviroment(observer: AgentEntity) -> str:
     room = observer.room
 
     position_format, position_value = _position_payload(observer.pos, room)
     data = {}
     data["you_are_in_room"] = {
         "name": room.name,
-        "your_pos": position_value,
         "room_size": {
             "extend_x": room.extend_x,
             "extend_y": room.extend_y,
-        }
+        },
+        "your_pos": position_value
     }
     data["your_inventory"] = observer.get_inventory()
-    data["your_observation"] = room.perceive(observer, DetailLevel.OMNISCIENT)
+    data["your_perception"] = room.perceive(observer, DetailLevel.OMNISCIENT)
     return json.dumps(data)
 
 def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginator = None, extra_model = None):
@@ -68,8 +68,8 @@ def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginat
             for agent in agents:
                 current.RESULT.observation_count += 1
 
-                observation = observe(agent.entity)
-                agent.update(observation)
+                perception = perceive_enviroment(agent.entity)
+                agent.update(perception)
 
                 if spec.is_success():
                     success = True

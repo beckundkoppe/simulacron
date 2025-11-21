@@ -19,33 +19,25 @@ class Agent:
         self.goal = goal
         self.main_memory = SuperMemory(goal=goal, path="main_memory.txt")
 
-    def update(self, observation: str):
+    def update(self, perception: str):
         current.ENTITY = self.entity
+
+        self.observe(perception)
+        self.main_memory.save()
 
         self.plan()
         self.main_memory.save()
 
-        self.observe(observation)
+        self.act(perception)
         self.main_memory.save()
 
-        self.act(observation)
-        self.main_memory.save()
-
-        self.reflect(observation)
+        self.reflect(perception)
         self.main_memory.save()
 
         current.ENTITY = None
 
-    def plan(self):
-        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
-            return
-        
-        planner = Provider.build("planner", self.imaginator_model, memory=self.main_memory)
-        plan = planner.invoke("MAIN GOAL: " + self.goal, "What are the steps to reach the goal? Make a short plan or update the existing one", append=False)
-        self.main_memory.add_plan(plan)
-
     def observe(self, observation: str):
-        self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
+        self.main_memory.append_message(Role.USER, observation, Type.PERCEPTION)
 
         if config.ACTIVE_CONFIG.agent.observe is config.PlanType.OFF:
             return
@@ -53,22 +45,58 @@ class Agent:
         mem = Memory()
         mem.append_message(Role.USER, observation)
         observer = Provider.build("observer", self.imaginator_model, memory=mem)
-        active_observation = observer.call("What do you observe? What is interesting? (short)")
-        self.main_memory.append_message(Role.USER, active_observation, Type.ACTIVE_OBSERVATION)
+        observation = observer.call("What do you observe? What is interesting? (short)")
+        self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
         
         self.memorize()
 
     def memorize(self):
         pass
+    
+    def plan(self):
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
+            return
+        
+        planner = Provider.build("planner", self.imaginator_model, memory=self.main_memory)
 
-    def act(self, observation: str):
+        should_plan: str = planner.call(
+            "Based on the current goal, context, and the last action: "
+            "Do we need to replan? Only if really neccesarry. "
+            "Answer with 'yes' or 'no' (nothing more)."
+        )
+
+        if "no" in should_plan.lower():
+            return
+
+        #prompt = """"You are the planning module of an embodied agent. Your task is to analyze the main goal and the current memory of the agent.
+        #Produce a clean, updated plan consisting of concrete sub-goals in logical order.
+#
+        #Requirements:
+        #1. Break the main goal into a minimal set of precise sub-goals.
+        #2. Compare these sub-goals with the memory of past actions.
+        #3. Remove all sub-goals that are already completed.
+        #4. Keep only steps that are still required to reach the goal.
+        #5. Output the plan as a simple ordered list.
+        #6. Be concise and avoid explanations.
+        #"""
+
+        #plan = planner.invoke(prompt, "MAIN GOAL: " + self.goal, append=False)
+        plan = planner.invoke("MAIN GOAL: " + self.goal, "What Goals are there. Can one be broken down into sub goals. Remove completed Goals. Give structured listing. Tell about how to structuredly approach the next step.", append=False)
+        self.main_memory.add_plan(plan)
+
+    def act(self, perception: str):
+        prompt = "Give best next action to perform (short answer)."
+
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
+            prompt += " Stick closely to the next step in the plan."
+
         if config.ACTIVE_CONFIG.agent.imaginator is config.ImaginatorType.OFF:
             self.provider = Provider.build("agent", self.realisator_model, memory=self.main_memory)
             raise NotImplementedError
         else:
-            self._imgagination_realisation_step(observation, "Give best next action to perform (short answer)", ToolGroup.ENV)
+            self._imgagination_realisation_step(perception, prompt, ToolGroup.ENV)
 
-    def reflect(self, observation: str):
+    def reflect(self, perception: str):
         result = process_action_results()
         self.main_memory.append(result)
 
@@ -76,10 +104,10 @@ class Agent:
             return
         
         mem = Memory()
-        mem.append_message(Role.USER, observation)
+        mem.append_message(Role.USER, perception)
         mem.append(result)
         reflector = Provider.build("reflector", self.imaginator_model, memory=mem)
-        reflection = reflector.call("Reflect what effect the performed Actions had.")
+        reflection = reflector.call("Reflect what effect the performed Actions had. Only what you can say for sure. (short)")
         self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
         
         self.learn()

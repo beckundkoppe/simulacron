@@ -6,6 +6,7 @@ class ImaginatorType(Enum):
     OFF      = auto(),
     ON       = auto(),
     QUESTION = auto(),
+    MULTIPLE = auto(),
 
 class ObserveType(Enum):
     OFF      = auto(),
@@ -60,4 +61,4 @@ DEPTH_FAKTOR: int = 1
 class Backend:
     _n_gpu_layers = -1
     _n_threads = 24
-    _n_context = 2048
+    _n_context = 4096

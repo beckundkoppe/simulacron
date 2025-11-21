@@ -43,7 +43,7 @@ class Cache():
             elif spec.backend == Backend.OLLAMA:
                 llm = ChatOllama(
                     model=spec.source.model_id,
-                    verbose=debug.VERBOSE_OLLAMA,
+                    verbose=debug.VERBOSE_LANGCHAIN,
                     seed=config.ACTIVE_CONFIG.seed,
                     temperature=config.ACTIVE_CONFIG.temperature,
                 )

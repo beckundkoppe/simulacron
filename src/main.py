@@ -38,16 +38,18 @@ def main():
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        main_model               = Model.Local.LlamaCpp.Qwen.VANILLA_8B,
-        #imaginator               = Model.Remote.MISTRAL_SMALL_24B,
+        main_model               = Model.Local.LlamaCpp.Qwen.VANILLA_8B
+        
+        ,
+        imaginator               = Model.Remote.MISTRAL_SMALL_24B,
         level                    = Levels.VAGUE_INSTRUCT.POTATO_HARD.value,
-        reruns                   = 10,
-        optimal_steps_multiplier = 3.0,
-        #extra_model              = Model.Local.Ollama.DOLPHIN3_8B,
+        reruns                   = 20,
+        optimal_steps_multiplier = 5.0,
+        extra_model              = Model.Remote.MISTRAL_SMALL_24B,
         )
     )
 
-    print("\n\n\nReruns: 4")
+    print("\n\n\nReruns: 20")
     print(result1.toString())
 
     #Only use toolcalls. For toolcalls, use the following syntax: {"name": "<tool_name>", "args": {"<arg_key>": "<arg_value>"}}

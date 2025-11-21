@@ -30,7 +30,7 @@ class SuperMemory(Memory):
         history_out.append((Type.GOAL, Role.SYSTEM, self._goal))
         ################
 
-        COUNT = 4
+        COUNT = 2
         n = COUNT
 
         # find newest observation in the whole history
@@ -40,14 +40,14 @@ class SuperMemory(Memory):
         if self._history:
             elem = self._history.copy().pop()
             t,r,d = elem
-            if t == Type.OBSERVATION:
+            if t == Type.PERCEPTION:
                 current_observation = elem
 
 
         for x in reversed(self._history):
             t, r, d = x
             recent_observations.append(x)
-            if t == Type.OBSERVATION:
+            if t == Type.PERCEPTION:
                 n = n - 1
             if n <= 0:
                 break
@@ -58,7 +58,7 @@ class SuperMemory(Memory):
         for x in self._history:
             if x not in recent_observations and not current_observation:  # exclude the recent observations
                 t, r, d = x
-                if t != Type.OBSERVATION:
+                if t != Type.PERCEPTION:
                     mini.append(x)
 
         ##### MINI HISTORY #####
@@ -81,10 +81,11 @@ class SuperMemory(Memory):
         ###############################
 
         #learning
-        #plan
-        if self._plan:
-            history_out.append((Type.PLAN, Role.USER, self._plan))
 
+        ##### PLAN #####
+        if self._plan:
+            history_out.append((Type.PLAN, Role.ASSISTANT, self._plan))
+        ################
 
         #memories
 

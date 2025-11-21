@@ -113,7 +113,7 @@ def interact_with_object(object_id: str, operator: str) -> str:
         elif (operator.upper() == "GO_THROUGH"):
             action = ActionTry(ActionType.USE)
         else:
-            raise HardException("unknown operator for this action: {operator}")
+            raise HardException(f"unknown operator for this action: can not {operator} {object_id}")
         
         return check_id(object_id).on_interact(entity, action)
     
@@ -139,7 +139,7 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
         elif (operator.upper() == "UNLOCK"):
             action = ActionTry(ActionType.UNLOCK, check_id(using_id))
         else:
-            raise HardException("unknown operator for this action: {operator}")
+            raise HardException(f"unknown operator for this action: can not {operator} {object_id}")
 
         return check_id(object_id).on_interact(entity, action)
 

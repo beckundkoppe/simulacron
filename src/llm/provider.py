@@ -118,11 +118,16 @@ class LlamaCppProvider(Provider):
     def invoke(self, message: str, transient: Optional[str] = None,  role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str:
         temp = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
 
+        if debug.VERBOSE_LLAMACPP:
+            print(temp.get_history())
 
         #response_format={"type": "text"}
         reply = self.llm.create_chat_completion(temp.get_history())["choices"][0]["message"]["content"]
 
         clean_reply = Provider._hard_clean_reply(reply)
+
+        if debug.VERBOSE_LLAMACPP:
+            print(clean_reply)
 
         if len(clean_reply) <= 0:
             hist = temp.get_history()
@@ -145,12 +150,12 @@ class LangchainProvider(Provider):
     def invoke(self, message: str, transient: Optional[str] = None,  role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str:
         temp = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
 
-        if debug.VERBOSE_OLLAMA:
-            print(message)
+        if debug.VERBOSE_LANGCHAIN:
+            print(temp.get_history())
 
         reply = self.llm.invoke(temp.get_history()).content
 
-        if debug.VERBOSE_OLLAMA:
+        if debug.VERBOSE_LANGCHAIN:
             print(reply)
         
         clean_reply = Provider._clean_reply(reply)

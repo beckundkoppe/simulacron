@@ -242,7 +242,7 @@ class LangchainToolprovider(ToolProvider):
             FormalError(f"no valid reply: " + str(e))
             return ""
 
-        if debug.VERBOSE_LANGCHAIN: console.json_dump(result)
+        if debug.VERBOSE_LANGCHAIN_TOOL: console.json_dump(result)
 
         clean_reply = Provider._clean_reply(result.content)
 

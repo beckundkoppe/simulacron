@@ -1,12 +1,20 @@
 # TODO
 
+## Features
+
+- Memory mit hard cuttoff statt summary
+
+## Optional
+
+- make reflection and planning optional states
+
+## Stats
+
 - stats erfassen
 - Observation => Perception
 - Observations schön anzeigen
 
-
-- Memory mit hard cuttoff statt summary
-
+## Formal
 
 - Output in die konsole soll besser werden. Aktuelle Beispiele die schlecht sind:
 • [toolcall] [FORMAL ERROR] toolcall failed:
