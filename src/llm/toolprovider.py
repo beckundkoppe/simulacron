@@ -72,14 +72,14 @@ class LlamaToolprovider(ToolProvider):
         )
 
     def invoke(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str:
-        mem = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
+        temp = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
 
         history = BasicChatHistory(
             chat_history_strategy=BasicChatHistoryStrategy.last_k_messages,
             llm_provider=self.llm
         )
 
-        for m in mem.get_history():
+        for m in temp:
             role_str = m["role"].lower()
             msg      = m["content"]
 
@@ -161,7 +161,7 @@ class LangchainToolprovider(ToolProvider):
             self.instance = self.llm.bind_tools(openai_tools)
 
     def invoke(self, message: str, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> str:
-        mem = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
+        temp = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
 
         @dataclass
         class ToolCall:
@@ -237,7 +237,7 @@ class LangchainToolprovider(ToolProvider):
         #-------------------------
 
         try:
-            result = self.instance.invoke(mem.get_history())
+            result = self.instance.invoke(temp)
         except Exception as e:
             FormalError(f"no valid reply: " + str(e))
             return ""

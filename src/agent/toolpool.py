@@ -148,17 +148,16 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
     return ""
 
 @tool
-def save_observation(short: str, data: str) -> str:
-    """The human stores an important information in its memory.
+def add_step(step: str) -> str:
+    """Add the next plan step
 
     Args:
-        short (str): A short version with few words.
-        data (str): The observation in few sentences.
+        step (str): A short description of the next step.
     """
 
-    agent: AgentEntity = current.AGENT
-
-    pass
+    agent = current.AGENT
+    
+    agent.main_memory.plan_steps.append(step)
 
     return ""
 
@@ -182,15 +181,15 @@ _TOOLS_ENV = [
     ]
 
 _TOOLS_MEM = [
-        save_observation,
+        add_step,
     ]
 
 _TOOLS_LEARN = [
-        save_observation,
+        add_step,
     ]
 
 _TOOLS_PLAN = [
-        save_observation,
+        add_step,
     ]
 
 def register_tools(toolprovider: ToolProvider, tools):

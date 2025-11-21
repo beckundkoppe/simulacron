@@ -573,16 +573,29 @@ class Model(Enum):
                 ),
             )
 
-            GEMMA3_27B_Q8 = ModelSpec(
-                name="Gemma3-27B-Q8" ,
-                tag="gemma3_27b_q8",
+            DEEPSEEK_R1_70B = ModelSpec(
+                name="Deepseek-R1-70B" ,
+                tag="deepseek_r1_70b",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
                 agent_backend=AgentBackend.LANGCHAIN,
                 kind=ModelKind.HYBRID,
                 source=SourceRemote(
-                    endpoint_url="http://127.0.0.1:8080/v1",
-                    model_id="",
+                    endpoint_url="http://127.0.0.1:11444/v1",
+                    model_id="deepseek-r1:70b-llama-distill-fp16",
+                ),
+            )
+
+            QWEN3 = ModelSpec(
+                name="Qwen3" ,
+                tag="qwen3",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="http://127.0.0.1:11444/v1",
+                    model_id="qwen3:235b-a22b-thinking-2507-q4_K_M",
                 ),
             )
 

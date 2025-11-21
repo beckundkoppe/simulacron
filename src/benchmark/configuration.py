@@ -43,10 +43,10 @@ def feature_planning() -> List[Configuration]:
     configs: List[Configuration] = []
 
     configs.extend([
-        Configuration(PerceptionType.ALL,  PositionType.CHESSBOARD, False, False, PlanType.PLAN, BASE_TEMP,   "feature-planning-full"),
-        Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, False, False, PlanType.PLAN, BASE_TEMP,   "feature-planning-partial"),
-        Configuration(PerceptionType.ALL,  PositionType.CHESSBOARD, False, False, PlanType.REPLAN, BASE_TEMP, "feature-replanning-full"),
-        Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, False, False, PlanType.REPLAN, BASE_TEMP, "feature-replanning-partial"),
+        Configuration(PerceptionType.ALL,  PositionType.CHESSBOARD, False, False, PlanType.FREE, BASE_TEMP,   "feature-planning-full"),
+        Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, False, False, PlanType.FREE, BASE_TEMP,   "feature-planning-partial"),
+        Configuration(PerceptionType.ALL,  PositionType.CHESSBOARD, False, False, PlanType.STRUCTURED, BASE_TEMP, "feature-replanning-full"),
+        Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, False, False, PlanType.STRUCTURED, BASE_TEMP, "feature-replanning-partial"),
     ])
 
     return configs
@@ -56,7 +56,7 @@ def combine() -> List[Configuration]:
 
     configs.extend([
         Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, True, True, PlanType.OFF,    BASE_TEMP, "combo-il"),
-        Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, True, True, PlanType.REPLAN, BASE_TEMP, "combo-ilp"),
+        Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, True, True, PlanType.STRUCTURED, BASE_TEMP, "combo-ilp"),
     ])
 
     return configs
@@ -67,7 +67,7 @@ def temps() -> List[Configuration]:
 
     for t in temps:
         configs.extend([
-            Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, True, True, PlanType.REPLAN, t, f"temps-{t}"),
+            Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, True, True, PlanType.STRUCTURED, t, f"temps-{t}"),
         ])
     return configs
 
@@ -75,7 +75,7 @@ def models() -> List[Configuration]:
     configs: List[Configuration] = []
 
     configs.extend([
-        Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, True, True, PlanType.REPLAN, BASE_TEMP, "models-full"),
+        Configuration(PerceptionType.SENSE, PositionType.CHESSBOARD, True, True, PlanType.STRUCTURED, BASE_TEMP, "models-full"),
     ])
 
     return configs

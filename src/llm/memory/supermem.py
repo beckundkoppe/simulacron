@@ -14,15 +14,21 @@ class SuperMemory(Memory):
         self._plans: List[str] = []
         self._memories: List[str] = []
         self._current_observation: str = []
-        self._plan = []
+        self.plan = None
+        self.plan_steps = []
+        self.completed_steps = []
 
     def add_plan(self, plan: str):
-        self._plan = plan
+        self.plan = plan
         self.save()
     
     def add_learing(self, learn):
         self.learning.append(learn)
         self.save()
+
+    def mark_completed(self):
+        if self.plan_steps:
+            self.completed_steps.append(self.plan_steps.pop(0))
 
     def _get_history(self) -> List[Tuple[Type, Role, str]]:
         history_out = []
@@ -84,8 +90,11 @@ class SuperMemory(Memory):
         #learning
 
         ##### PLAN #####
-        if self._plan:
-            history_out.append((Type.PLAN, Role.ASSISTANT, self._plan))
+        if self.completed_steps:
+            history_out.append((Type.PLAN, Role.USER, "COMPLETED SUB-GOALS: "+ str(self.completed_steps)))
+
+        if self.plan:
+            history_out.append((Type.PLAN, Role.USER, self.plan))
         ################
 
         #memories
@@ -112,7 +121,7 @@ class SuperMemory(Memory):
     def copy(self) -> "SuperMemory":
         new_copy = SuperMemory(self._goal, self.path)
         new_copy._history = copy.deepcopy(self._history)
-        new_copy._plan = copy.deepcopy(self._plan)
+        new_copy.plan = copy.deepcopy(self.plan)
         new_copy._learnings = copy.deepcopy(self._learnings)
         new_copy._memories = copy.deepcopy(self._memories)
         new_copy._current_observation = copy.deepcopy(self._current_observation)

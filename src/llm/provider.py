@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 import re
-from typing import Optional
+from typing import List, Optional, Tuple
 from langchain_openai import ChatOpenAI
 
 import debug
 from llm.cache import Cache
-from llm.memory.memory import Memory, Role
+from llm.memory.memory import Memory, Role, Type
 from llm.prepare import prepare_model_source
 from llm.model import (
     Model,
@@ -40,7 +40,7 @@ class Provider(ABC):
     def call(self, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None) -> str:
         return self.invoke(message=None, transient=transient, role=role, override=override, append=False)
 
-    def _invoke_pre(self, message: Optional[str] = None, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> Memory:
+    def _invoke_pre(self, message: Optional[str] = None, transient: Optional[str] = None, role: Role = Role.USER, override: Optional[Memory] = None, append: bool = True) -> List[dict[str, str]]:
         if message is None:
             msg = ""
         else:
@@ -59,13 +59,15 @@ class Provider(ABC):
             mem.append_message(role, message)
 
 
-        mem.get_history()
+        out = mem.get_history()
 
-        temp = mem.copy()
         if transient is not None:
-            temp.append_message(role, transient)
+            out.append({
+                "role": role.to_string(),
+                "content": transient
+            })
 
-        return temp
+        return out
 
     def _clean_reply(reply: str) -> str:
         if isinstance(reply, str):
@@ -119,10 +121,10 @@ class LlamaCppProvider(Provider):
         temp = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
 
         if debug.VERBOSE_LLAMACPP:
-            print(temp.get_history())
+            print(temp)
 
         #response_format={"type": "text"}
-        reply = self.llm.create_chat_completion(temp.get_history())["choices"][0]["message"]["content"]
+        reply = self.llm.create_chat_completion(temp)["choices"][0]["message"]["content"]
 
         clean_reply = Provider._hard_clean_reply(reply)
 
@@ -130,7 +132,7 @@ class LlamaCppProvider(Provider):
             print(clean_reply)
 
         if len(clean_reply) <= 0:
-            hist = temp.get_history()
+            hist = temp
             hist[-1]["content"] = hist[-1]["content"] + " /nothink"
             reply = self.llm.create_chat_completion(hist)["choices"][0]["message"]["content"]
 
@@ -151,9 +153,9 @@ class LangchainProvider(Provider):
         temp = self._invoke_pre(message=message, transient=transient, role=role, override=override, append=append)
 
         if debug.VERBOSE_LANGCHAIN:
-            print(temp.get_history())
+            print(temp)
 
-        reply = self.llm.invoke(temp.get_history()).content
+        reply = self.llm.invoke(temp).content
 
         if debug.VERBOSE_LANGCHAIN:
             print(reply)

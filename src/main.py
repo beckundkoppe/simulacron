@@ -31,15 +31,16 @@ def main():
         imaginator = ImaginatorType.QUESTION,
         observe    = ObserveType.ON,
         reflect    = ReflectType.ON,
-        plan       = PlanType.PLAN
+        plan       = PlanType.STRUCTURED
     )
 
     config = Configuration(PerceptionType.ALL, PositionType.RELATIVE, agent=agent_config, temperature=0.0, name="test", seed=-1)
 
     result1: RunResult = dispatcher.run_single(Run(
         config,
-        main_model               = Model.Local.Ollama.GPT_OSS_20B,
-        #imaginator               = Model.Remote.MISTRAL_SMALL_24B,
+        #main_model               = Model.Local.Ollama.GPT_OSS_20B,
+        main_model               = Model.Local.LlamaCpp.Qwen.VANILLA_8B,
+        imaginator               = Model.Remote.MISTRAL_SMALL_24B,
         level                    = Levels.VAGUE_INSTRUCT.POTATO_HARD.value,
         reruns                   = 30,
         optimal_steps_multiplier = 4.0,

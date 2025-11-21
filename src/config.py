@@ -20,8 +20,8 @@ class ReflectType(Enum):
 
 class PlanType(Enum):
     OFF    = auto(),
-    PLAN   = auto(),
-    REPLAN = auto(),
+    FREE   = auto(),
+    STRUCTURED = auto(),
 
 @dataclass(frozen=True)
 class AgentConfiguration:
