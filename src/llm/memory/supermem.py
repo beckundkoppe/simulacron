@@ -1,3 +1,4 @@
+import copy
 from typing import List, Tuple
 import config
 from llm.memory.memory import Memory, Role, Type
@@ -107,3 +108,12 @@ class SuperMemory(Memory):
     def get_token_count(self) -> int:
         history_out = self._get_history()
         return Memory._approximate_token_count(str(history_out))
+    
+    def copy(self) -> "SuperMemory":
+        new_copy = SuperMemory(self._goal, self.path)
+        new_copy._history = copy.deepcopy(self._history)
+        new_copy._plan = copy.deepcopy(self._plan)
+        new_copy._learnings = copy.deepcopy(self._learnings)
+        new_copy._memories = copy.deepcopy(self._memories)
+        new_copy._current_observation = copy.deepcopy(self._current_observation)
+        return new_copy

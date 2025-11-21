@@ -4,10 +4,6 @@
 
 - Memory mit hard cuttoff statt summary
 
-## Optional
-
-- make reflection and planning optional states
-
 ## Stats
 
 - stats erfassen
