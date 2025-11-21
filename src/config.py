@@ -61,4 +61,4 @@ DEPTH_FAKTOR: int = 1
 class Backend:
     _n_gpu_layers = -1
     _n_threads = 24
-    _n_context = 4096
+    _n_context = 8096
