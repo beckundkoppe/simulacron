@@ -48,7 +48,7 @@ def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginat
 
     current.EXTRA_MODEL = extra_model
 
-    spec: LevelSpec = level.build()
+    spec: LevelSpec = level.build(level.detailed)
     console.pretty(console.banner(level.name, char="+", color=console.Color.BLUE))
 
     agents = []

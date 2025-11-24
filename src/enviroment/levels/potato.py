@@ -5,6 +5,11 @@ from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
 
+
+vague_instruction_str = "Place a potato on the table."
+detailed_instruction_str = "Find the potato in the other room, take it and place it on the table."
+
+
 def build_easy(detailed_instruction: bool) -> LevelSpec:
     """
     Easy Level, where the agent has to get the potato from the other room, and put it on the table. 
@@ -47,16 +52,10 @@ def build_easy(detailed_instruction: bool) -> LevelSpec:
     shelf2.enter(chamber)
     shelf2.add_child(diamond)
 
-    instr = ""
-    if detailed_instruction:
-        instr = "Goal: Find the potato in the other room, take it and place it on the table."
-    else:
-        instr = "Goal: Find the potato and place it on the table."
-
     return LevelSpec(
         agent_entities=[(
             tron,
-            instr
+            detailed_instruction_str if detailed_instruction else vague_instruction_str
             ),
         ],
         is_success=check_win_table_key,
@@ -113,16 +112,10 @@ def build_medium(detailed_instruction) -> LevelSpec:
     door_main.connect(door_chamber)
     door_chamber.connect(door_main)
 
-    instr = ""
-    if detailed_instruction:
-        instr = "Goal: Search the containers in the other room, find the potato, take it, and place it on the table."
-    else:
-        instr = "Goal: Find the potato and place it on the table."
-
     return LevelSpec(
         agent_entities=[(
             tron,
-            instr
+            detailed_instruction_str if detailed_instruction else vague_instruction_str
         )],
         is_success=check_win_table_key,
     )

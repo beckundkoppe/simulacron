@@ -38,7 +38,7 @@ class Box(ContainerEntity):
     """Generic storage box."""
     def __init__(self, pos: Position | None = None, description: str | None = None):
         super().__init__(
-            name="chest",
+            name="box",
             pos=pos,
             description=description,
         )
