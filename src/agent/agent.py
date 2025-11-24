@@ -177,12 +177,13 @@ class Agent:
 
         plan_str = plan_imaginator.call(prompt)
 
-    
-        plan_realisator = ToolProvider.build("plan_realisator", self.realisator_model, Memory("Use toolcalls to add the following steps that arise with the given plan"))
+        mem = Memory()
+        mem.append_message(Role.USER, plan_str)
+        plan_realisator = ToolProvider.build("plan_realisator", self.realisator_model, mem)
         register_tools(plan_realisator, ToolGroup.PLAN)
 
         for i in range(0, 3):
-            reply = plan_realisator.invoke(plan_str)
+            reply = plan_realisator.invoke("Use toolcalls to add the steps specified in the plan for the user.")
 
             if process_formal_errors(None):
                 self.main_memory.plan_steps.clear()
