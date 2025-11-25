@@ -201,6 +201,20 @@ class Model(Enum):
                     ),
                 )
 
+            GLM_9B = ModelSpec(
+                name="GLM_9B-Q8",
+                tag="glm_9b",
+                location=Location.LOCAL,
+                backend=Backend.LLAMACPP,
+                agent_backend=AgentBackend.LLAMACPPAGENT,
+                kind=ModelKind.HYBRID,
+                source=SourceHuggingface(
+                    repo_id="legraphista/glm-4-9b-chat-GGUF",
+                    filename="glm-4-9b-chat.Q8_0.gguf",
+                    local_dir="data/model/"
+                    #https://huggingface.co/legraphista/glm-4-9b-chat-GGUF/blob/main/glm-4-9b-chat.Q8_0.gguf?library=llama-cpp-python
+                ),
+            )
 
             MPT_30B = ModelSpec(
                 name="MPT-30B-Q2",
@@ -259,6 +273,21 @@ class Model(Enum):
 	                filename="Arch-Agent-3B-q6_k_m.gguf",
                     local_dir="data/model/"
                     #https://huggingface.co/Mungert/Arch-Agent-3B-GGUF
+                ),
+            )
+
+            XLAM2_8B = ModelSpec(
+                name="XLAM2_8B",
+                tag="xlam2-8B",
+                location=Location.LOCAL,
+                backend=Backend.LLAMACPP,
+                agent_backend=AgentBackend.LLAMACPPAGENT,
+                kind=ModelKind.TOOL,
+                source=SourceHuggingface(
+                    repo_id="Salesforce/Llama-xLAM-2-8b-fc-r-gguf",
+	                filename="xLAM-2-3B-fc-r-Q8_0.gguf",
+                    local_dir="data/model/"
+                    #https://huggingface.co/Salesforce/Llama-xLAM-2-8b-fc-r-gguf?show_file_info=Llama-xLAM-2-8B-fc-r-Q8_0.gguf&library=llama-cpp-python
                 ),
             )
 
@@ -488,6 +517,19 @@ class Model(Enum):
                         #https://ollama.com/library/granite4/tags
                     ),
                 )
+
+            GLM_9B = ModelSpec(
+                name="GLM-9B-Q8",
+                tag="glm_9b",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.TOOL,
+                source=SourceOllama(
+                    model_id="glm4:9b-chat-q8_0",
+                    #https://ollama.com/library/glm4/tags
+                ),
+            )
 
             XLAM2_8B_Q8 = ModelSpec(
                 name="xLAM-2-8B-Q8",
