@@ -57,10 +57,12 @@ class Dispatcher:
 
     def run_all(self):
         results = []
-        
+
         for run in self.queued_runs:
             results.append(self.run_single(run))
 
+        return results
+
 
     def expected_time(self) -> float:
-        return self.queue_run.count * self.average_time
+        return len(self.queued_runs) * self.average_time

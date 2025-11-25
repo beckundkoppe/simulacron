@@ -58,12 +58,26 @@ class Agent:
         observer = Provider.build("observer", self.imaginator_model, memory=mem)
         observation = observer.call("What do you observe? What is interesting? (short)")
         self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
-        
+
         self.memorize()
 
     def memorize(self):
-        pass
-    
+        if config.ACTIVE_CONFIG.agent.observe is not config.ObserveType.MEMORIZE:
+            return
+
+        last_perception = None
+        for msg_type, _, msg in reversed(self.main_memory._history):
+            if msg_type is Type.PERCEPTION:
+                last_perception = msg
+                break
+
+        if last_perception:
+            self.main_memory.append_message(
+                Role.USER,
+                f"Memorized snapshot: {last_perception}",
+                Type.SUMMARY,
+            )
+
     def _parse_decision(self, response: str, positive_markers=None) -> bool:
         markers = ["done", "yes", "y", "true"] if positive_markers is None else positive_markers
         normalized = response.strip().lower()
@@ -75,13 +89,13 @@ class Agent:
         
         
         if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
-            prompt += " Stick closely to the next step in the plan. But allways tell the next action"
+            prompt += " Stick closely to the next step in the plan. But always tell the next action"
 
         if config.ACTIVE_CONFIG.agent.imaginator is config.ImaginatorType.OFF:
-            self.provider = Provider.build("agent", self.realisator_model, memory=self.main_memory)
-            raise NotImplementedError
-        else:
-            self._imgagination_realisation_step(perception, prompt, ToolGroup.ENV)
+            self._direct_action_step(perception, prompt)
+            return
+
+        self._imgagination_realisation_step(perception, prompt, ToolGroup.ENV)
 
     def reflect(self, perception: str):
         action_messages = process_action_results()
@@ -98,11 +112,21 @@ class Agent:
         reflector = Provider.build("reflector", self.imaginator_model, memory=mem)
         self.reflection = reflector.call("Reflect what effect the performed Actions had. Only what you can say for sure. (short)")
         self.main_memory.append_message(Role.USER, self.reflection, Type.REFLECT)
-        
+
         self.learn()
 
     def learn(self):
-        pass
+        if config.ACTIVE_CONFIG.agent.reflect is not config.ReflectType.LEARN:
+            return
+
+        if not self.reflection:
+            return
+
+        self.main_memory.append_message(
+            Role.USER,
+            f"Lesson learned: {self.reflection}",
+            Type.FEEDBACK,
+        )
 
     def plan(self):
         if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
@@ -260,3 +284,15 @@ class Agent:
                 )
             else:
                 break
+
+    def _direct_action_step(self, context: str, task: str):
+        realisator = ToolProvider.build(
+            "realisator",
+            self.realisator_model,
+            Memory(
+                "Use concise, executable actions. Prefer tool calls when possible; otherwise respond with a short action descriptio"
+                "n."
+            ),
+        )
+        register_tools(realisator, ToolGroup.ENV)
+        realisator.invoke(context + ". " + task)
