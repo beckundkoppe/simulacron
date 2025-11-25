@@ -60,33 +60,29 @@ class Agent:
         if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.MEMORIZE:
             self.memorize(observation, "Do you now this room already?")
 
-    #TODO make this an imaginator realisator step with the realisation retries...
     def memorize(self, context: str, task: str):
-        imaginator = Provider.build("memo_imaginator", self.imaginator_model, memory=self.main_memory)
-        reasoning = imaginator.call(
-            f"""
-            Is there something important to memorize from the data? If so tell short and precise what it is. Only information that is useful for the Plan.
-            Are there obsolete or redundat MEMORIES that need to be deleted? Keep only important ones.
-            \n:{context}
-            \n{task}
-            """
+        imagination = self._imaginator_realisator_step(
+            imagination_task=(
+                f"""
+                Is there something important to memorize from the data? If so tell short and precise what it is. Only information that is useful for the Plan.
+                Are there obsolete or redundat MEMORIES that need to be deleted? Keep only important ones.
+                \n:{context}
+                \n{task}
+                """
+            ),
+            realization_context=(
+                f"Memories: {str(self.main_memory.memories)}\n"
+                f"{context}\nReasoning: {{imagination}}\n"
+                "Use the tools to store and/or delete memories like told. If there is nothing to do use the noop tool."
+            ),
+            tools=ToolGroup.MEM,
+            realisator_system="Respond by calling the given functions only!",
+            imaginator_name="memo_imaginator",
+            realisator_name="memo_realisator",
+            allow_question_retry=False,
         )
 
-        qa_memory = Memory(path="memories.txt")
-        qa_memory.append_message(
-            Role.USER,
-            f"Memories: {str(self.main_memory.memories)}",
-        )
-        qa_memory.save()
-
-        qa_memory.append_message(
-            Role.USER,
-            f"{context}\nReasoning: {reasoning}\nUse the tools to store and/or delete memories like told. If there is nothing todo use the noop tool. Only delete",
-        )
-
-        qa_realisator = ToolProvider.build("memo_realisator", self.realisator_model, qa_memory)
-        register_tools(qa_realisator, ToolGroup.MEM)
-        qa_realisator.invoke("Respond by calling the given funktions only!")
+        return imagination
 
     def _parse_decision(self, response: str, positive_markers=None) -> bool:
         markers = ["done", "yes", "y", "true"] if positive_markers is None else positive_markers
@@ -136,6 +132,9 @@ class Agent:
                 "If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a "
                 "precice and short question."
             ),
+            imaginator_name="action_imaginator",
+            realisator_name="action_realisator",
+            allow_question_retry=True,
         )
 
     def reflect(self, perception: str):
@@ -261,23 +260,33 @@ class Agent:
             raise Exception("no planned steps")
 
 
-    #TODO split this into the general concept of imaginator&realisator and the "action step". move the action part into the act() func.
-    def _imgagination_realisation_step(self, context, task: str, tools: ToolGroup):
-        imaginator = Provider.build("action_imaginator", self.imaginator_model, memory=self.main_memory)
+    def _imaginator_realisator_step(
+        self,
+        imagination_task: str,
+        realization_context: str,
+        tools: ToolGroup,
+        realisator_system: str,
+        imaginator_name: str = "imaginator",
+        realisator_name: str = "realisator",
+        allow_question_retry: bool = False,
+        realisator_memory: Memory | None = None,
+    ) -> str:
+        imaginator = Provider.build(imaginator_name, self.imaginator_model, memory=self.main_memory)
 
         imagination = imaginator.call(imagination_task)
 
+        realisator_mem = realisator_memory or Memory(realisator_system)
         realisator = ToolProvider.build(
-            "realisator",
+            realisator_name,
             self.realisator_model,
-            Memory(realisator_system),
+            realisator_mem,
         )
         register_tools(realisator, tools)
 
         correction_suffix = ""
 
         for attempt in range(0, 3):
-            ctx = realization_context + ". What to do next: " + imagination + correction_suffix
+            ctx = realization_context.format(imagination=imagination) + correction_suffix
             reply = realisator.invoke(ctx)
 
             has_error, errors = process_formal_errors(realisator.memory, collect=True)
@@ -293,7 +302,7 @@ class Agent:
                 else " Retry using valid tool calls with explicit object IDs."
             )
 
-            if config.ACTIVE_CONFIG.agent.imaginator is not config.ImaginatorType.QUESTION:
+            if not allow_question_retry or config.ACTIVE_CONFIG.agent.imaginator is not config.ImaginatorType.QUESTION:
                 self.main_memory.append_message(
                     Role.USER,
                     "Last step was not specified well. Please provide more explicit instructions",
