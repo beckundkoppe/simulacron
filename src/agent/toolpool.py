@@ -172,8 +172,8 @@ def decompose_node(task_node_id: int, sub_nodes: list[str]) -> str:
     """
 
     agent = current.AGENT
-    
-    agent.main_memory.plan_node = ...PlanNode(goal)
+
+    agent.main_memory.decompose_plan_node(task_node_id, sub_nodes)
 
     return ""
 
@@ -187,8 +187,8 @@ def delete_node(task_node_id: int, delete_children:bool = True) -> str:
     """
 
     agent = current.AGENT
-    
-    agent.main_memory.plan_node = ...PlanNode(goal)
+
+    agent.main_memory.delete_plan_node(task_node_id, delete_children)
 
     return ""
 
@@ -201,10 +201,10 @@ def store_memory(information: str) -> str:
     """
 
     agent = current.AGENT
-    
-    agent.main_memory.memories
 
-    return ""
+    memory_id = agent.main_memory.store_permanent_memory(information)
+
+    return f"Stored memory with id {memory_id}"
 
 @tool
 def delete_memory(memory_id: int,) -> str:
@@ -215,8 +215,8 @@ def delete_memory(memory_id: int,) -> str:
     """
 
     agent = current.AGENT
-    
-    agent.main_memory.memories
+
+    agent.main_memory.delete_permanent_memory(memory_id)
 
     return ""
 

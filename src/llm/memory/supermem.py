@@ -1,18 +1,63 @@
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Tuple
 import config
 from llm.memory.memory import Memory, Role, Type
 
-NODE_COUNTER: int = 0
-MEMORIES_COUNTER: int = 0
 
+@dataclass
 class PlanNode:
-    def init(self, data: str, parent: int = None):
-        self.parent = parent
-        self.id: int = NODE_COUNTER
-        NODE_COUNTER += 1
-        self.data: str = data
+    """A simple tree structure to represent nested plans and tasks."""
+
+    data: str
+    parent: "PlanNode | None" = None
+    id: int | None = None
+    children: list["PlanNode"] = field(default_factory=list)
+
+    _counter: int = 0
+
+    def __post_init__(self):
+        if self.id is None:
+            self.id = PlanNode._counter
+        PlanNode._counter = max(PlanNode._counter + 1, (self.id or 0) + 1)
+
+        if self.parent:
+            self.parent.children.append(self)
+
+    def add_child(self, data: str) -> "PlanNode":
+        return PlanNode(data, parent=self)
+
+    def find(self, search_id: int) -> "PlanNode | None":
+        if self.id == search_id:
+            return self
+
+        for child in self.children:
+            found = child.find(search_id)
+            if found:
+                return found
+
+        return None
+
+    def remove(self, delete_children: bool = True) -> None:
+        if self.parent is None:
+            raise ValueError("Cannot delete the root plan node")
+
+        parent_children = self.parent.children
+        if delete_children:
+            self.parent.children = [child for child in parent_children if child is not self]
+            return
+
+        self.parent.children = [child for child in parent_children if child is not self]
+        for child in self.children:
+            child.parent = self.parent
+            self.parent.children.append(child)
+        self.children.clear()
+
+    def clone(self, parent: "PlanNode | None" = None) -> "PlanNode":
+        clone_node = PlanNode(self.data, parent=parent, id=self.id)
+        for child in self.children:
+            child.clone(clone_node)
+        return clone_node
 
 class SuperMemory(Memory):
     def __init__(self, goal, path) -> None:
@@ -22,24 +67,52 @@ class SuperMemory(Memory):
         #_history
         self._learnings: List[str] = []
         self._plans: List[str] = []
-        self.plan_nodes = PlanNode(goal)
-        self.memories: dict[int, str] = []
+        self.plan_root = PlanNode(goal)
+        self.plan_node = self.plan_root
+        self.memories: dict[int, str] = {}
         self._current_observation: str = []
         self.plan = None
-        self.plan_steps = []
-        self.completed_steps = []
+        self.plan_steps: list[str] = []
+        self.completed_steps: list[str] = []
 
     def add_plan(self, plan: str):
         self.plan = plan
         self.save()
-    
+
     def add_learing(self, learn):
-        self.learning.append(learn)
+        self._learnings.append(learn)
         self.save()
 
     def mark_completed(self):
         if self.plan_steps:
             self.completed_steps.append(self.plan_steps.pop(0))
+
+    def store_permanent_memory(self, information: str) -> int:
+        new_id = max(self.memories.keys(), default=-1) + 1
+        self.memories[new_id] = information
+        return new_id
+
+    def delete_permanent_memory(self, memory_id: int) -> None:
+        if memory_id not in self.memories:
+            raise KeyError(f"Memory id {memory_id} not found")
+        del self.memories[memory_id]
+
+    def decompose_plan_node(self, task_node_id: int, sub_nodes: List[str]) -> PlanNode:
+        node = self.plan_root.find(task_node_id)
+        if node is None:
+            raise KeyError(f"Plan node with id {task_node_id} not found")
+
+        for sub_task in sub_nodes:
+            node.add_child(sub_task)
+
+        return node
+
+    def delete_plan_node(self, task_node_id: int, delete_children: bool = True) -> None:
+        node = self.plan_root.find(task_node_id)
+        if node is None:
+            raise KeyError(f"Plan node with id {task_node_id} not found")
+
+        node.remove(delete_children=delete_children)
 
     def _get_history(self) -> List[Tuple[Type, Role, str]]:
         history_out = []
@@ -136,4 +209,8 @@ class SuperMemory(Memory):
         new_copy._learnings = copy.deepcopy(self._learnings)
         new_copy.memories = copy.deepcopy(self.memories)
         new_copy._current_observation = copy.deepcopy(self._current_observation)
+        new_copy.plan_steps = copy.deepcopy(self.plan_steps)
+        new_copy.completed_steps = copy.deepcopy(self.completed_steps)
+        new_copy.plan_root = self.plan_root.clone(None)
+        new_copy.plan_node = new_copy.plan_root
         return new_copy

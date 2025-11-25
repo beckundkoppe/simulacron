@@ -83,6 +83,28 @@ class Agent:
         normalized = response.strip().lower()
         return any(normalized.startswith(marker) for marker in markers)
 
+    def _ask_yes_no(self, context: str, question: str) -> bool:
+        """Use imaginator reasoning and QA tool calls to answer a binary question."""
+
+        current.ANSWER_BUFFER = None
+
+        imaginator = Provider.build("qa_imaginator", self.imaginator_model, memory=self.main_memory)
+        reasoning = imaginator.call(
+            f"{context}\nQuestion: {question}\nProvide a short reasoning before deciding."
+        )
+
+        qa_memory = Memory()
+        qa_memory.append_message(
+            Role.USER,
+            f"{context}\nQuestion: {question}\nReasoning: {reasoning}\nUse yes() or no() tool calls only.",
+        )
+
+        qa_realisator = ToolProvider.build("qa_realisator", self.realisator_model, qa_memory)
+        register_tools(qa_realisator, ToolGroup.QA)
+        qa_realisator.invoke("Respond by calling yes() or no() to answer the question above.")
+
+        return bool(current.ANSWER_BUFFER)
+
     def act(self, perception: str):
         prompt = "Give best next action to perform (short answer)."
 
@@ -136,26 +158,23 @@ class Agent:
 
 
 
-        #TODO use imaginator, realisator with QA tools here
         if self.main_memory.plan is not None:
             if config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
-                is_completed: str = planner.invoke(
-                    "PLAN:" + self.main_memory.plan + " REFLECTION: "+self.reflection,
-                    "Based on the current reflection of the last action. Respond with DONE if the current PLAN is fully completed, otherwise respond with TODO (only one of these tokens).",
-                    override=Memory()
+                is_completed = self._ask_yes_no(
+                    context=f"PLAN: {self.main_memory.plan}\nREFLECTION: {self.reflection}",
+                    question="Based on the current reflection of the last action, is the current plan fully completed?",
                 )
 
-                if self._parse_decision(is_completed, ["done"]):
+                if is_completed:
                     self.main_memory.mark_completed()
 
                     if not self.main_memory.plan_steps:
-                        should_plan = planner.invoke(
-                            "Main goal: " + self.goal,
-                            "Respond with DONE if the main goal is already achieved, otherwise TODO (only one of these tokens).",
-                            override=Memory()
+                        should_finish = self._ask_yes_no(
+                            context=f"Main goal: {self.goal}",
+                            question="Is the main goal already achieved?",
                         )
 
-                        if self._parse_decision(should_plan, ["done"]):
+                        if should_finish:
                             raise Exception("AGENT FINISHED")
 
                         return
@@ -164,12 +183,15 @@ class Agent:
                     self.main_memory.add_plan("PLAN: "+ current_step)
                     return
 
-            should_plan: str = planner.call(
-                "Based on the current goal, context, and the last action: "
-                "Is the current sub goal still possible? Respond with POSSIBLE or REPLAN (only one of these tokens)."
+            should_plan = self._ask_yes_no(
+                context=(
+                    f"Goal: {self.goal}\nCurrent plan: {self.main_memory.plan}\nReflection: {self.reflection}\n"
+                    f"Perception: {perception}"
+                ),
+                question="Based on the current goal, context, and the last action, is the current sub goal still possible?",
             )
 
-            if self._parse_decision(should_plan, ["possible", "continue"]):
+            if should_plan:
                 return
 
         if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
