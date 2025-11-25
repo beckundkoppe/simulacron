@@ -343,90 +343,192 @@ class AdvancedContainerEntity(ContainerEntity):
 
 class ConnectorEntity(Entity):
     def __init__(self, name, pos, description = None, is_locked = False):
-        super().__init__(name, pos, description)
-        self.otherDoor : ConnectorEntity = None
-        self.is_locked = is_locked
-        self.keys: list[Entity] = []
+        super().__init__(name, pos, description, is_collectible=False)
+        self.rooms: dict[Room, Position] = {}
+        self.keys: set[Entity] = set()
+
+        self._openable = OpenableCapability(self, initially_open=True)
+        self.add_capability(self._openable)
+
+        self._lockable = LockableCapability(self, initially_locked=is_locked)
+        self.add_capability(self._lockable)
+
+    @property
+    def is_locked(self) -> bool:
+        return self._lockable.is_locked
+
+    @is_locked.setter
+    def is_locked(self, value: bool) -> None:
+        self._lockable.is_locked = value
+
+    def add_key(self, entity: Entity):
+        self.keys.add(entity)
+        self._lockable.allow_key(entity)
 
     def connect(self, entity: "ConnectorEntity"):
         self.otherDoor = entity
 
-    def enter_connect(self, user_entity: Entity):
-        assert self.otherDoor is not None, f"connectionDoor is None in {self.name}"
+    def add_room(self, room: Room, pos: Position) -> None:
+        assert room.isPosInRoom(pos), (
+            f"Position: {self._format_position_for_agent(pos, room)} from {self.name} "
+            f"does not fit in Room:{room.name} ({room.extend_x,room.extend_y})"
+        )
+        self.rooms[room] = pos
+        room.entities.add(self)
+        if self.room is None:
+            self.room = room
+        self.pos = pos
 
-        current_room = user_entity.room
-        connection_room = self.otherDoor.room
-        assert current_room != connection_room, f"Entity: {user_entity.name} is already in Room: {connection_room.name}"
+    def enter(self, room: Room, pos: Position | None = None):
+        position = pos if pos is not None else self.pos
+        if position is None:
+            raise ValueError("Connector needs a position per room")
+        self.add_room(room, position)
+
+    def prepare_for_perception(self, room: Room) -> None:
+        if room in self.rooms:
+            self.pos = self.rooms[room]
+            self.room = room
+
+    def get_position_for_room(self, room: Room) -> Position | None:
+        return self.rooms.get(room)
+
+    def get_other_room(self, room: Room | None) -> Room | None:
+        if room is None:
+            return None
+        for candidate in self.rooms:
+            if candidate is not room:
+                return candidate
+        return None
+
+    def _distance_to_actor(self, actor_entity: "Entity") -> float | None:
+        actor_room = actor_entity.room if actor_entity else None
+        if actor_room is None:
+            return None
+        connector_pos = self.get_position_for_room(actor_room)
+        if connector_pos is None or actor_entity.pos is None:
+            return None
+        return connector_pos.distanceTo(actor_entity.pos)
+
+    def _ensure_same_room(self, actor_entity: "Entity") -> None:
+        actor_room = actor_entity.room if actor_entity else None
+        if actor_room is None or actor_room not in self.rooms:
+            raise HardException(
+                f"{self.readable_id} is not in your current room.",
+                console_message=(
+                    f"{getattr(actor_entity, 'readable_id', 'unknown')} attempted to interact with "
+                    f"'{self.readable_id}', but it is only reachable from "
+                    f"'{', '.join(room.readable_id for room in self.rooms)}'."
+                ),
+                hint="Move to a room connected to the door before interacting.",
+                context={
+                    "actor": getattr(actor_entity, "readable_id", None),
+                    "actor_room": actor_room.readable_id if actor_room else None,
+                    "target": self.readable_id,
+                },
+            )
+
+    def enter_connect(self, user_entity: Entity):
+        destination_room = self.get_other_room(user_entity.room)
+        if destination_room is None:
+            raise HardException(
+                "This connector is not linked to another room.",
+                console_message=(
+                    f"Connector '{self.readable_id}' is missing a destination from "
+                    f"'{user_entity.room.readable_id if user_entity.room else 'unknown'}'."
+                ),
+                hint="Ensure doors are connected to two rooms before traversal.",
+            )
+
+        target_position = self.get_position_for_room(destination_room)
+        assert target_position is not None, "destination position missing"
+
         user_entity.leave()
-        user_entity.pos = self.otherDoor.pos
-        user_entity.enter(connection_room)
+        user_entity.pos = target_position
+        user_entity.enter(destination_room)
 
     def on_interact(self, actor_entity, action: ActionTry) -> str:
+        self.prepare_for_perception(actor_entity.room)
         self._ensure_same_room(actor_entity)
         self._ensure_in_range(actor_entity)
 
-        if(action.type == ActionType.OPEN or action.type == ActionType.CLOSE):
-            raise SoftException(
-                "Use the USE operator to go through this connector.",
-                console_message=(
-                    f"Connector '{self.readable_id}' received '{action.type.value}' from "
-                    f"'{getattr(actor_entity, 'readable_id', 'unknown')}'."
-                ),
-                hint="Invoke interact_with_object(..., operator=\"GO_THROUGH\") to traverse connectors.",
-                context={
-                    "connector": self.readable_id,
-                    "operator": action.type.value,
-                },
-            )
-
-        if(action.type == ActionType.UNLOCK):
-            if(not self.is_locked):
-                return f"{self.readable_id} is already unlocked"
-            if(action.item_1 in self.keys):
-                self.is_locked = False
-                return f"unlocked {self.readable_id}"
-
-            key_id = getattr(action.item_1, "readable_id", None)
-
-            raise SoftException(
-                "That key does not fit this lock.",
-                console_message=(
-                    f"Key '{key_id or 'unknown'}' failed to unlock connector '{self.readable_id}'."
-                ),
-                hint="Use a matching key before unlocking.",
-                context={
-                    "connector": self.readable_id,
-                    "key": key_id,
-                },
-            )
-
-        if(action.type == ActionType.LOCK):
-            if(self.is_locked):
-                return "already locked"
-            if(action.item_1 in self.keys):
-                self.is_locked = True
-                key_id = getattr(action.item_1, "readable_id", None)
+        if action.type == ActionType.LOOK_THROUGH:
+            if not self._openable.is_open:
                 raise SoftException(
-                    "The connector is now locked.",
+                    "You need to open the door before looking through it.",
                     console_message=(
-                        f"Connector '{self.readable_id}' locked using key '{key_id or 'unknown'}'."
+                        f"Attempted LOOK_THROUGH on closed connector '{self.readable_id}'."
                     ),
-                    hint="Unlock it again before attempting to use it.",
-                    context={
-                        "connector": self.readable_id,
-                        "key": key_id,
-                    },
+                    hint="Use the OPEN operator first.",
                 )
 
-        if(action.type == ActionType.USE):
-            if not self.is_locked:
-                actor_entity.use_connector(self)
-                return f"Went through {self.readable_id} into {self.otherDoor.room.name}"
-            
-        super().on_interact(actor_entity, action)
+            destination_room = self.get_other_room(actor_entity.room)
+            if destination_room is None:
+                raise HardException(
+                    "This door does not lead anywhere.",
+                    console_message=(
+                        f"Connector '{self.readable_id}' has no destination room registered."
+                    ),
+                    hint="Connect the door to a neighbouring room before looking through.",
+                )
 
-    def add_key(self, entity):
-        self.keys.append(entity)
+            observations = []
+            origin_position = self.get_position_for_room(actor_entity.room)
+            for obj in destination_room.entities:
+                if obj is actor_entity:
+                    continue
+                obj.prepare_for_perception(destination_room) if hasattr(obj, "prepare_for_perception") else None
+                target_pos = obj.pos
+                if origin_position is None or target_pos is None:
+                    continue
+                env = PerceptionEnviroment(
+                    distance_m=origin_position.distanceTo(target_pos),
+                    light_level=destination_room.light_level,
+                )
+                observations.append(
+                    obj.on_perceive(actor_entity, env, DetailLevel.NORMAL)
+                )
+
+            return (
+                f"Through {self.readable_id} you see into {destination_room.readable_id}: "
+                f"{observations or 'nothing of interest'}"
+            )
+
+        if action.type in (ActionType.OPEN, ActionType.CLOSE):
+            result = self._openable.on_interact(actor_entity, action)
+            if result is not None:
+                return result
+
+        if action.type in (ActionType.UNLOCK, ActionType.LOCK):
+            if action.item_1 is not None:
+                self._lockable.allow_key(action.item_1)
+            result = self._lockable.on_interact(actor_entity, action)
+            if result is not None:
+                return result
+
+        if action.type == ActionType.USE:
+            if self._lockable.is_locked:
+                raise SoftException(
+                    "The door is locked.",
+                    console_message=(
+                        f"Use prevented because '{self.readable_id}' is locked."
+                    ),
+                    hint="Unlock it before trying to go through.",
+                )
+            if not self._openable.is_open:
+                raise SoftException(
+                    "Open the door before going through.",
+                    console_message=(
+                        f"Use prevented because '{self.readable_id}' is closed."
+                    ),
+                    hint="Use the OPEN operator first.",
+                )
+            destination_room = self.get_other_room(actor_entity.room)
+            actor_entity.use_connector(self)
+            destination_name = destination_room.name if destination_room else "the next room"
+            return f"Went through {self.readable_id} into {destination_name}"
+
+        return super().on_interact(actor_entity, action)
 
 class AgentEntity(Entity):
     def __init__(self, name: str, pos: Position | None = None, description: str | None = None, is_collectible: bool = False,):
@@ -649,22 +751,19 @@ class AgentEntity(Entity):
         self.pos = pos
 
     def use_connector(self, connector: ConnectorEntity):
-        if self.room != connector.room:
+        if self.room not in connector.rooms:
             agent_room = self.room
-            connector_room = connector.room
             raise HardException(
                 f"Connector {connector.readable_id} is not in your current room.",
                 console_message=(
-                    f"Agent '{self.readable_id}' attempted to use connector '{connector.readable_id}' located in "
-                    f"'{connector_room.name if connector_room else 'unknown'}' while staying in "
+                    f"Agent '{self.readable_id}' attempted to use connector '{connector.readable_id}' while staying in "
                     f"'{agent_room.name if agent_room else 'unknown'}'."
                 ),
-                hint="Move to the room where the connector resides before using it.",
+                hint="Move to a room that contains the door before using it.",
                 context={
                     "agent": self.readable_id,
                     "agent_room": agent_room.readable_id if agent_room else None,
                     "connector": connector.readable_id,
-                    "connector_room": connector_room.readable_id if connector_room else None,
                 },
             )
 
@@ -680,16 +779,11 @@ class AgentEntity(Entity):
         return o
 
 def connect_rooms_with_door(room_a, pos_a, room_b, pos_b, description = None):
-    # create doors
-    door_a = ConnectorEntity("door", pos_a, description=description)
-    door_b = ConnectorEntity("door", pos_b, description=description)
+    # create shared door
+    door = ConnectorEntity("door", pos_a, description=description)
 
     # assign to rooms
-    door_a.enter(room_a)
-    door_b.enter(room_b)
+    door.enter(room_a, pos_a)
+    door.enter(room_b, pos_b)
 
-    # connect both sides
-    door_a.connect(door_b)
-    door_b.connect(door_a)
-
-    return door_a, door_b
+    return door

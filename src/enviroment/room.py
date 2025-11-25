@@ -33,6 +33,9 @@ class Room:
             if obj is observer:
                 continue
 
+            if hasattr(obj, "prepare_for_perception"):
+                obj.prepare_for_perception(self)
+
             target = obj
             observer = observer
 
