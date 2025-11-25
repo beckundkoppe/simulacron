@@ -71,10 +71,33 @@ class Agent:
                 last_perception = msg
                 break
 
-        if last_perception:
+        if not last_perception:
+            return
+
+        if config.ACTIVE_CONFIG.agent.imaginator is config.ImaginatorType.OFF:
             self.main_memory.append_message(
                 Role.USER,
                 f"Memorized snapshot: {last_perception}",
+                Type.SUMMARY,
+            )
+            return
+
+        imagination = self._imaginator_realisator_step(
+            imagination_task=(
+                "From the latest perception, identify a concise, valuable fact worth storing permanently."
+            ),
+            realization_context=f"Latest perception: {last_perception}",
+            tools=ToolGroup.MEM,
+            realisator_system=(
+                "Use store_memory() to record a single, compact, and valuable memory about the user's recent perception. Do not "
+                "delete memories unless explicitly instructed."
+            ),
+        )
+
+        if imagination:
+            self.main_memory.append_message(
+                Role.USER,
+                f"Memorized snapshot: {imagination}",
                 Type.SUMMARY,
             )
 
@@ -117,7 +140,16 @@ class Agent:
             self._direct_action_step(perception, prompt)
             return
 
-        self._imgagination_realisation_step(perception, prompt, ToolGroup.ENV)
+        self._imaginator_realisator_step(
+            imagination_task=prompt,
+            realization_context=perception,
+            tools=ToolGroup.ENV,
+            realisator_system=(
+                "Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. "
+                "If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a "
+                "precice and short question."
+            ),
+        )
 
     def reflect(self, perception: str):
         action_messages = process_action_results()
@@ -261,24 +293,28 @@ class Agent:
         #   yes: next step
         #   no: retry OR replan 
 
-    def _imgagination_realisation_step(self, context, task: str, tools: ToolGroup):
+    def _imaginator_realisator_step(
+        self,
+        imagination_task: str,
+        realization_context: str,
+        tools: ToolGroup,
+        realisator_system: str,
+    ) -> str:
         imaginator = Provider.build("imaginator", self.imaginator_model, memory=self.main_memory)
 
-        imagination = imaginator.call(task)
+        imagination = imaginator.call(imagination_task)
 
         realisator = ToolProvider.build(
             "realisator",
             self.realisator_model,
-            Memory(
-                "Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a precice and short question."
-            ),
+            Memory(realisator_system),
         )
         register_tools(realisator, tools)
 
         correction_suffix = ""
 
         for attempt in range(0, 3):
-            ctx = context + ". What to do next: " + imagination + correction_suffix
+            ctx = realization_context + ". What to do next: " + imagination + correction_suffix
             reply = realisator.invoke(ctx)
 
             has_error, errors = process_formal_errors(realisator.memory, collect=True)
@@ -297,18 +333,20 @@ class Agent:
             if config.ACTIVE_CONFIG.agent.imaginator is not config.ImaginatorType.QUESTION:
                 self.main_memory.append_message(
                     Role.USER,
-                    "Last action was not specified well. Please provide more explicit instructions",
+                    "Last step was not specified well. Please provide more explicit instructions",
                 )
                 break
 
             if "Question" in reply:
                 correction_suffix = imaginator.invoke(
                     reply + " Use explicit object IDs and absolute positions.",
-                    task + " Provide an explicit and precise instruction.",
+                    imagination_task + " Provide an explicit and precise instruction.",
                     append=False,
                 )
             else:
                 break
+
+        return imagination
 
     def _direct_action_step(self, context: str, task: str):
         realisator = ToolProvider.build(
