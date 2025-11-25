@@ -10,8 +10,9 @@ class ActionType(str, Enum):
     OPEN = "open"
     CLOSE = "close"
     UNLOCK = "unlock"
-    LOCK = "unlock"
+    LOCK = "lock"
     USE = "use"
+    LOOK_THROUGH = "look_through"
 
 @dataclass
 class ActionTry:
