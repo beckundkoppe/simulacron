@@ -20,8 +20,6 @@ class Agent:
         self.goal = goal
         self.main_memory = SuperMemory(goal=goal, path="main_memory.txt")
 
-        self.reflection = ""
-
     def update(self, perception: str):
         current.AGENT = self
         current.ENTITY = self.entity
@@ -59,47 +57,36 @@ class Agent:
         observation = observer.call("What do you observe? What is interesting? (short)")
         self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
 
-        self.memorize()
+        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.MEMORIZE:
+            self.memorize(observation, "Do you now this room already?")
 
-    def memorize(self):
-        if config.ACTIVE_CONFIG.agent.observe is not config.ObserveType.MEMORIZE:
-            return
-
-        last_perception = None
-        for msg_type, _, msg in reversed(self.main_memory._history):
-            if msg_type is Type.PERCEPTION:
-                last_perception = msg
-                break
-
-        if not last_perception:
-            return
-
-        if config.ACTIVE_CONFIG.agent.imaginator is config.ImaginatorType.OFF:
-            self.main_memory.append_message(
-                Role.USER,
-                f"Memorized snapshot: {last_perception}",
-                Type.SUMMARY,
-            )
-            return
-
-        imagination = self._imaginator_realisator_step(
-            imagination_task=(
-                "From the latest perception, identify a concise, valuable fact worth storing permanently."
-            ),
-            realization_context=f"Latest perception: {last_perception}",
-            tools=ToolGroup.MEM,
-            realisator_system=(
-                "Use store_memory() to record a single, compact, and valuable memory about the user's recent perception. Do not "
-                "delete memories unless explicitly instructed."
-            ),
+    #TODO make this an imaginator realisator step with the realisation retries...
+    def memorize(self, context: str, task: str):
+        imaginator = Provider.build("memo_imaginator", self.imaginator_model, memory=self.main_memory)
+        reasoning = imaginator.call(
+            f"""
+            Is there something important to memorize from the data? If so tell short and precise what it is. Only information that is useful for the Plan.
+            Are there obsolete or redundat MEMORIES that need to be deleted? Keep only important ones.
+            \n:{context}
+            \n{task}
+            """
         )
 
-        if imagination:
-            self.main_memory.append_message(
-                Role.USER,
-                f"Memorized snapshot: {imagination}",
-                Type.SUMMARY,
-            )
+        qa_memory = Memory(path="memories.txt")
+        qa_memory.append_message(
+            Role.USER,
+            f"Memories: {str(self.main_memory.memories)}",
+        )
+        qa_memory.save()
+
+        qa_memory.append_message(
+            Role.USER,
+            f"{context}\nReasoning: {reasoning}\nUse the tools to store and/or delete memories like told. If there is nothing todo use the noop tool. Only delete",
+        )
+
+        qa_realisator = ToolProvider.build("memo_realisator", self.realisator_model, qa_memory)
+        register_tools(qa_realisator, ToolGroup.MEM)
+        qa_realisator.invoke("Respond by calling the given funktions only!")
 
     def _parse_decision(self, response: str, positive_markers=None) -> bool:
         markers = ["done", "yes", "y", "true"] if positive_markers is None else positive_markers
@@ -164,23 +151,11 @@ class Agent:
         for role, msg, msg_type in action_messages:
             mem.append_message(role, msg, msg_type)
         reflector = Provider.build("reflector", self.imaginator_model, memory=mem)
-        self.reflection = reflector.call("Reflect what effect the performed Actions had. Only what you can say for sure. (short)")
-        self.main_memory.append_message(Role.USER, self.reflection, Type.REFLECT)
+        reflection = reflector.call("Reflect what effect the performed Actions had. Only what you can say for sure. (short)")
+        self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
 
-        self.learn()
-
-    def learn(self):
-        if config.ACTIVE_CONFIG.agent.reflect is not config.ReflectType.MEMORIZE:
-            return
-
-        if not self.reflection:
-            return
-
-        self.main_memory.append_message(
-            Role.USER,
-            f"Lesson learned: {self.reflection}",
-            Type.FEEDBACK,
-        )
+        if config.ACTIVE_CONFIG.agent.observe is config.ReflectType.MEMORIZE:
+            self.memorize(reflection)
 
     def plan(self):
         if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
@@ -193,7 +168,7 @@ class Agent:
         if self.main_memory.plan is not None:
             if config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
                 is_completed = self._ask_yes_no(
-                    context=f"PLAN: {self.main_memory.plan}\nREFLECTION: {self.reflection}",
+                    context=f"{self.main_memory.plan}",
                     question="Based on the current reflection of the last action, is the current plan fully completed?",
                 )
 
@@ -217,8 +192,7 @@ class Agent:
 
             should_plan = self._ask_yes_no(
                 context=(
-                    f"Goal: {self.goal}\nCurrent plan: {self.main_memory.plan}\nReflection: {self.reflection}\n"
-                    f"Perception: {perception}"
+                    f"Goal: {self.goal}\nCurrent plan: {self.main_memory.plan}\n"
                 ),
                 question="Based on the current goal, context, and the last action, is the current sub goal still possible?",
             )
@@ -286,21 +260,10 @@ class Agent:
         if not self.main_memory.plan_steps:
             raise Exception("no planned steps")
 
-        
-        #activate step
-        #(actionloop)
-        #reflect: is step completed
-        #   yes: next step
-        #   no: retry OR replan 
 
-    def _imaginator_realisator_step(
-        self,
-        imagination_task: str,
-        realization_context: str,
-        tools: ToolGroup,
-        realisator_system: str,
-    ) -> str:
-        imaginator = Provider.build("imaginator", self.imaginator_model, memory=self.main_memory)
+    #TODO split this into the general concept of imaginator&realisator and the "action step". move the action part into the act() func.
+    def _imgagination_realisation_step(self, context, task: str, tools: ToolGroup):
+        imaginator = Provider.build("action_imaginator", self.imaginator_model, memory=self.main_memory)
 
         imagination = imaginator.call(imagination_task)
 
@@ -350,7 +313,7 @@ class Agent:
 
     def _direct_action_step(self, context: str, task: str):
         realisator = ToolProvider.build(
-            "realisator",
+            "action_realisator",
             self.realisator_model,
             Memory(
                 "Use concise, executable actions. Prefer tool calls when possible; otherwise respond with a short action descriptio"
