@@ -102,9 +102,9 @@ class SuperMemory(Memory):
         return history_out
 
     def get_history(self) -> List[dict[str, str]]:
-        max_allowed = int(config.Backend._n_context - max(500, config.Backend._n_context * 0.5))
+        max_allowed = int(config.Backend.n_context - max(500, config.Backend.n_context * 0.5))
 
-        print(f"mem: {self.get_token_count()}/{max_allowed} ({config.Backend._n_context})")
+        print(f"mem: {self.get_token_count()}/{max_allowed} ({config.Backend.n_context})")
         self.assure_max_token_count(max_allowed)
         history_out = self._get_history()
 

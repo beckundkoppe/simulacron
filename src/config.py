@@ -3,25 +3,25 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 class ImaginatorType(Enum):
-    OFF      = auto(),
-    ON       = auto(),
-    QUESTION = auto(),
-    MULTIPLE = auto(),
+    OFF = auto()
+    ON = auto()
+    QUESTION = auto()
+    MULTIPLE = auto()
 
 class ObserveType(Enum):
-    OFF      = auto(),
-    ON       = auto(),
-    MEMORIZE = auto(),
+    OFF = auto()
+    ON = auto()
+    MEMORIZE = auto()
 
 class ReflectType(Enum):
-    OFF   = auto(),
-    ON    = auto(),
-    LEARN = auto(),
+    OFF = auto()
+    ON = auto()
+    LEARN = auto()
 
 class PlanType(Enum):
-    OFF    = auto(),
-    FREE   = auto(),
-    STRUCTURED = auto(),
+    OFF = auto()
+    FREE = auto()
+    STRUCTURED = auto()
 
 @dataclass(frozen=True)
 class AgentConfiguration:
@@ -31,13 +31,13 @@ class AgentConfiguration:
     plan: PlanType
 
 class PerceptionType(Enum):
-    ALL        = auto(),
-    DISTANCE    = auto(),
+    ALL = auto()
+    DISTANCE = auto()
 
 class PositionType(Enum):
-    ROOMLESS    = auto(),
-    CHESSBOARD  = auto(),
-    RELATIVE    = auto(),
+    ROOMLESS = auto()
+    CHESSBOARD = auto()
+    RELATIVE = auto()
 
 @dataclass(frozen=True)
 class Configuration:
@@ -59,6 +59,18 @@ DEPTH_FAKTOR: int = 1
 
 @dataclass(frozen=True)
 class Backend:
-    _n_gpu_layers = -1
-    _n_threads = 24
-    _n_context = 8096
+    n_gpu_layers: int = -1
+    n_threads: int = 24
+    n_context: int = 8096
+
+    @classmethod
+    def effective_gpu_layers(cls) -> int:
+        return cls.n_gpu_layers
+
+    @classmethod
+    def effective_threads(cls) -> int:
+        return cls.n_threads
+
+    @classmethod
+    def effective_context(cls) -> int:
+        return cls.n_context

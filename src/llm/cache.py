@@ -61,9 +61,9 @@ class Cache():
     def _create_llama(path: str) -> Llama:
         llm = Llama(
             model_path=path,
-            n_gpu_layers=config.Backend._n_gpu_layers,
-            n_threads=config.Backend._n_threads,
-            n_ctx=config.Backend._n_context,
+            n_gpu_layers=config.Backend.n_gpu_layers,
+            n_threads=config.Backend.n_threads,
+            n_ctx=config.Backend.n_context,
             verbose=debug.VERBOSE_LLAMACPP,
             seed=config.ACTIVE_CONFIG.seed,
             temperature=config.ACTIVE_CONFIG.temperature,

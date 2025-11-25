@@ -188,7 +188,7 @@ class Memory(ABC):
         size = Memory._approximate_token_count(str(self._history))
 
         while(size > max_count):
-            todo = min(max(size - max_count, (size - max_count) * 10), int(config.Backend._n_context / 4))
+            todo = min(max(size - max_count, (size - max_count) * 10), int(config.Backend.n_context / 4))
 
             staged = []
 
