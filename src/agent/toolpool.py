@@ -6,6 +6,7 @@ import current
 from enviroment.entity import AgentEntity
 from enviroment.exception import HardException
 from enviroment.position import Position
+from llm.memory.supermem import PlanNode
 from llm.tool import tool
 from llm.toolprovider import ToolProvider
 
@@ -161,15 +162,96 @@ def add_step(step: str) -> str:
 
     return ""
 
+@tool
+def decompose_node(task_node_id: int, sub_nodes: list[str]) -> str:
+    """Decompose a task node into a list of subtasks
 
+    Args:
+        task_node_id (int): The ID of the task node to decompose
+        sub_nodes (list[str]): The list of the sub task with a short description each
+    """
+
+    agent = current.AGENT
+    
+    agent.main_memory.plan_node = ...PlanNode(goal)
+
+    return ""
+
+@tool
+def delete_node(task_node_id: int, delete_children:bool = True) -> str:
+    """Deletes a task node
+
+    Args:
+        task_node_id (int): The ID of the task node to delete
+        delete_children (bool): Wether children should be deleted or moved up
+    """
+
+    agent = current.AGENT
+    
+    agent.main_memory.plan_node = ...PlanNode(goal)
+
+    return ""
+
+@tool
+def store_memory(information: str) -> str:
+    """Store an information permanently. For relevant data only.
+
+    Args:
+        information (str): The compact information to store.
+    """
+
+    agent = current.AGENT
+    
+    agent.main_memory.memories
+
+    return ""
+
+@tool
+def delete_memory(memory_id: int,) -> str:
+    """Deletes a memory
+
+    Args:
+        memory_id (int): The ID of the memory to delete
+    """
+
+    agent = current.AGENT
+    
+    agent.main_memory.memories
+
+    return ""
+
+@tool
+def yes() -> str:
+    """Answer with yes
+
+    Args:
+        None
+    """
+
+    current.ANSWER_BUFFER = True
+
+    return ""
+
+@tool
+def no() -> str:
+    """Answer with no
+
+    Args:
+        None
+    """
+
+    current.ANSWER_BUFFER = False
+
+    return ""
 
 class ToolGroup(Enum):
     NONE    = auto()
     ALL     = auto()
     ENV     = auto()
     MEM     = auto()
-    LEARN   = auto()
     PLAN    = auto()
+    DECOMPOSE    = auto()
+    QA    = auto()
 
 _TOOLS_ENV = [
         move_to_position,
@@ -181,15 +263,22 @@ _TOOLS_ENV = [
     ]
 
 _TOOLS_MEM = [
-        add_step,
-    ]
-
-_TOOLS_LEARN = [
-        add_step,
+        store_memory,
+        delete_memory,
     ]
 
 _TOOLS_PLAN = [
         add_step,
+    ]
+
+_TOOLS_DECOMPOSE = [
+        decompose_node,
+        delete_node,
+    ]
+
+_TOOLS_QA = [
+        yes,
+        no,
     ]
 
 def register_tools(toolprovider: ToolProvider, tools):
@@ -206,11 +295,14 @@ def register_tools(toolprovider: ToolProvider, tools):
     if ToolGroup.MEM in tools or is_all:
         selection.extend(_TOOLS_MEM)
 
-    if ToolGroup.LEARN in tools or is_all:
-        selection.extend(_TOOLS_LEARN)
-
     if ToolGroup.PLAN in tools or is_all:
         selection.extend(_TOOLS_PLAN)
+
+    if ToolGroup.DECOMPOSE in tools or is_all:
+        selection.extend(_TOOLS_DECOMPOSE)
+
+    if ToolGroup.QA in tools or is_all:
+        selection.extend(_TOOLS_QA)
 
     toolprovider.register_tools(tools=selection)
     

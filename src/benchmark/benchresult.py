@@ -2,70 +2,27 @@ from dataclasses import dataclass
 
 from llama_cpp import List
 
-
-@dataclass
-class BenchResult:
-    model_name: str
-    config_name: str
-
-    sr_short_horizon: float = 0
-    sr_long_horizon: float = 0
-    success_rate: float = 0
-
-    actions_external: float = 0
-    actions_internal: float = 0
-    actions_total: float = 0
-
-    failed_actions: float = 0
-    time_s: float = 0
-
-    @staticmethod
-    def average(results: List["BenchResult"]) -> "BenchResult":
-        """Compute field-wise averages for a list of BenchResult objects."""
-        n = len(results)
-        if n == 0:
-            raise ValueError("No results to average.")
-
-        def mean(field: str) -> float:
-            return sum(getattr(r, field) for r in results) / n
-
-        base = results[0]
-
-        return BenchResult(
-            model_name=base.model_name,
-            config_name=base.config_name,
-            sr_short_horizon=mean("sr_short_horizon"),
-            sr_long_horizon=mean("sr_long_horizon"),
-            success_rate=mean("success_rate"),
-            actions_external=mean("actions_external"),
-            actions_internal=mean("actions_internal"),
-            actions_total=mean("actions_total"),
-            failed_actions=mean("failed_actions"),
-            time_s=mean("time_s"),
-        )
+from benchmark.run import Run
 
 
 @dataclass()
-class RunResult:
-    model_name: str
-    config_name: str
-    level_name: str
-    level_optimal_steps: float
+class PerformanceResult:
+    run: Run
+
+    success_rate: float = 0
 
     toolcall_count: float = 0
-    observation_count: float = 0
+    actions_external: float = 0
+    actions_internal: float = 0
+
     softerror_count: float = 0
     harderror_count: float = 0
-    
-    success: float = 0
+
+    step_count: float = 0
 
     time_s: float = 0
     
-    def average(results: List["RunResult"]) -> "RunResult":
-        """
-        Computes the field-wise average for a list of BenchResultLite instances.
-        """
-
+    def average(results: List["PerformanceResult"]) -> "PerformanceResult":
         n = len(results)
         if n == 0:
             raise ValueError("No results to average.")
@@ -74,23 +31,19 @@ class RunResult:
             return sum(getattr(r, field) for r in results) / n
         
         base = results[0]
-        return RunResult(
-            model_name=base.model_name,
-            config_name=base.config_name,
-            level_name=base.level_name,
-            level_optimal_steps=base.level_optimal_steps,
+        return PerformanceResult(
+            run=base.run,
+            success_rate=(mean("success_rate")),
             toolcall_count=mean("toolcall_count"),
-            observation_count=mean("observation_count"),
+            actions_external=mean("actions_external"),
+            actions_internal=mean("actions_internal"),
             softerror_count=mean("softerror_count"),
             harderror_count=(mean("harderror_count")),
-            success=(mean("success")),
+            step_count=(mean("step_count")),
             time_s=(mean("time_s")),
         )
     
     def toString(self, color: bool = True) -> str:
-        """
-        Formatiertes ASCII-Panel mit exakt ausgerichteten Spalten und dynamischer Breite.
-        """
         import re
 
         # ANSI-Farben
@@ -104,7 +57,7 @@ class RunResult:
         else:
             GREEN = RED = YELLOW = BLUE = CYAN = RESET = ""
 
-        success_color = GREEN if self.success >= 0.8 else YELLOW if self.success >= 0.5 else RED
+        success_color = GREEN if self.success_rate >= 0.8 else YELLOW if self.success_rate >= 0.5 else RED
 
         # linke und rechte Spaltenbreite (anpassen, falls du längere Namen hast)
         left_width = 18
@@ -123,17 +76,49 @@ class RunResult:
                 spaces = 1
             return f"{left}{' ' * spaces}{right}"
 
+        def format_time(seconds: float) -> str:
+            # Convert seconds to min:sec format if >= 60s
+            if seconds >= 60:
+                mins = int(seconds // 60)
+                secs = seconds % 60
+                return f"{mins}m {secs}s"
+            return f"{seconds:.2f}s"
+
+        model_name = self.run.main_model.value.name
+
+        if self.run.imaginator is not None:
+            model_name += " +" + self.run.imaginator.value.name
+
         lines = [
-            f"{BLUE}Model:{RESET} {self.model_name}",
-            f"{BLUE}Level:{RESET} {self.level_name}",
-            f"{BLUE}Optimal Steps:{RESET} {self.level_optimal_steps}",
-            #"-" * 40,
-            fmt_pair_fixed("Toolcalls", f"{self.toolcall_count:.1f}", "Steps", f"{self.observation_count:.1f}"),
-            fmt_pair_fixed("SoftErrors", f"{self.softerror_count:.1f}", "HardErrors", f"{int(self.harderror_count)}"),
-            fmt_pair_fixed(f"{success_color}Success", f"{self.success*100:.1f}%{RESET}", "Time", f"{self.time_s:.2f}s")
+            f"{BLUE}Model:{RESET} {model_name}",
+            f"{BLUE}Level:{RESET} {self.run.level.value.getName()}",
+            f"{BLUE}Optimal Steps:{RESET} {self.run.level.value.optimal_steps}",
+
+            # Toolcalls and steps
+            fmt_pair_fixed(
+                "Toolcalls",
+                f"{self.toolcall_count} ({self.actions_external}e/{self.actions_internal}i)",
+                "Steps",
+                f"{self.step_count:.1f}"
+            ),
+
+            # Soft and hard errors
+            fmt_pair_fixed(
+                "SoftErrors",
+                f"{self.softerror_count:.1f}",
+                "HardErrors",
+                f"{int(self.harderror_count)}"
+            ),
+
+            # Success and time
+            fmt_pair_fixed(
+                f"{success_color}Success",
+                f"{self.success_rate * 100:.1f}%{RESET}",
+                "Time",
+                format_time(self.time_s)  # here is the key change
+            ),
         ]
 
-        
         inner_width = max(len(strip_ansi(l)) for l in lines) + 2
 
         top_down_split_index = 3

@@ -26,10 +26,10 @@ class Agent:
         current.AGENT = self
         current.ENTITY = self.entity
 
-        self.observe(perception)
+        self.plan()
         self.main_memory.save()
 
-        self.plan()
+        self.observe(perception)
         self.main_memory.save()
 
         pretty(title("The current Plan", color=Color.MAGENTA))
@@ -116,7 +116,7 @@ class Agent:
         self.learn()
 
     def learn(self):
-        if config.ACTIVE_CONFIG.agent.reflect is not config.ReflectType.LEARN:
+        if config.ACTIVE_CONFIG.agent.reflect is not config.ReflectType.MEMORIZE:
             return
 
         if not self.reflection:
@@ -134,8 +134,11 @@ class Agent:
 
         planner = Provider.build("planner", self.imaginator_model, memory=self.main_memory)
 
+
+
+        #TODO use imaginator, realisator with QA tools here
         if self.main_memory.plan is not None:
-            if config.ACTIVE_CONFIG.agent.plan is config.PlanType.STRUCTURED:
+            if config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
                 is_completed: str = planner.invoke(
                     "PLAN:" + self.main_memory.plan + " REFLECTION: "+self.reflection,
                     "Based on the current reflection of the last action. Respond with DONE if the current PLAN is fully completed, otherwise respond with TODO (only one of these tokens).",
@@ -176,7 +179,7 @@ class Agent:
                 append=False,
             )
             self.main_memory.add_plan(plan)
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STRUCTURED:
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
             self.make_structured_plan()
             self.completed_steps = []
             current_step = self.main_memory.plan_steps[0]

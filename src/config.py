@@ -16,12 +16,14 @@ class ObserveType(Enum):
 class ReflectType(Enum):
     OFF = auto()
     ON = auto()
-    LEARN = auto()
+    MEMORIZE = auto()
 
 class PlanType(Enum):
     OFF = auto()
     FREE = auto()
-    STRUCTURED = auto()
+    STEP = auto()
+    DECOMPOSE = auto()
+    TRY = auto()
 
 @dataclass(frozen=True)
 class AgentConfiguration:

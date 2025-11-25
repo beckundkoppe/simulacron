@@ -678,3 +678,18 @@ class AgentEntity(Entity):
             data["id"] = item.readable_id
             o.append(data)
         return o
+
+def connect_rooms_with_door(room_a, pos_a, room_b, pos_b, description = None):
+    # create doors
+    door_a = ConnectorEntity("door", pos_a, description=description)
+    door_b = ConnectorEntity("door", pos_b, description=description)
+
+    # assign to rooms
+    door_a.enter(room_a)
+    door_b.enter(room_b)
+
+    # connect both sides
+    door_a.connect(door_b)
+    door_b.connect(door_a)
+
+    return door_a, door_b

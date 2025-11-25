@@ -284,7 +284,7 @@ class Model(Enum):
                 agent_backend=AgentBackend.LLAMACPPAGENT,
                 kind=ModelKind.TOOL,
                 source=SourceHuggingface(
-                    repo_id="Salesforce/Llama-xLAM-2-8b-fc-r-gguf",
+                    repo_id="Salesforce/xLAM-2-3b-fc-r-gguf",
 	                filename="xLAM-2-3B-fc-r-Q8_0.gguf",
                     local_dir="data/model/"
                     #https://huggingface.co/Salesforce/Llama-xLAM-2-8b-fc-r-gguf?show_file_info=Llama-xLAM-2-8B-fc-r-Q8_0.gguf&library=llama-cpp-python

@@ -1,8 +1,18 @@
 import copy
+from dataclasses import dataclass
 from typing import List, Tuple
 import config
 from llm.memory.memory import Memory, Role, Type
 
+NODE_COUNTER: int = 0
+MEMORIES_COUNTER: int = 0
+
+class PlanNode:
+    def init(self, data: str, parent: int = None):
+        self.parent = parent
+        self.id: int = NODE_COUNTER
+        NODE_COUNTER += 1
+        self.data: str = data
 
 class SuperMemory(Memory):
     def __init__(self, goal, path) -> None:
@@ -12,7 +22,8 @@ class SuperMemory(Memory):
         #_history
         self._learnings: List[str] = []
         self._plans: List[str] = []
-        self._memories: List[str] = []
+        self.plan_nodes = PlanNode(goal)
+        self.memories: dict[int, str] = []
         self._current_observation: str = []
         self.plan = None
         self.plan_steps = []
@@ -123,6 +134,6 @@ class SuperMemory(Memory):
         new_copy._history = copy.deepcopy(self._history)
         new_copy.plan = copy.deepcopy(self.plan)
         new_copy._learnings = copy.deepcopy(self._learnings)
-        new_copy._memories = copy.deepcopy(self._memories)
+        new_copy.memories = copy.deepcopy(self.memories)
         new_copy._current_observation = copy.deepcopy(self._current_observation)
         return new_copy

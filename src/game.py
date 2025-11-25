@@ -48,8 +48,8 @@ def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginat
 
     current.EXTRA_MODEL = extra_model
 
-    spec: LevelSpec = level.build(level.detailed)
-    console.pretty(console.banner(level.name, char="+", color=console.Color.BLUE))
+    spec: LevelSpec = level.value.build(level.value.detailed)
+    console.pretty(console.banner(level.value.name, char="+", color=console.Color.BLUE))
 
     agents = []
     success = False
@@ -62,11 +62,11 @@ def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginat
             agents.append(agent)
 
 
-        for i in range(int(level.optimal_steps * optimal_steps_multilier)):
+        for i in range(int(level.value.optimal_steps * optimal_steps_multilier)):
             console.pretty(console.bullet(f"Observation: {i}", color=console.Color.BLUE))
 
             for agent in agents:
-                current.RESULT.observation_count += 1
+                current.RESULT.step_count += 1
 
                 perception = perceive_enviroment(agent.entity)
                 agent.update(perception)
