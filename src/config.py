@@ -51,6 +51,8 @@ class Configuration:
     seed: int = 12345
     
 ACTIVE_CONFIG: Configuration = None
+APPEND_RAW = None
+
 
 PERCEPTION_DISTANCE: float = 4.0
 INTERACTION_DISTANCE: float = 1.5

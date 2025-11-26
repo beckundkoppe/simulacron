@@ -1,8 +1,11 @@
 from dataclasses import dataclass
+from enum import Enum
 
 from llama_cpp import List
 
 from benchmark.run import Run
+import json
+from dataclasses import asdict, is_dataclass
 
 
 @dataclass()
@@ -43,6 +46,45 @@ class PerformanceResult:
             time_s=(mean("time_s")),
         )
     
+
+
+
+    def toJSON(self) -> str:
+        """
+        Gibt eine JSON-Zeichenkette zurück.
+        Dataclasses (inkl. Run) werden korrekt in Dictionaries umgewandelt.
+        """
+
+        def serialize(obj):
+            # Dataclass → dict
+            if is_dataclass(obj):
+                return {k: serialize(v) for k, v in asdict(obj).items()}
+
+            # Enum → Name
+            if isinstance(obj, Enum):
+                return obj.name
+
+            # dict → rekursiv
+            if isinstance(obj, dict):
+                return {k: serialize(v) for k, v in obj.items()}
+
+            # list/tuple → rekursiv
+            if isinstance(obj, (list, tuple)):
+                return [serialize(x) for x in obj]
+
+            # Primitive
+            if isinstance(obj, (str, int, float, bool)) or obj is None:
+                return obj
+
+            # Fallback für alles andere
+            return str(obj)
+            
+
+        data = serialize(self)
+        return json.dumps(data, indent=4)
+
+
+
     def toString(self, color: bool = True) -> str:
         import re
 

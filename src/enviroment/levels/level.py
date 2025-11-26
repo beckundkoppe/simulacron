@@ -21,7 +21,7 @@ class Level:
         dif = "easy" if self.easy else "hard"
         det = "detailed" if self.detailed else "vague"
 
-        return self.name + "_" + dif + "_" + det
+        return self.name + "-" + dif + "-" + det
 
 class Levels(Enum):
     class DETAILED_INSTRUCT(Enum):
