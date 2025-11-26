@@ -544,6 +544,19 @@ class Model(Enum):
                 ),
             )
 
+            XLAM2_32B = ModelSpec(
+                name="xLAM-2-32B",
+                tag="xlam2_32b",
+                location=Location.LOCAL,
+                backend=Backend.OLLAMA,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.TOOL,
+                source=SourceOllama(
+                    model_id="felixnguyen95/xLAM-2-32b-fc-r:latest",
+                    #https://ollama.com/felixnguyen95/xLAM-2-32b-fc-r:latest
+                ),
+            )
+
             MAGISTRAL_SMALL_24B = ModelSpec(
                 name="Magistral-Small-24B-Q4",
                 tag="magistral_small_24B",
