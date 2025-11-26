@@ -449,20 +449,12 @@ class Agent:
             if active_node is None:
                 raise Exception("No available plan nodes to execute")
 
-<<<<<<< HEAD
             self.main_memory.plan_node = active_node
             plan_overview = self._format_plan_tree(active_node=active_node)
             self.main_memory.add_plan(
                 "FULL PLAN TREE:\n" + plan_overview +
                 f"\nCurrent target: [{active_node.id}] {active_node.data}"
             )
-=======
-            if self._ensure_active_goal(active_node):
-                active_node = self._choose_active_leaf()
-                if active_node is None:
-                    raise Exception("AGENT FINISHED")
-                
->>>>>>> 28a967c (Work)
         else:
             raise NotImplementedError()
 
