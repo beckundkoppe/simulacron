@@ -150,51 +150,7 @@ class Agent:
         return "\n".join(lines)
 
     def _node_identifier(self, node) -> str:
-        label = self._positional_label(node)
-        if label:
-            return f"[{node.id} | {label}]"
         return f"[{node.id}]"
-
-    def _positional_label(self, node) -> str:
-        if node is self.main_memory.plan_root:
-            return ""
-
-        path_indices = []
-        current = node
-        while current.parent:
-            path_indices.append(current.parent.children.index(current))
-            current = current.parent
-
-        path_indices.reverse()
-        label_parts = []
-        token_generators = [self._numeric_token, self._upper_token, self._lower_token]
-
-        for depth, index in enumerate(path_indices):
-            token_fn = token_generators[depth % len(token_generators)]
-            label_parts.append(token_fn(index))
-
-        return "".join(label_parts)
-
-    def _numeric_token(self, index: int) -> str:
-        return str(index + 1)
-
-    def _upper_token(self, index: int) -> str:
-        return self._alpha_token(index, uppercase=True)
-
-    def _lower_token(self, index: int) -> str:
-        return self._alpha_token(index, uppercase=False)
-
-    def _alpha_token(self, index: int, uppercase: bool) -> str:
-        base = ord("A") if uppercase else ord("a")
-        token = ""
-        n = index
-        while True:
-            n, remainder = divmod(n, 26)
-            token = chr(base + remainder) + token
-            if n == 0:
-                break
-            n -= 1
-        return token
 
     def _leaf_nodes(self, node=None) -> list:
         node = node or self.main_memory.plan_root
@@ -264,6 +220,7 @@ class Agent:
 
             self._imaginator_realisator_step(
                 imagination_task=(
+                    f"Goal: {self.goal}\nCurrent plan tree:\n{current_plan}\n"
                     "Study the current plan tree and decide how to refine it."
                     " Suggest concise updates to decompose or prune nodes before execution."
                 ),
@@ -285,6 +242,7 @@ class Agent:
 
         self._imaginator_realisator_step(
             imagination_task=(
+                f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree(active_node=active_node)}\n"
                 f"Active target: [{active_node.id}] {active_node.data}."
                 " Brainstorm concrete ideas on how to achieve this task."
                 " Avoid repeating previously tried approaches."
@@ -355,13 +313,12 @@ class Agent:
 
         self._imaginator_realisator_step(
             imagination_task=prompt,
-            realization_context=perception,
+            realization_context=f"{perception} Reasoning: {{imagination}}\n",
             tools=ToolGroup.ENV,
             realisator_system=(
-                f"Reasoning: {{imagination}}\n"
                 "Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. "
                 "If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a "
-                "precice and short question."
+                "precice and short question. Else toolcalls only!"
             ),
             imaginator_name="action_imaginator",
             realisator_name="action_realisator",
