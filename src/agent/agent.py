@@ -25,10 +25,10 @@ class Agent:
         current.AGENT = self
         current.ENTITY = self.entity
 
-        self.observe(perception)
+        self.plan()
         self.main_memory.save()
 
-        self.plan()
+        self.observe(perception)
         self.main_memory.save()
 
         plan_tree = self._format_plan_tree()

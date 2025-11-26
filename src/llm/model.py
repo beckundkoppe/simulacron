@@ -518,44 +518,46 @@ class Model(Enum):
                     ),
                 )
 
-            GLM_9B = ModelSpec(
-                name="GLM-9B-Q8",
-                tag="glm_9b",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.TOOL,
-                source=SourceOllama(
-                    model_id="glm4:9b-chat-q8_0",
-                    #https://ollama.com/library/glm4/tags
-                ),
-            )
+            #UNFROTUNATLY NO TOOL SUPPORT
 
-            XLAM2_8B_Q8 = ModelSpec(
-                name="xLAM-2-8B-Q8",
-                tag="xlam2_8b",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.TOOL,
-                source=SourceOllama(
-                    model_id="robbiemu/Salesforce_Llama-xLAM-2:8b-fc-r-q8_0",
-                    #https://ollama.com/robbiemu/Salesforce_Llama-xLAM-2/tags
-                ),
-            )
-
-            XLAM2_32B = ModelSpec(
-                name="xLAM-2-32B",
-                tag="xlam2_32b",
-                location=Location.LOCAL,
-                backend=Backend.OLLAMA,
-                agent_backend=AgentBackend.LANGCHAIN,
-                kind=ModelKind.TOOL,
-                source=SourceOllama(
-                    model_id="felixnguyen95/xLAM-2-32b-fc-r:latest",
-                    #https://ollama.com/felixnguyen95/xLAM-2-32b-fc-r:latest
-                ),
-            )
+            #GLM_9B = ModelSpec(
+            #    name="GLM-9B-Q8",
+            #    tag="glm_9b",
+            #    location=Location.LOCAL,
+            #    backend=Backend.OLLAMA,
+            #    agent_backend=AgentBackend.LANGCHAIN,
+            #    kind=ModelKind.TOOL,
+            #    source=SourceOllama(
+            #        model_id="glm4:9b-chat-q8_0",
+            #        #https://ollama.com/library/glm4/tags
+            #    ),
+            #)
+#
+            #XLAM2_8B_Q8 = ModelSpec(
+            #    name="xLAM-2-8B-Q8",
+            #    tag="xlam2_8b",
+            #    location=Location.LOCAL,
+            #    backend=Backend.OLLAMA,
+            #    agent_backend=AgentBackend.LANGCHAIN,
+            #    kind=ModelKind.TOOL,
+            #    source=SourceOllama(
+            #        model_id="robbiemu/Salesforce_Llama-xLAM-2:8b-fc-r-q8_0",
+            #        #https://ollama.com/robbiemu/Salesforce_Llama-xLAM-2/tags
+            #    ),
+            #)
+#
+            #XLAM2_32B = ModelSpec(
+            #    name="xLAM-2-32B",
+            #    tag="xlam2_32b",
+            #    location=Location.LOCAL,
+            #    backend=Backend.OLLAMA,
+            #    agent_backend=AgentBackend.LANGCHAIN,
+            #    kind=ModelKind.TOOL,
+            #    source=SourceOllama(
+            #        model_id="felixnguyen95/xLAM-2-32b-fc-r:latest",
+            #        #https://ollama.com/felixnguyen95/xLAM-2-32b-fc-r:latest
+            #    ),
+            #)
 
             MAGISTRAL_SMALL_24B = ModelSpec(
                 name="Magistral-Small-24B-Q4",
