@@ -1,5 +1,5 @@
 from enviroment.blueprints.blueprints import Chest, IronChest, PaperBox, Shelf, Table, WoodenCabinet, WoodenChest, WoodenShelf, WoodenTable
-from enviroment.entity import AdvancedContainerEntity, AgentEntity, ConnectorEntity, ContainerEntity, Entity
+from enviroment.entity import AdvancedContainerEntity, AgentEntity, ConnectorEntity, ContainerEntity, Entity, connect_rooms_with_door
 from enviroment.levels.data import LevelSpec
 from enviroment.position import Position
 from enviroment.room import Room
@@ -29,14 +29,7 @@ def build_easy(detailed_instruction: bool) -> LevelSpec:
     table = Table(pos=Position(0.0,3.0))
     table.enter(main)
     
-    doorMain = ConnectorEntity("door", Position(4.0,4.0))
-    doorMain.enter(main)
-
-    doorChamber = ConnectorEntity("door", Position(0.0,1.0))
-    doorChamber.enter(chamber)
-
-    doorMain.connect(doorChamber)
-    doorChamber.connect(doorMain)
+    connect_rooms_with_door(main, Position(4.0,4.0), chamber, Position(0.0,1.0))
 
     potato = Entity("potato", is_collectible=True)
     diamond = Entity("diamond", is_collectible=True)
@@ -87,13 +80,9 @@ def build_medium(detailed_instruction) -> LevelSpec:
     key = Entity("key", Position(3.0, 1.0), is_collectible=True)
     key.enter(main)
 
-    door_main = ConnectorEntity("door", Position(4.0, 4.0))
-    door_main.enter(main)
-
+    connect_rooms_with_door(main, Position(4.0,4.0), chamber, Position(0.0,1.0))
     ##### Chamber:
 
-    door_chamber = ConnectorEntity("door", Position(0.0, 1.0))
-    door_chamber.enter(chamber)
 
     potato = Entity("potato", is_collectible=True)
     diamond = Entity("diamond", is_collectible=True)
@@ -109,8 +98,6 @@ def build_medium(detailed_instruction) -> LevelSpec:
     shelf_real.enter(chamber)
     shelf_real.add_child(chest)
 
-    door_main.connect(door_chamber)
-    door_chamber.connect(door_main)
 
     return LevelSpec(
         agent_entities=[(
@@ -147,14 +134,10 @@ def build_hard(detailed_instruction) -> LevelSpec:
     chest_fake.enter(main)
     chest_fake.add_child(diamond_main)
 
-    door_main = ConnectorEntity("door", Position(4.0, 4.0))
-    door_main.enter(main)
+    connect_rooms_with_door(main, Position(4.0,4.0), chamber, Position(0.0,1.0))
 
     ##### Chamber:
 
-    door_chamber = ConnectorEntity("door", Position(0.0, 1.0))
-    door_chamber.enter(chamber)
-    
 
     potato = Entity("potato", is_collectible=True)
     diamond = Entity("diamond", is_collectible=True)
@@ -170,9 +153,6 @@ def build_hard(detailed_instruction) -> LevelSpec:
     shelf_real = WoodenShelf(pos=Position(0.0, 2.0))
     shelf_real.enter(chamber)
     shelf_real.add_child(chest)
-
-    door_main.connect(door_chamber)
-    door_chamber.connect(door_main)
 
 
     instr = ""

@@ -26,6 +26,19 @@ def build_easy(detailed_instruction: bool) -> LevelSpec:
     )
 
 def build_hard(detailed_instruction) -> LevelSpec:
+    #----- Notwendig -----
+
+    main = Room("main", 5, 5)
+
+    tron = AgentEntity("tron", pos=Position(0.5, 0.5))
+    tron.enter(main)
+    
+    table = Table(pos=Position(1.0,4.0))
+    table.enter(main)
+
+    carrot = Entity("carrot", is_collectible=True)
+    tron.inventory.append(carrot)
+    
     #----- Ablenkung -----
 
     shelf_1 = ContainerEntity("shelf", pos=Position(4.5, 4.5))
@@ -42,18 +55,6 @@ def build_hard(detailed_instruction) -> LevelSpec:
     chair_2 = ContainerEntity("chair", pos=Position(0.0, 4.5))
     chair_2.enter(main)
 
-    #----- Notwendig -----
-
-    main = Room("main", 5, 5)
-
-    tron = AgentEntity("tron", pos=Position(0.5, 0.5))
-    tron.enter(main)
-    
-    table = Table(pos=Position(1.0,4.0))
-    table.enter(main)
-
-    carrot = Entity("carrot", is_collectible=True)
-    tron.inventory.append(carrot)
 
     return LevelSpec(
         agent_entities=[(tron,detailed_instruction_str if detailed_instruction else vague_instruction_str),],

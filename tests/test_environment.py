@@ -22,6 +22,7 @@ from enviroment.entity import (
     ConnectorEntity,
     ContainerEntity,
     Entity,
+    connect_rooms_with_door,
 )
 from enviroment.exception import HardException, SoftException
 from enviroment.position import Position
@@ -126,37 +127,34 @@ class TestEnvInteraction(unittest.TestCase):
         """Connectors enforce the allowed operators and lock state."""
 
         second_room = Room.default(name="hall")
-        entrance = ConnectorEntity("door_a", Position(1.0, 0.5))
-        exit = ConnectorEntity("door_b", Position(1.0, 0.5))
-        entrance.connect(exit)
-        exit.connect(entrance)
-        entrance.enter(self.room)
-        exit.enter(second_room)
+        connector = connect_rooms_with_door(self.room, Position(1.0, 0.5), second_room, Position(1.0, 0.5))
 
         key = Entity("key", Position(0.5, 0.5))
         key.enter(self.room)
-        entrance.add_key(key)
-        exit.add_key(key)
+        connector.add_key(key)
 
-        self.assertIn("Went through", entrance.on_interact(self.agent, ActionTry(ActionType.USE)))
+        self.assertTrue(self.room.contains_entity(self.agent))
+        self.assertIn("Went through", connector.on_interact(self.agent, ActionTry(ActionType.USE)))
+        self.assertFalse(self.room.contains_entity(self.agent))
         self.assertEqual(self.agent.room, second_room)
-        self.assertIn("Went through", exit.on_interact(self.agent, ActionTry(ActionType.USE)))
+        self.assertTrue(second_room.contains_entity(self.agent))
+        self.assertIn("Went through", connector.on_interact(self.agent, ActionTry(ActionType.USE)))
         self.assertEqual(self.agent.room, self.room)
 
-        entrance.is_locked = True
+        connector.is_locked = True
 
         wrong_key = Entity("wrong", Position(1.0, 0.5))
         wrong_key.enter(self.room)
         with self.assertRaises(SoftException):
-            entrance.on_interact(self.agent, ActionTry(ActionType.UNLOCK, wrong_key))
+            connector.on_interact(self.agent, ActionTry(ActionType.UNLOCK, wrong_key))
 
         with self.assertRaises(SoftException):
-            entrance.on_interact(self.agent, ActionTry(ActionType.USE))
+            connector.on_interact(self.agent, ActionTry(ActionType.USE))
 
         self.agent.take(key)
-        entrance.on_interact(self.agent, ActionTry(ActionType.UNLOCK, key))
-        self.assertFalse(entrance.is_locked)
-        self.assertIn("Went through", entrance.on_interact(self.agent, ActionTry(ActionType.USE)))
+        connector.on_interact(self.agent, ActionTry(ActionType.UNLOCK, key))
+        self.assertFalse(connector.is_locked)
+        self.assertIn("Went through", connector.on_interact(self.agent, ActionTry(ActionType.USE)))
 
 
 if __name__ == "__main__":

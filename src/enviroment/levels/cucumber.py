@@ -9,7 +9,7 @@ vague_instruction_str = "Place the cucumber on the table."
 detailed_instruction_str = "Find the cucumber, pick it up and place it on the table."
 
 def build_easy(detailed_instruction: bool) -> LevelSpec:
-    main = Room("main", 2, 4)
+    main = Room("main", 4, 2)
 
     tron = AgentEntity("tron", pos=Position(0.0, 0.0))
     tron.enter(main)
@@ -30,7 +30,7 @@ def build_easy(detailed_instruction: bool) -> LevelSpec:
     )
 
 def build_hard(detailed_instruction: bool) -> LevelSpec:
-    main = Room("main", 2, 4)
+    main = Room("main", 4, 2)
 
     tron = AgentEntity("tron", pos=Position(0.0, 0.0))
     tron.enter(main)

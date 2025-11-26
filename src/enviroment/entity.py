@@ -500,8 +500,9 @@ class ConnectorEntity(Entity):
                 return result
 
         if action.type in (ActionType.UNLOCK, ActionType.LOCK):
-            if action.item_1 is not None:
-                self._lockable.allow_key(action.item_1)
+            #TODO????
+            #if action.item_1 is not None:
+            #    self._lockable.allow_key(action.item_1)
             result = self._lockable.on_interact(actor_entity, action)
             if result is not None:
                 return result
@@ -691,15 +692,30 @@ class AgentEntity(Entity):
                     "target": target.readable_id,
                 },
             )
+        
+        # Sonderfall: Connectoren (Türen)
+        if isinstance(target, ConnectorEntity):
+            pos_in_room = target.get_position_for_room(room)
+            if pos_in_room is None:
+                raise HardException(
+                    f"{target.readable_id} cannot be reached from your current room.",
+                    console_message=(
+                        f"Connector '{target.readable_id}' is not reachable from room '{room.readable_id}'."
+                    ),
+                )
+            self.move_to_position(pos_in_room)
+            return
 
-        if room == target.room:
+        # Normales Objekt im gleichen Raum
+        if target.room == room:
             self.move_to_position(target.pos)
             return
-        else:
-            for ent in room.entities:
-                if ent.hasChild(target):
-                     self.move_to_position(ent.pos)
-                     return
+        
+        # Objekt steckt in einem Container
+        for ent in room.entities:
+            if ent.hasChild(target):
+                self.move_to_position(ent.pos)
+                return
 
         agent_room = self.room
         target_room = target.room
