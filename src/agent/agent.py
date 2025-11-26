@@ -39,6 +39,16 @@ class Agent:
         self.brainstorm()
         self.main_memory.save()
 
+        self._evaluate_current_idea(active_node)
+
+        active_idea = self.main_memory.plan_steps[0] if self.main_memory.plan_steps else "No idea available"
+        plan_overview = self._format_plan_tree(active_node=active_node)
+        self.main_memory.add_plan(
+            "FULL PLAN TREE:\n" + plan_overview +
+            f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
+            f"Current idea: {active_idea}"
+        )
+
         pretty(title("The current Plan", color=Color.MAGENTA))
         for step in self.main_memory.completed_steps:
             pretty(bullet(step, color=Color.RESET))
@@ -439,12 +449,20 @@ class Agent:
             if active_node is None:
                 raise Exception("No available plan nodes to execute")
 
+<<<<<<< HEAD
             self.main_memory.plan_node = active_node
             plan_overview = self._format_plan_tree(active_node=active_node)
             self.main_memory.add_plan(
                 "FULL PLAN TREE:\n" + plan_overview +
                 f"\nCurrent target: [{active_node.id}] {active_node.data}"
             )
+=======
+            if self._ensure_active_goal(active_node):
+                active_node = self._choose_active_leaf()
+                if active_node is None:
+                    raise Exception("AGENT FINISHED")
+                
+>>>>>>> 28a967c (Work)
         else:
             raise NotImplementedError()
 
