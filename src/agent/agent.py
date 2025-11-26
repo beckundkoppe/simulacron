@@ -277,6 +277,7 @@ class Agent:
                 f"Active target: [{active_node.id}] {active_node.data}."
                 " Brainstorm concrete ideas on how to achieve this task."
                 " Avoid repeating previously tried approaches."
+                " If the naive approach hasent been tried yet, try it."
             ),
             realization_context=(
                 f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree(active_node=active_node)}\n"
@@ -346,6 +347,7 @@ class Agent:
             realization_context=perception,
             tools=ToolGroup.ENV,
             realisator_system=(
+                f"Reasoning: {{imagination}}\n"
                 "Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. "
                 "If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a "
                 "precice and short question."
