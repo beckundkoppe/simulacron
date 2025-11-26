@@ -462,7 +462,9 @@ class Agent:
         correction_suffix = ""
 
         for attempt in range(0, 3):
-            ctx = realization_context.format(imagination=imagination) + correction_suffix
+            # Avoid Python format treating braces from JSON perceptions as placeholders.
+            # Only the explicit `{imagination}` token should be substituted.
+            ctx = realization_context.replace("{imagination}", imagination) + correction_suffix
             reply = realisator.invoke(ctx)
 
             has_error, errors = process_formal_errors(realisator.memory, collect=True)
