@@ -25,6 +25,9 @@ class Agent:
         current.AGENT = self
         current.ENTITY = self.entity
 
+        self.observe(perception)
+        self.main_memory.save()
+
         self.plan()
         self.main_memory.save()
 
@@ -33,7 +36,7 @@ class Agent:
         for line in plan_tree.split("\n"):
             pretty(bullet(line, color=Color.CYAN))
 
-        self.observe(perception)
+        self.brainstorm()
         self.main_memory.save()
 
         pretty(title("The current Plan", color=Color.MAGENTA))
@@ -121,7 +124,12 @@ class Agent:
         node = node or self.main_memory.plan_root
         active_node = active_node or self.main_memory.plan_node
 
-        marker = " (current focus)" if active_node and node.id == active_node.id else ""
+        markers = []
+        if node.done:
+            markers.append("done")
+        if active_node and node.id == active_node.id:
+            markers.append("current focus")
+        marker = f" ({'; '.join(markers)})" if markers else ""
         id_label = self._node_identifier(node)
         lines = [f"{prefix}- {id_label} {node.data}{marker}"]
 
@@ -179,6 +187,9 @@ class Agent:
 
     def _leaf_nodes(self, node=None) -> list:
         node = node or self.main_memory.plan_root
+
+        if node.done:
+            return []
 
         if not node.children:
             return [node]
@@ -247,8 +258,9 @@ class Agent:
                 ),
                 realization_context=(
                     f"Goal: {self.goal}\nPlan tree:\n{current_plan}\n"
-                    "Use decompose_node(task_node_id, sub_nodes) to split tasks or delete_node(task_node_id, delete_children)"
-                    " to remove or merge tasks."
+                    "Use decompose_node(task_node_id, sub_nodes) to split tasks, delete_node(task_node_id, delete_children)"
+                    " to remove or merge tasks, mark_done(task_node_id) to label completed nodes, and"
+                    " mark_focued(task_node_id) to set the next focus."
                 ),
                 tools=ToolGroup.DECOMPOSE,
                 realisator_system="Use only the provided plan editing tools to update the plan tree.",
@@ -287,9 +299,7 @@ class Agent:
         )
 
         if goal_completed:
-            self.main_memory.completed_steps.append(f"[{active_node.id}] {active_node.data}")
-            if active_node.parent:
-                self.main_memory.delete_plan_node(active_node.id)
+            self.main_memory.mark_plan_node_done(active_node.id)
             self.main_memory.plan_steps.clear()
             self.main_memory.plan_node = self.main_memory.plan_root
             return True
@@ -427,23 +437,43 @@ class Agent:
             if active_node is None:
                 raise Exception("No available plan nodes to execute")
 
-            if self._ensure_active_goal(active_node):
-                active_node = self._choose_active_leaf()
-                if active_node is None:
-                    raise Exception("AGENT FINISHED")
-
-            self._evaluate_current_idea(active_node)
-
-            active_idea = self.main_memory.plan_steps[0] if self.main_memory.plan_steps else "No idea available"
+            self.main_memory.plan_node = active_node
             plan_overview = self._format_plan_tree(active_node=active_node)
             self.main_memory.add_plan(
                 "FULL PLAN TREE:\n" + plan_overview +
-                f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
-                f"Current idea: {active_idea}"
+                f"\nCurrent target: [{active_node.id}] {active_node.data}"
             )
         else:
             raise NotImplementedError()
-        
+
+    def brainstorm(self):
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.DECOMPOSE:
+            return
+
+        active_node = self.main_memory.plan_node
+        if active_node is None or active_node.done:
+            active_node = self._choose_active_leaf()
+            if active_node is None:
+                return
+            self.main_memory.plan_node = active_node
+
+        if self._ensure_active_goal(active_node):
+            active_node = self._choose_active_leaf()
+            if active_node is None:
+                self.main_memory.add_plan("FULL PLAN TREE:\n" + self._format_plan_tree())
+                return
+            self.main_memory.plan_node = active_node
+
+        self._evaluate_current_idea(active_node)
+
+        active_idea = self.main_memory.plan_steps[0] if self.main_memory.plan_steps else "No idea available"
+        plan_overview = self._format_plan_tree(active_node=active_node)
+        self.main_memory.add_plan(
+            "FULL PLAN TREE:\n" + plan_overview +
+            f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
+            f"Current idea: {active_idea}"
+        )
+
     #def is_ready(self):
 
     def make_structured_plan(self):

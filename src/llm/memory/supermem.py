@@ -13,6 +13,7 @@ class PlanNode:
     parent: "PlanNode | None" = None
     id: int | None = None
     children: list["PlanNode"] = field(default_factory=list)
+    done: bool = False
 
     _counter: int = 0
 
@@ -54,7 +55,7 @@ class PlanNode:
         self.children.clear()
 
     def clone(self, parent: "PlanNode | None" = None) -> "PlanNode":
-        clone_node = PlanNode(self.data, parent=parent, id=self.id)
+        clone_node = PlanNode(self.data, parent=parent, id=self.id, done=self.done)
         for child in self.children:
             child.clone(clone_node)
         return clone_node
@@ -113,6 +114,26 @@ class SuperMemory(Memory):
             raise KeyError(f"Plan node with id {task_node_id} not found")
 
         node.remove(delete_children=delete_children)
+
+    def mark_plan_node_done(self, task_node_id: int) -> PlanNode:
+        node = self.plan_root.find(task_node_id)
+        if node is None:
+            raise KeyError(f"Plan node with id {task_node_id} not found")
+
+        node.done = True
+        completed_entry = f"[{node.id}] {node.data}"
+        if completed_entry not in self.completed_steps:
+            self.completed_steps.append(completed_entry)
+
+        return node
+
+    def mark_plan_node_focus(self, task_node_id: int) -> PlanNode:
+        node = self.plan_root.find(task_node_id)
+        if node is None:
+            raise KeyError(f"Plan node with id {task_node_id} not found")
+
+        self.plan_node = node
+        return node
 
     def _get_history(self) -> List[Tuple[Type, Role, str]]:
         history_out = []
@@ -212,5 +233,5 @@ class SuperMemory(Memory):
         new_copy.plan_steps = copy.deepcopy(self.plan_steps)
         new_copy.completed_steps = copy.deepcopy(self.completed_steps)
         new_copy.plan_root = self.plan_root.clone(None)
-        new_copy.plan_node = new_copy.plan_root
+        new_copy.plan_node = new_copy.plan_root.find(self.plan_node.id) if self.plan_node else new_copy.plan_root
         return new_copy

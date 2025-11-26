@@ -195,6 +195,34 @@ def delete_node(task_node_id: int, delete_children:bool = True) -> str:
     return ""
 
 @tool
+def mark_done(task_node_id: int) -> str:
+    """Marks a plan node as completed.
+
+    Args:
+        task_node_id (int): The ID of the task node to mark as done
+    """
+
+    agent = current.AGENT
+
+    agent.main_memory.mark_plan_node_done(task_node_id)
+
+    return ""
+
+@tool
+def mark_focued(task_node_id: int) -> str:
+    """Marks a plan node as the current focus.
+
+    Args:
+        task_node_id (int): The ID of the task node to focus
+    """
+
+    agent = current.AGENT
+
+    agent.main_memory.mark_plan_node_focus(task_node_id)
+
+    return ""
+
+@tool
 def store_memory(information: str) -> str:
     """Store an information permanently. For relevant data only.
 
@@ -276,6 +304,8 @@ _TOOLS_PLAN = [
 _TOOLS_DECOMPOSE = [
         decompose_node,
         delete_node,
+        mark_done,
+        mark_focued,
     ]
 
 _TOOLS_QA = [
