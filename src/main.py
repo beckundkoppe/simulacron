@@ -58,7 +58,7 @@ def main():
         imaginator = ImaginatorType.QUESTION,
         observe    = ObserveType.ON,
         reflect    = ReflectType.ON,
-        plan       = PlanType.STEP
+        plan       = PlanType.DECOMPOSE
     )
 
     config = Configuration(PerceptionType.ALL, PositionType.RELATIVE, agent=agent_config, temperature=0.0, name="test", seed=-1)
