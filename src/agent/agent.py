@@ -3,6 +3,7 @@ from agent.toolpool import ToolGroup, register_tools
 import config
 import current
 from enviroment.entity import Entity
+from enviroment.resultbuffer import FormalError
 from llm.memory.memory import Memory, Role, Type
 from llm.memory.supermem import PlanNode, SuperMemory
 from llm.model import Model
@@ -26,6 +27,11 @@ class Agent:
 
         self.plan()
         self.main_memory.save()
+
+        plan_tree = self._format_plan_tree()
+        pretty(title("Plan Tree", color=Color.CYAN))
+        for line in plan_tree.split("\n"):
+            pretty(bullet(line, color=Color.CYAN))
 
         self.observe(perception)
         self.main_memory.save()
@@ -116,12 +122,60 @@ class Agent:
         active_node = active_node or self.main_memory.plan_node
 
         marker = " (current focus)" if active_node and node.id == active_node.id else ""
-        lines = [f"{prefix}- [{node.id}] {node.data}{marker}"]
+        id_label = self._node_identifier(node)
+        lines = [f"{prefix}- {id_label} {node.data}{marker}"]
 
         for child in node.children:
             lines.append(self._format_plan_tree(child, prefix + "  ", active_node))
 
         return "\n".join(lines)
+
+    def _node_identifier(self, node) -> str:
+        label = self._positional_label(node)
+        if label:
+            return f"[{node.id} | {label}]"
+        return f"[{node.id}]"
+
+    def _positional_label(self, node) -> str:
+        if node is self.main_memory.plan_root:
+            return ""
+
+        path_indices = []
+        current = node
+        while current.parent:
+            path_indices.append(current.parent.children.index(current))
+            current = current.parent
+
+        path_indices.reverse()
+        label_parts = []
+        token_generators = [self._numeric_token, self._upper_token, self._lower_token]
+
+        for depth, index in enumerate(path_indices):
+            token_fn = token_generators[depth % len(token_generators)]
+            label_parts.append(token_fn(index))
+
+        return "".join(label_parts)
+
+    def _numeric_token(self, index: int) -> str:
+        return str(index + 1)
+
+    def _upper_token(self, index: int) -> str:
+        return self._alpha_token(index, uppercase=True)
+
+    def _lower_token(self, index: int) -> str:
+        return self._alpha_token(index, uppercase=False)
+
+    def _alpha_token(self, index: int, uppercase: bool) -> str:
+        base = ord("A") if uppercase else ord("a")
+        token = ""
+        n = index
+        while True:
+            n, remainder = divmod(n, 26)
+            token = chr(base + remainder) + token
+            if n == 0:
+                break
+            n -= 1
+        return token
 
     def _leaf_nodes(self, node=None) -> list:
         node = node or self.main_memory.plan_root
@@ -460,6 +514,8 @@ class Agent:
         register_tools(realisator, tools)
 
         correction_suffix = ""
+        final_has_error = False
+        last_error_payloads: list[dict] = []
 
         for attempt in range(0, 3):
             # Avoid Python format treating braces from JSON perceptions as placeholders.
@@ -468,6 +524,9 @@ class Agent:
             reply = realisator.invoke(ctx)
 
             has_error, errors = process_formal_errors(realisator.memory, collect=True)
+            final_has_error = has_error
+            last_error_payloads = errors
+
             if not has_error:
                 break
 
@@ -495,6 +554,25 @@ class Agent:
                 )
             else:
                 break
+
+        if final_has_error:
+            hint_texts = [e.get("hint") for e in last_error_payloads if e.get("hint")]
+            agent_msgs = [e.get("agent_message") for e in last_error_payloads if e.get("agent_message")]
+            combined = "; ".join(hint_texts or agent_msgs)
+            FormalError(
+                "Action generation failed after multiple retries.",
+                console_message=(
+                    "Action generation failed after multiple retries. "
+                    "Review the latest hints and adjust the prompt."
+                ),
+                hint=combined or None,
+                context={
+                    "imagination_task": imagination_task,
+                    "realization_context": realization_context,
+                    "attempts": attempt + 1,
+                },
+            )
+            process_formal_errors(self.main_memory)
 
         return imagination
 
