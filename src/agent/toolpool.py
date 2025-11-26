@@ -6,8 +6,8 @@ import current
 from enviroment.entity import AgentEntity
 from enviroment.exception import HardException
 from enviroment.position import Position
-from llm.memory.supermem import PlanNode
 from llm.tool import tool
+from agent.plan import TreePlan
 from llm.toolprovider import ToolProvider
 
 @tool
@@ -159,8 +159,11 @@ def add_step(step: str) -> str:
     """
 
     agent = current.AGENT
-    
-    agent.main_memory.plan_steps.append(step)
+
+    if agent and hasattr(agent, "plan") and hasattr(agent.plan, "add_step"):
+        agent.plan.add_step(step)
+    else:
+        raise ValueError("Current agent plan does not support adding steps")
 
     return ""
 
@@ -175,7 +178,10 @@ def decompose_node(task_node_id: int, sub_nodes: list[str]) -> str:
 
     agent = current.AGENT
 
-    agent.main_memory.decompose_plan_node(task_node_id, sub_nodes)
+    if agent and isinstance(agent.plan, TreePlan):
+        agent.plan.decompose_node(task_node_id, sub_nodes)
+    else:
+        raise ValueError("Current agent plan does not support decomposition")
 
     return ""
 
@@ -190,7 +196,10 @@ def delete_node(task_node_id: int, delete_children:bool = True) -> str:
 
     agent = current.AGENT
 
-    agent.main_memory.delete_plan_node(task_node_id, delete_children)
+    if agent and isinstance(agent.plan, TreePlan):
+        agent.plan.delete_node(task_node_id, delete_children)
+    else:
+        raise ValueError("Current agent plan does not support deleting nodes")
 
     return ""
 
@@ -204,7 +213,10 @@ def mark_done(task_node_id: int) -> str:
 
     agent = current.AGENT
 
-    agent.main_memory.mark_plan_node_done(task_node_id)
+    if agent and isinstance(agent.plan, TreePlan):
+        agent.plan.mark_node_done(task_node_id)
+    else:
+        raise ValueError("Current agent plan does not support marking nodes done")
 
     return ""
 
@@ -218,7 +230,10 @@ def mark_focued(task_node_id: int) -> str:
 
     agent = current.AGENT
 
-    agent.main_memory.mark_plan_node_focus(task_node_id)
+    if agent and isinstance(agent.plan, TreePlan):
+        agent.plan.mark_node_focus(task_node_id)
+    else:
+        raise ValueError("Current agent plan does not support marking focus")
 
     return ""
 
