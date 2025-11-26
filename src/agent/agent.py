@@ -36,18 +36,19 @@ class Agent:
         for line in plan_tree.split("\n"):
             pretty(bullet(line, color=Color.CYAN))
 
-        self.brainstorm()
+        active_node = self.brainstorm()
         self.main_memory.save()
 
-        self._evaluate_current_idea(active_node)
+        if active_node:
+            self._evaluate_current_idea(active_node)
 
-        active_idea = self.main_memory.plan_steps[0] if self.main_memory.plan_steps else "No idea available"
-        plan_overview = self._format_plan_tree(active_node=active_node)
-        self.main_memory.add_plan(
-            "FULL PLAN TREE:\n" + plan_overview +
-            f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
-            f"Current idea: {active_idea}"
-        )
+            active_idea = self.main_memory.plan_steps[0] if self.main_memory.plan_steps else "No idea available"
+            plan_overview = self._format_plan_tree(active_node=active_node)
+            self.main_memory.add_plan(
+                "FULL PLAN TREE:\n" + plan_overview +
+                f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
+                f"Current idea: {active_idea}"
+            )
 
         pretty(title("The current Plan", color=Color.MAGENTA))
         for step in self.main_memory.completed_steps:
@@ -460,21 +461,14 @@ class Agent:
 
     def brainstorm(self):
         if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.DECOMPOSE:
-            return
+            return None
 
         active_node = self.main_memory.plan_node
         if active_node is None or active_node.done:
-            active_node = self._choose_active_leaf()
-            if active_node is None:
-                return
-            self.main_memory.plan_node = active_node
+            return None
 
         if self._ensure_active_goal(active_node):
-            active_node = self._choose_active_leaf()
-            if active_node is None:
-                self.main_memory.add_plan("FULL PLAN TREE:\n" + self._format_plan_tree())
-                return
-            self.main_memory.plan_node = active_node
+            return None
 
         self._evaluate_current_idea(active_node)
 
@@ -485,6 +479,8 @@ class Agent:
             f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
             f"Current idea: {active_idea}"
         )
+
+        return active_node
 
     #def is_ready(self):
 
