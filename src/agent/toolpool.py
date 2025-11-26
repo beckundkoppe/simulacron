@@ -274,6 +274,32 @@ def no() -> str:
 
     return ""
 
+@tool
+def yes_rationale(rationale: str) -> str:
+    """Answer with yes and the rationale
+
+    Args:
+        rationale (str): why yes
+    """
+
+    current.ANSWER_BUFFER = True
+    current.ANSWER_BUFFER_REASON = rationale
+
+    return ""
+
+@tool
+def no_rationale(rationale: str) -> str:
+    """Answer with no and the rationale
+
+    Args:
+        rationale (str): why no
+    """
+
+    current.ANSWER_BUFFER = False
+    current.ANSWER_BUFFER_REASON = rationale
+
+    return ""
+
 class ToolGroup(Enum):
     NONE    = auto()
     ALL     = auto()
@@ -282,6 +308,7 @@ class ToolGroup(Enum):
     PLAN    = auto()
     DECOMPOSE    = auto()
     QA    = auto()
+    QA_RATIO = auto()
 
 _TOOLS_ENV = [
         move_to_position,
@@ -313,6 +340,11 @@ _TOOLS_QA = [
         no,
     ]
 
+_TOOLS_QA_RATIO = [
+        yes_rationale,
+        no_rationale,
+    ]
+
 def register_tools(toolprovider: ToolProvider, tools):
     if isinstance(tools, ToolGroup):
         tools = [tools]
@@ -335,6 +367,9 @@ def register_tools(toolprovider: ToolProvider, tools):
 
     if ToolGroup.QA in tools or is_all:
         selection.extend(_TOOLS_QA)
+    
+    if ToolGroup.QA_RATIO in tools or is_all:
+        selection.extend(_TOOLS_QA_RATIO)
 
     toolprovider.register_tools(tools=selection)
     

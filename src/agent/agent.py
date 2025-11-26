@@ -1,3 +1,4 @@
+from typing import Tuple
 from agent.helper import process_action_results, process_formal_errors
 from agent.toolpool import ToolGroup, register_tools
 import config
@@ -13,7 +14,6 @@ from util.console import Color, bullet, pretty, title
 
 class Agent:
     def __init__(self, goal: str, entity: Entity, imaginator_model: Model, realisator_model: Model):
-        self.goal = goal
         self.entity = entity
         self.imaginator_model = imaginator_model
         self.realisator_model = realisator_model
@@ -21,151 +21,127 @@ class Agent:
         self.goal = goal
         self.main_memory = SuperMemory(goal=goal, path="main_memory.txt")
 
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
+            self._replan("Initial main goal is not yet reached")
+
     def update(self, perception: str):
         current.AGENT = self
         current.ENTITY = self.entity
 
-        self.plan()
+        self.plan = self._plan() # should set self.plan with a full Plan
         self.main_memory.save()
 
-        self.observe(perception)
+        observation = self._observe(perception) # returns aufbereitete observation mit den für die aufgabe relevanten inhalte
         self.main_memory.save()
 
-        plan_tree = self._format_plan_tree()
-        pretty(title("Plan Tree", color=Color.CYAN))
-        for line in plan_tree.split("\n"):
-            pretty(bullet(line, color=Color.CYAN))
-
-        active_node = self.brainstorm()
+        ideas = self._trial() # generiert List[str] mit ideen um das ziel im focused plannode zu erreichen
         self.main_memory.save()
 
-        if active_node:
-            self._evaluate_current_idea(active_node)
-
-            active_idea = self.main_memory.plan_steps[0] if self.main_memory.plan_steps else "No idea available"
-            plan_overview = self._format_plan_tree(active_node=active_node)
-            self.main_memory.add_plan(
-                "FULL PLAN TREE:\n" + plan_overview +
-                f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
-                f"Current idea: {active_idea}"
-            )
-
-        pretty(title("The current Plan", color=Color.MAGENTA))
-        for step in self.main_memory.completed_steps:
-            pretty(bullet(step, color=Color.RESET))
-        for step in self.main_memory.plan_steps:
-            pretty(bullet(step, color=Color.MAGENTA))
-
-        self.act(perception)
+        self._act(perception) # führt beste idee aus
         self.main_memory.save()
 
-        self.reflect(perception)
+        self._reflect(perception) # stellt fest, was das ergebniss der aktion ist. ziel im focused plannode schon erreicht? dann in planung, sonst Frage: sind wir noch auf einem guten weg? ja -> weiter; nein -> nächste idee
         self.main_memory.save()
 
         current.AGENT = None
         current.ENTITY = None
 
-    def observe(self, observation: str):
-        self.main_memory.append_message(Role.USER, observation, Type.PERCEPTION)
+    def _observe(self, perception: str):
+        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.OFF:
+            self.main_memory.append_message(Role.USER, perception, Type.PERCEPTION)
+            return
+
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
+            active_plan = "goal"
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
+            active_plan = "current plan step"
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
+            active_plan = "focused plan step"
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
+            active_plan = "focused plan node"
+        else:
+            raise Exception()
+        
+        observer = Provider.build("observer", self.imaginator_model, memory=self.main_memory)
+        observation = observer.call(f"Perception: {perception}\nWhat do you observe? What is relevant for your {active_plan}? (short)")
 
         if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.OFF:
+            self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
+        else:
+            pass
+            #self._memorize(observation, Type.OBSERVATION)
+
+        #if config.ACTIVE_CONFIG.agent.observe is not config.ObserveType.ON:
+            #self._memorize(observation, "Do you now this room already?")
+
+    def _trial(self):
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.DECOMPOSE:
+            return None
+
+        active_node = self.main_memory.plan_node
+        if active_node is None or active_node.done:
+            return None
+
+        if self._ensure_active_goal(active_node):
+            return None
+
+        self._evaluate_current_idea(active_node)
+
+        active_idea = self.main_memory.plan_steps[0] if self.main_memory.plan_steps else "No idea available"
+        plan_overview = self._format_plan_tree(active_node=active_node)
+        self.main_memory.add_plan(
+            "FULL PLAN TREE:\n" + plan_overview +
+            f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
+            f"Current idea: {active_idea}"
+        )
+
+        return active_node
+    
+    def _act(self, perception: str):
+        prompt = "Give best next action to perform (short answer)."
+
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
+            prompt += " Stick closely to the next step in the plan. But always tell the next action"
+
+        if config.ACTIVE_CONFIG.agent.action is config.ActionType.DIRECT:
+            realisator = ToolProvider.build("actor", self.realisator_model, memory=self.main_memory)
+            register_tools(realisator, ToolGroup.ENV)
+            realisator.call(perception + ". " + prompt + "Use concise, executable actions. Your answer must only consist of toolcalls.")
+        else:
+            tc_prompt =  """
+            Give exactly the toolcalls that arise from the planned action.
+            Use correct object id.
+            Toolcall order matters.
+            Your answer must only consist of toolcalls.
+            """
+            #If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a precice and short question.
+            #Else toolcalls only!
+
+            self._imaginator_realisator_step(
+                imagination_task=prompt,
+                realization_context=f"{perception} Reasoning: {{imagination}} Task: {tc_prompt}",
+                tools=ToolGroup.ENV,
+                name="action",
+            )
+
+    def _reflect(self):
+        results = ""
+        for role, msg, msg_type in process_action_results():
+            results += msg + "\n"
+
+        if config.ACTIVE_CONFIG.agent.reflect is config.ReflectType.OFF:
+            self.main_memory.append(Type.FEEDBACK, Role.USER, results)
             return
-        
-        mem = Memory()
-        mem.append_message(Role.USER, observation)
-        observer = Provider.build("observer", self.imaginator_model, memory=mem)
-        observation = observer.call("What do you observe? What is interesting? (short)")
-        self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
 
-        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.MEMORIZE:
-            self.memorize(observation, "Do you now this room already?")
+        reflector = Provider.build("reflector", self.imaginator_model, memory=self.main_memory)
+        reflection = reflector.call("Result: {result}\nReflect what effect the performed Actions had. Only what you can say for sure. (short)")
 
-    def memorize(self, context: str, task: str):
-        imagination = self._imaginator_realisator_step(
-            imagination_task=(
-                f"""
-                Is there something important to memorize from the data? If so tell short and precise what it is. Only information that is useful for the Plan.
-                Are there obsolete or redundat MEMORIES that need to be deleted? Keep only important ones.
-                \n:{context}
-                \n{task}
-                """
-            ),
-            realization_context=(
-                f"Memories: {str(self.main_memory.memories)}\n"
-                f"{context}\nReasoning: {{imagination}}\n"
-                "Use the tools to store and/or delete memories like told. If there is nothing to do use the noop tool."
-            ),
-            tools=ToolGroup.MEM,
-            realisator_system="Respond by calling the given functions only!",
-            imaginator_name="memo_imaginator",
-            realisator_name="memo_realisator",
-            allow_question_retry=False,
-        )
+        self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
 
-        return imagination
-
-    def _parse_decision(self, response: str, positive_markers=None) -> bool:
-        markers = ["done", "yes", "y", "true"] if positive_markers is None else positive_markers
-        normalized = response.strip().lower()
-        return any(normalized.startswith(marker) for marker in markers)
-
-    def _ask_yes_no(self, context: str, question: str) -> bool:
-        """Use imaginator reasoning and QA tool calls to answer a binary question."""
-
-        current.ANSWER_BUFFER = None
-
-        imaginator = Provider.build("qa_imaginator", self.imaginator_model, memory=self.main_memory)
-        reasoning = imaginator.call(
-            f"{context}\nQuestion: {question}\nProvide a short reasoning before deciding."
-        )
-
-        qa_memory = Memory()
-        qa_memory.append_message(
-            Role.USER,
-            f"{context}\nQuestion: {question}\nReasoning: {reasoning}\nUse yes() or no() tool calls only.",
-        )
-
-        qa_realisator = ToolProvider.build("qa_realisator", self.realisator_model, qa_memory)
-        register_tools(qa_realisator, ToolGroup.QA)
-        qa_realisator.invoke("Respond by calling yes() or no() to answer the question above.")
-
-        return bool(current.ANSWER_BUFFER)
-
-    def _format_plan_tree(self, node=None, prefix: str = "", active_node=None) -> str:
-        node = node or self.main_memory.plan_root
-        active_node = active_node or self.main_memory.plan_node
-
-        markers = []
-        if node.done:
-            markers.append("done")
-        if active_node and node.id == active_node.id:
-            markers.append("current focus")
-        marker = f" ({'; '.join(markers)})" if markers else ""
-        id_label = self._node_identifier(node)
-        lines = [f"{prefix}- {id_label} {node.data}{marker}"]
-
-        for child in node.children:
-            lines.append(self._format_plan_tree(child, prefix + "  ", active_node))
-
-        return "\n".join(lines)
-
-    def _node_identifier(self, node) -> str:
-        return f"[{node.id}]"
-
-    def _leaf_nodes(self, node=None) -> list:
-        node = node or self.main_memory.plan_root
-
-        if node.done:
-            return []
-
-        if not node.children:
-            return [node]
-
-        leaves = []
-        for child in node.children:
-            leaves.extend(self._leaf_nodes(child))
-
-        return leaves
+        #if config.ACTIVE_CONFIG.agent.reflect is config.ReflectType.ON:
+        #    self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
+        #else:
+        ##    self._memorize(reflection)
 
     def _choose_active_leaf(self) -> "PlanNode | None":
         leaves = self._leaf_nodes()
@@ -204,7 +180,7 @@ class Agent:
         self.main_memory.plan_node = selected_leaf
         return selected_leaf
 
-    def _high_level_decomposition(self):
+    def _decompose_tree_plan(self):
         for _ in range(0, 3):
             current_plan = self._format_plan_tree()
             is_ready = self._ask_yes_no(
@@ -231,9 +207,8 @@ class Agent:
                     " mark_focued(task_node_id) to set the next focus."
                 ),
                 tools=ToolGroup.DECOMPOSE,
-                realisator_system="Use only the provided plan editing tools to update the plan tree.",
-                imaginator_name="decompose_imaginator",
-                realisator_name="decompose_realisator",
+                realisator_prompt="Use only the provided plan editing tools to update the plan tree.",
+                name="decompose",
                 allow_question_retry=False,
             )
 
@@ -254,7 +229,7 @@ class Agent:
                 "Use add_step(text) for each distinct idea to try. Keep them concise and actionable."
             ),
             tools=ToolGroup.PLAN,
-            realisator_system="Respond only with add_step() tool calls, one per idea.",
+            realisator_prompt="Respond only with add_step() tool calls, one per idea.",
             imaginator_name="idea_imaginator",
             realisator_name="idea_realisator",
             allow_question_retry=False,
@@ -299,212 +274,125 @@ class Agent:
         if not self.main_memory.plan_steps:
             self._generate_low_level_plan(active_node)
 
-    def act(self, perception: str):
-        prompt = "Give best next action to perform (short answer)."
-
-        
-        
-        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
-            prompt += " Stick closely to the next step in the plan. But always tell the next action"
-
-        if config.ACTIVE_CONFIG.agent.imaginator is config.ImaginatorType.OFF:
-            self._direct_action_step(perception, prompt)
-            return
-
-        self._imaginator_realisator_step(
-            imagination_task=prompt,
-            realization_context=f"{perception} Reasoning: {{imagination}}\n",
-            tools=ToolGroup.ENV,
-            realisator_system=(
-                "Give exactly the toolcalls that arise from the planned action. Use correct object id. Toolcall order matters. "
-                "If there are implicit references to vague to be realised with the available tools answer with 'Question:' and a "
-                "precice and short question. Else toolcalls only!"
-            ),
-            imaginator_name="action_imaginator",
-            realisator_name="action_realisator",
-            allow_question_retry=True,
-        )
-
-    def reflect(self, perception: str):
-        action_messages = process_action_results()
-        for role, msg, msg_type in action_messages:
-            self.main_memory.append_message(role, msg, msg_type)
-
-        if config.ACTIVE_CONFIG.agent.reflect is config.ReflectType.OFF:
-            return
-
-        mem = Memory()
-        mem.append_message(Role.USER, perception)
-        for role, msg, msg_type in action_messages:
-            mem.append_message(role, msg, msg_type)
-        reflector = Provider.build("reflector", self.imaginator_model, memory=mem)
-        reflection = reflector.call("Reflect what effect the performed Actions had. Only what you can say for sure. (short)")
-        self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
-
-        if config.ACTIVE_CONFIG.agent.observe is config.ReflectType.MEMORIZE:
-            self.memorize(reflection)
-
-    def plan(self):
+    def _plan(self):
         if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
             return
 
-        planner = Provider.build("planner", self.imaginator_model, memory=self.main_memory)
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
+            plan = "current plan"
+            active_plan_completed = f"{plan} completed and the goal reached"
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
+            plan = "focused plan step"
+            active_plan_completed = f"{plan} completed"
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
+            plan = "focused plan node"
+            active_plan_completed = f"{plan} completed"
+        else:
+            raise Exception()
 
+        ans, rationale = self._ask_yes_no_with_rationale(
+            "planner",
+            context = self.main_memory.get_history(),
+            question = f"Based on the current reflection of the last action, is the {active_plan_completed}?",
+        )
 
+        if ans is True:
+            print(f"The {plan} is completed because {rationale}")
+            self._next_plan_part()
+        else:
+            ans2, rationale2 = self._ask_yes_no_with_rationale(
+                "planner",
+                context = self.main_memory.get_history(),
+                question = f"The {plan} is not completed because: {rationale}. Does it still seem promising?",
+            )
 
-        if self.main_memory.plan is not None:
-            if config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
-                is_completed = self._ask_yes_no(
-                    context=f"{self.main_memory.plan}",
-                    question="Based on the current reflection of the last action, is the current plan fully completed?",
-                )
+            if ans2 is True:
+                self._replan(rationale2)
+            else:
+                print(f"The {plan} is still promising because {rationale2}")
+                return #go on
 
-                if is_completed:
-                    self.main_memory.mark_completed()
+    def _next_plan_part(self):
+        next = self.plan.mark_current_completed()
 
-                    if not self.main_memory.plan_steps:
-                        should_finish = self._ask_yes_no(
-                            context=f"Main goal: {self.goal}",
-                            question="Is the main goal already achieved?",
-                        )
+        if next:
+            return
+        
+        ans, rationale = self._ask_yes_no_with_rationale(
+            "planner",
+            context = self.main_memory.get_history(),
+            question = f"Based on the current reflection of the last action, is the initial main goal reached?",
+        )
 
-                        if should_finish:
-                            raise Exception("AGENT FINISHED")
+        if ans:
+            self.finished = True
+            return
+        else:
+            self._replan("Initial main goal is not yet reached")
 
-                        return
-
-                    current_step = self.main_memory.plan_steps[0]
-                    self.main_memory.add_plan("PLAN: "+ current_step)
-                    return
-
-            if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.DECOMPOSE:
-                should_plan = self._ask_yes_no(
-                    context=(
-                        f"Goal: {self.goal}\nCurrent plan: {self.main_memory.plan}\n"
-                    ),
-                    question="Based on the current goal, context, and the last action, is the current sub goal still possible?",
-                )
-
-                if should_plan:
-                    return
+    def _replan(self, reason):
+        print(f"Replanning because: {reason}")
 
         if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
-            plan = planner.invoke(
+            self.plan = self.plan_free()
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
+            self.plan = self.plan_steps()
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
+            self.plan = self.plan_tree()
+        else:
+            raise Exception()
+                
+
+    def _plan_free(self, replan_reason=None) -> Plan:
+        #TODO: all imaginator for plan put into plan as string
+
+        plan = planner.invoke(
                 "MAIN GOAL: " + self.goal,
                 "What goals are there. Can one be broken down into sub goals. You must drop a subgoal immediately if the environment state proves that the subgoal is completed or impossible. Do not repeat subgoals that cannot change the environment anymore. Give structured listing. Tell about how to structuredly approach the next step.",
                 append=False,
             )
-            self.main_memory.add_plan(plan)
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
-            self.make_structured_plan()
-            self.completed_steps = []
-            current_step = self.main_memory.plan_steps[0]
-            self.main_memory.add_plan("PLAN: "+ current_step)
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
-            self._high_level_decomposition()
+        
+        self.add plan
+                
+    #TODO return plan
+    def _plan_steps(self, replan_reason=None) -> Plan:
+        self._imaginator_realisator_step(
+            imagination_task=(f"Main goal: {self.plan.goal}\nReplanning because {replan_reason}\nCreate a new strucutred plan to reach the goal."),
+            realization_context=(f"Plan: {{imagination}}\nUse toolcalls to add the steps specified in the plan for the user."),
+            tools=ToolGroup.PLAN,
+            name="plan"
+        )
+                
+    #TODO return plan
+    def _plan_tree(self, replan_reason=None) -> Plan:
+        self._decompose_tree_plan()
 
-            active_node = self._choose_active_leaf()
-            if active_node is None:
-                raise Exception("No available plan nodes to execute")
+        active_node = self._choose_active_leaf()
+        if active_node is None:
+            raise Exception("No available plan nodes to execute")
 
-            self.main_memory.plan_node = active_node
-            plan_overview = self._format_plan_tree(active_node=active_node)
-            self.main_memory.add_plan(
-                "FULL PLAN TREE:\n" + plan_overview +
-                f"\nCurrent target: [{active_node.id}] {active_node.data}"
-            )
-        else:
-            raise NotImplementedError()
-
-    def brainstorm(self):
-        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.DECOMPOSE:
-            return None
-
-        active_node = self.main_memory.plan_node
-        if active_node is None or active_node.done:
-            return None
-
-        if self._ensure_active_goal(active_node):
-            return None
-
-        self._evaluate_current_idea(active_node)
-
-        active_idea = self.main_memory.plan_steps[0] if self.main_memory.plan_steps else "No idea available"
+        self.main_memory.plan_node = active_node
         plan_overview = self._format_plan_tree(active_node=active_node)
         self.main_memory.add_plan(
             "FULL PLAN TREE:\n" + plan_overview +
-            f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
-            f"Current idea: {active_idea}"
+            f"\nCurrent target: [{active_node.id}] {active_node.data}"
         )
-
-        return active_node
-
-    #def is_ready(self):
-
-    def make_structured_plan(self):
-        #create plan (replan)
-
-        #imaginate plan
-        
-        #get memory + goal without plan 
-        plan_imaginator = Provider.build("plan_imaginator", self.imaginator_model, memory=self.main_memory)
-        goal = self.goal
-
-        prompt = f"MAIN GOAL: {goal} Create a strucutred plan to reach the goal."
-
-        ##if self.main_memory.completed_steps:
-        ##    prompt += "Old plan: " +  + ". Already completed subgoals: " + str(self.completed_steps)
-
-        plan_str = plan_imaginator.call(prompt)
-
-        mem = Memory()
-        mem.append_message(Role.USER, plan_str)
-        plan_realisator = ToolProvider.build("plan_realisator", self.realisator_model, mem)
-        register_tools(plan_realisator, ToolGroup.PLAN)
-
-        correction_note = ""
-        for _ in range(0, 3):
-            reply = plan_realisator.invoke(
-                "Use toolcalls to add the steps specified in the plan for the user." + correction_note
-            )
-
-            has_error, errors = process_formal_errors(plan_realisator.memory, collect=True)
-            if not has_error:
-                break
-
-            self.main_memory.plan_steps.clear()
-            hint_texts = [e.get("hint") for e in errors if e.get("hint")]
-            agent_msgs = [e.get("agent_message") for e in errors if e.get("agent_message")]
-            combined = "; ".join(hint_texts or agent_msgs)
-            if combined:
-                correction_note = f" Retry with these corrections in mind: {combined}. Keep tool calls concise."
-            else:
-                correction_note = " Retry with strict, valid tool calls only."
-
-        if not self.main_memory.plan_steps:
-            raise Exception("no planned steps")
-
 
     def _imaginator_realisator_step(
         self,
         imagination_task: str,
         realization_context: str,
         tools: ToolGroup,
-        realisator_system: str,
-        imaginator_name: str = "imaginator",
-        realisator_name: str = "realisator",
-        allow_question_retry: bool = False,
-        realisator_memory: Memory | None = None,
-    ) -> str:
-        imaginator = Provider.build(imaginator_name, self.imaginator_model, memory=self.main_memory)
+        name: str,
+    ) -> None:
+        imaginator = Provider.build(name + "_imaginator", self.imaginator_model, memory=self.main_memory)
 
         imagination = imaginator.call(imagination_task)
 
-        realisator_mem = realisator_memory or Memory(realisator_system)
         realisator = ToolProvider.build(
-            realisator_name,
+            name + "_realisator",
             self.realisator_model,
-            realisator_mem,
+            Memory(realization_context),
         )
         register_tools(realisator, tools)
 
@@ -513,8 +401,6 @@ class Agent:
         last_error_payloads: list[dict] = []
 
         for attempt in range(0, 3):
-            # Avoid Python format treating braces from JSON perceptions as placeholders.
-            # Only the explicit `{imagination}` token should be substituted.
             ctx = realization_context.replace("{imagination}", imagination) + correction_suffix
             reply = realisator.invoke(ctx)
 
@@ -525,6 +411,9 @@ class Agent:
             if not has_error:
                 break
 
+            if not current.any_action():
+                correction_suffix = "If nothing is todo use the 'noop'"
+
             hint_texts = [e.get("hint") for e in errors if e.get("hint")]
             agent_msgs = [e.get("agent_message") for e in errors if e.get("agent_message")]
             combined = "; ".join(hint_texts or agent_msgs)
@@ -534,51 +423,84 @@ class Agent:
                 else " Retry using valid tool calls with explicit object IDs."
             )
 
-            if not allow_question_retry or config.ACTIVE_CONFIG.agent.imaginator is not config.ImaginatorType.QUESTION:
+            if config.ACTIVE_CONFIG.agent.action is config.ActionType.IMG_RETRY:
                 self.main_memory.append_message(
                     Role.USER,
                     "Last step was not specified well. Please provide more explicit instructions",
                 )
                 break
 
-            if "Question" in reply:
-                correction_suffix = imaginator.invoke(
-                    reply + " Use explicit object IDs and absolute positions.",
-                    imagination_task + " Provide an explicit and precise instruction.",
-                    append=False,
-                )
-            else:
-                break
+            #if config.ACTIVE_CONFIG.agent.action is config.ActionType.IMG_QUESTION:
+            #    if "Question" in reply:
+            #        correction_suffix = imaginator.invoke(
+            #            reply + " Use explicit object IDs and absolute positions.",
+            #            imagination_task + " Provide an explicit and precise instruction.",
+            #            append=False,
+            #        )
+            #    else:
+            #        break
 
         if final_has_error:
             hint_texts = [e.get("hint") for e in last_error_payloads if e.get("hint")]
             agent_msgs = [e.get("agent_message") for e in last_error_payloads if e.get("agent_message")]
-            combined = "; ".join(hint_texts or agent_msgs)
             FormalError(
                 "Action generation failed after multiple retries.",
                 console_message=(
                     "Action generation failed after multiple retries. "
                     "Review the latest hints and adjust the prompt."
                 ),
-                hint=combined or None,
-                context={
-                    "imagination_task": imagination_task,
-                    "realization_context": realization_context,
-                    "attempts": attempt + 1,
-                },
+                hint="No action executed",
             )
-            process_formal_errors(self.main_memory)
 
-        return imagination
+        process_formal_errors() #clear errors
 
-    def _direct_action_step(self, context: str, task: str):
-        realisator = ToolProvider.build(
-            "action_realisator",
-            self.realisator_model,
-            Memory(
-                "Use concise, executable actions. Prefer tool calls when possible; otherwise respond with a short action descriptio"
-                "n."
-            ),
+        return
+
+
+        #def _memorize(self, context: str, task: str):
+    #        imagination = self._imaginator_realisator_step(
+    #            imagination_task=(
+    #            f"""
+    #            Is there something important to memorize from the data? If so tell short and precise what it is. Only information that is useful for the Plan.
+    #            Are there obsolete or redundat MEMORIES that need to be deleted? Keep only important ones.
+    #            \n:{context}
+    #            \n{task}
+    #            """
+    #        ),
+    #        realization_context=(
+    #            f"Memories: {str(self.main_memory.memories)}\n"
+    #            f"{context}\nReasoning: {{imagination}}\n"
+    #            "Use the tools to store and/or delete memories like told. If there is nothing to do use the noop tool."
+    #        ),
+    #        tools=ToolGroup.MEM,
+    #        realisator_system="Respond by calling the given functions only!",
+    #        imaginator_name="memo_imaginator",
+    #        realisator_name="memo_realisator",
+    #        allow_question_retry=False,
+    #    )
+#
+#          return imagination
+
+    def _ask_yes_no(self, name: str, context: str, question: str) -> bool:
+        current.ANSWER_BUFFER = None
+
+        self._imaginator_realisator_step(
+                imagination_task=f"{context}\nQuestion: {question}\nProvide a short reasoning before deciding.",
+                realization_context=f"{context}\nQuestion: {question}\nReasoning: {{imagination}}\nRespond by calling yes() or no() to answer the question.",
+                tools=ToolGroup.QA,
+                name=name+"_qa",
         )
-        register_tools(realisator, ToolGroup.ENV)
-        realisator.invoke(context + ". " + task)
+
+        return current.get_answer()
+    
+    def _ask_yes_no_with_rationale(self, name: str, context: str, question: str) -> Tuple[bool, str]:
+        current.ANSWER_BUFFER = None
+
+        self._imaginator_realisator_step(
+                imagination_task=f"{context}\nQuestion: {question}\nProvide a short reasoning before deciding.",
+                realization_context=f"{context}\nQuestion: {question}\nReasoning: {{imagination}}\nRespond by calling yes or no with the rationale to answer the question.",
+                tools=ToolGroup.QA_RATIO,
+                name=name+"_qa_rationale",
+        )
+
+        return current.get_answer(), current.get_rationale()

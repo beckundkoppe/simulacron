@@ -3,7 +3,7 @@ from typing import Iterable
 
 from benchmark.benchresult import PerformanceResult
 from benchmark.dispatcher import Dispatcher, Run
-from config import AgentConfiguration, Configuration, ImaginatorType, ObserveType, PerceptionType, PlanType, PositionType, ReflectType
+from config import AgentConfiguration, Configuration, ActionType, ObserveType, PerceptionType, PlanType, PositionType, ReflectType
 from enviroment.levels.level import Levels
 from llm.model import Model
 
@@ -55,7 +55,7 @@ def main():
     dispatcher = Dispatcher()
 
     agent_config = AgentConfiguration(
-        imaginator = ImaginatorType.QUESTION,
+        action = ActionType.IMG_RETRY,
         observe    = ObserveType.ON,
         reflect    = ReflectType.ON,
         plan       = PlanType.DECOMPOSE

@@ -2,35 +2,41 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 
-class ImaginatorType(Enum):
-    OFF = auto()
-    ON = auto()
-    QUESTION = auto()
-    MULTIPLE = auto()
+class PlanType(Enum):
+    OFF = auto()            # no plan step
+    FREE = auto()           # freeform planning
+    STEP = auto()           # structured step planning
+    DECOMPOSE = auto()      # structured tree planning
+
+class TryType(Enum):
+    ON = auto()             # no try step
+    OFF = auto()            #
+
+class ActionType(Enum):
+    DIRECT = auto()         # no extra step just realisation
+    IMAGINATOR = auto()     # imaginator -> realisator
+    IMG_RETRY = auto()      # += realisator has 3 retries
+    IMG_QUESTION = auto()   # += img-real cycle has 3 retries
 
 class ObserveType(Enum):
-    OFF = auto()
-    ON = auto()
-    MEMORIZE = auto()
+    OFF = auto()            # off
+    ON = auto()             # observation step
+    MEMORIZE_ZERO = auto()  # += memorize important info
+    MEMORIZE_FEW = auto()   # += examples what would be suficient
 
 class ReflectType(Enum):
-    OFF = auto()
-    ON = auto()
-    MEMORIZE = auto()
-
-class PlanType(Enum):
-    OFF = auto()
-    FREE = auto()
-    STEP = auto()
-    DECOMPOSE = auto()
-    TRY = auto()
+    OFF = auto()            # off
+    ON = auto()             # reflection step
+    MEMORIZE_ZERO = auto()  # += memorize important info
+    MEMORIZE_FEW = auto()   # += examples what would be suficient
 
 @dataclass(frozen=True)
 class AgentConfiguration:
-    imaginator: ImaginatorType
+    plan: PlanType
+    trial: TryType
+    action: ActionType
     observe: ObserveType
     reflect: ReflectType
-    plan: PlanType
 
 class PerceptionType(Enum):
     ALL = auto()
@@ -38,43 +44,29 @@ class PerceptionType(Enum):
 
 class PositionType(Enum):
     ROOMLESS = auto()
-    CHESSBOARD = auto()
     RELATIVE = auto()
 
 @dataclass(frozen=True)
 class Configuration:
+    agent: AgentConfiguration
     perception: PerceptionType
     position: PositionType
-    agent: AgentConfiguration
     temperature: float
     name: str
     seed: int = 12345
+    perception_distance = 4.0
+    interaction_distance = 1.5
+
+    depth_factor = 1 # higher value would make perception harder: less deep discouveries into children of containers
+    # factor=1 => 10 depth steps visible
+    # factor=2 => 5 depth steps visible
     
 ACTIVE_CONFIG: Configuration = None
 APPEND_RAW = None
 
-
-PERCEPTION_DISTANCE: float = 4.0
-INTERACTION_DISTANCE: float = 1.5
-
-DEPTH_FAKTOR: int = 1
-# faktor=1 => 10 depth steps visible
-# faktor=2 => 5 depth steps visible
 
 @dataclass(frozen=True)
 class Backend:
     n_gpu_layers: int = -1
     n_threads: int = 24
     n_context: int = 8096
-
-    @classmethod
-    def effective_gpu_layers(cls) -> int:
-        return cls.n_gpu_layers
-
-    @classmethod
-    def effective_threads(cls) -> int:
-        return cls.n_threads
-
-    @classmethod
-    def effective_context(cls) -> int:
-        return cls.n_context

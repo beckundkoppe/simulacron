@@ -159,6 +159,7 @@ def process_action_results() -> list[tuple[Role, str, Type]]:
             color = console.Color.YELLOW
             role = Role.USER
         elif isinstance(result, Success):
+            current.ANY_ACTION = True
             prefix = "[ACTION EXECUTED]"
             color = console.Color.GREEN
             role = Role.USER
@@ -181,13 +182,6 @@ def process_action_results() -> list[tuple[Role, str, Type]]:
             console_lines.append(
                 console.bullet(
                     f"\nHint: {result.hint}",
-                    color=console.Color.BLUE,
-                )
-            )
-        if result.context:
-            console_lines.append(
-                console.bullet_multi(
-                    f"\nContext: {console.dump_limited(result.context, max_depth=1)}",
                     color=console.Color.BLUE,
                 )
             )
