@@ -25,7 +25,10 @@ class Trials:
         return self.current_step() != None
     
     def to_string(self) -> str:
-        return self.ideas[self.current_index]
+        if len(self.ideas) > self.current_index:
+             return self.ideas[self.current_index]
+        else:
+            return ""
 
     def format_full(self) -> str:
         completed_text = "\n".join([f"- [x] {s}" for s in self.completed])
@@ -34,7 +37,7 @@ class Trials:
         )
         sections = []
         if self.goal:
-            [f"Main goal: {self.goal}"]
+            sections.append(f"Main goal: {self.goal}")
         if completed_text:
             sections.append("Completed steps:\n" + completed_text)
         if remaining_text:
@@ -68,10 +71,14 @@ class Plan:
 class FreePlan(Plan):
     description: str
 
-    trials: Trials = Trials()
+    trials: Trials = field(default_factory=Trials)
 
-    def to_string(self) -> str:
-        return f"Goal: {self.goal}\nPlan: {self.description}. To do this {self.trials.to_string()}"
+    def to_string(self, show_trial = True) -> str:
+        trials_text = self.trials.to_string()
+        trial_suffix = f" To do this {trials_text}" if trials_text else ""
+        if not show_trial:
+            trials_text = ""
+        return f"Goal: {self.goal}\nPlan: {self.description}.{trial_suffix}"
 
 
 @dataclass
@@ -80,7 +87,7 @@ class StepPlan(Plan):
     current_index: int = 0
     completed: List[str] = field(default_factory=list)
 
-    trials: Trials = Trials()
+    trials: Trials = field(default_factory=Trials)
 
     def add_step(self, step: str) -> None:
         self.steps.append(step)
@@ -97,8 +104,17 @@ class StepPlan(Plan):
             self.current_index += 1
         return self.current_step()
     
-    def to_string(self) -> str:
-        return self.steps[self.current_index] + f"To do this {self.trials.to_string()}"
+    def to_string(self, show_trial = True) -> str:
+        current = self.current_step()
+        trials_text = self.trials.to_string()
+        trial_suffix = f" To do this {trials_text}" if trials_text else ""
+        if not show_trial:
+            trials_text = ""
+
+        if current is None:
+            return f"Goal: {self.goal}"
+
+        return current + trial_suffix
 
     def format_full(self) -> str:
         completed_text = "\n".join([f"- [x] {s}" for s in self.completed])
@@ -123,7 +139,7 @@ class PlanNode:
     children: list["PlanNode"] = field(default_factory=list)
     done: bool = False
 
-    trials: Trials = Trials()
+    trials: Trials = field(default_factory=Trials)
 
     _counter: int = 0
 
@@ -274,8 +290,12 @@ class TreePlan(Plan):
     def _node_identifier(self, node: PlanNode) -> str:
         return f"[{node.id}]"
 
-    def to_string(self) -> str:
-        return self.focus.data + f"To do this {self.trials.to_string()}"
+    def to_string(self, show_trial = True) -> str:
+        trials_text = self.focus.trials.to_string()
+        trial_suffix = f" To do this {trials_text}" if trials_text else ""
+        if not show_trial:
+            trials_text = ""
+        return self.focus.data + trial_suffix
 
     def clone(self) -> "TreePlan":
         root_clone = self.root.clone(None)

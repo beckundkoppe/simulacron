@@ -6,6 +6,7 @@ import current
 from enviroment.entity import AgentEntity
 from enviroment.exception import HardException
 from enviroment.position import Position
+from enviroment.resultbuffer import FormalError
 from llm.tool import tool
 from agent.plan import TreePlan
 from llm.toolprovider import ToolProvider
@@ -161,7 +162,10 @@ def add_step(step: str) -> str:
     agent = current.AGENT
 
     if agent and hasattr(agent, "plan") and hasattr(agent.plan, "add_step"):
-        agent.plan.add_step(step)
+        try:
+            agent.plan.add_step(step)
+        except Exception as e:
+            HardException(str(e))
     else:
         raise ValueError("Current agent plan does not support adding steps")
 
@@ -177,10 +181,10 @@ def add_trial(trial: str) -> str:
 
     agent = current.AGENT
 
-    if agent and hasattr(agent, "plan") and hasattr(agent.plan, "trial_ideas"):
-        agent.plan.trial_ideas.append(trial)
-    else:
-        raise ValueError("Current agent plan does not support adding trials")
+    try:
+        agent.plan.get_trial().add_step(trial)
+    except Exception as e:
+        FormalError("add_trial " + str(e))
 
     return ""
 
@@ -196,7 +200,10 @@ def decompose_node(task_node_id: int, sub_nodes: list[str]) -> str:
     agent = current.AGENT
 
     if agent and isinstance(agent.plan, TreePlan):
-        agent.plan.decompose_node(task_node_id, sub_nodes)
+        try:
+            agent.plan.decompose_node(task_node_id, sub_nodes)
+        except Exception as e:
+            FormalError("add_trial " + str(e))
     else:
         raise ValueError("Current agent plan does not support decomposition")
 
@@ -214,7 +221,10 @@ def delete_node(task_node_id: int, delete_children:bool = True) -> str:
     agent = current.AGENT
 
     if agent and isinstance(agent.plan, TreePlan):
-        agent.plan.delete_node(task_node_id, delete_children)
+        try:
+            agent.plan.delete_node(task_node_id, delete_children)
+        except Exception as e:
+            FormalError("delete_node " + str(e))
     else:
         raise ValueError("Current agent plan does not support deleting nodes")
 
@@ -231,7 +241,10 @@ def mark_done(task_node_id: int) -> str:
     agent = current.AGENT
 
     if agent and isinstance(agent.plan, TreePlan):
-        agent.plan.mark_node_done(task_node_id)
+        try:
+            agent.plan.mark_node_done(task_node_id)
+        except Exception as e:
+            FormalError("mark_done " + str(e))
     else:
         raise ValueError("Current agent plan does not support marking nodes done")
 
@@ -248,7 +261,10 @@ def mark_focused(task_node_id: int) -> str:
     agent = current.AGENT
 
     if agent and isinstance(agent.plan, TreePlan):
-        agent.plan.mark_node_focus(task_node_id)
+        try:
+            agent.plan.mark_node_focus(task_node_id)
+        except Exception as e:
+            FormalError("mark_focused " + str(e))
     else:
         raise ValueError("Current agent plan does not support marking focus")
 

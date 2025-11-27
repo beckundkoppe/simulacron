@@ -13,7 +13,7 @@ class SuperMemory(Memory):
         self._current_observation: str = []
         self.plan = None
 
-    def add_plan(self, plan):
+    def set_plan(self, plan):
         """Store an arbitrary plan representation."""
 
         self.plan = plan
@@ -37,36 +37,36 @@ class SuperMemory(Memory):
         history_out = []
 
         ##### GOAL #####
-        history_out.append((Type.GOAL, Role.SYSTEM, self._goal))
+        #history_out.append((Type.GOAL, Role.SYSTEM, self._goal))
         ################
 
         COUNT = 2
         n = COUNT
 
         # find newest observation in the whole history
-        current_observation = None
-        recent_observations = []
+        current_perceptions = None
+        recent_perceptions = []
 
         if self._history:
             elem = self._history.copy().pop()
             t,r,d = elem
             if t == Type.PERCEPTION:
-                current_observation = elem
+                current_perceptions = elem
 
 
         for x in reversed(self._history):
             t, r, d = x
-            recent_observations.append(x)
+            recent_perceptions.append(x)
             if t == Type.PERCEPTION:
                 n = n - 1
             if n <= 0:
                 break
         
-        recent_observations.reverse()
+        recent_perceptions.reverse()
 
         mini = []
         for x in self._history:
-            if x not in recent_observations and not current_observation:  # exclude the recent observations
+            if x not in recent_perceptions and not current_perceptions:  # exclude the recent observations
                 t, r, d = x
                 if t != Type.PERCEPTION:
                     mini.append(x)
@@ -76,25 +76,25 @@ class SuperMemory(Memory):
             history_out.extend(mini)
         ########################
 
-        if current_observation:
-            recent_observations.remove(current_observation)
+        if current_perceptions:
+            recent_perceptions.remove(current_perceptions)
 
         ##### FULL HISTORY #####
-        if recent_observations:
-            history_out.extend(recent_observations)
+        if recent_perceptions:
+            history_out.extend(recent_perceptions)
         ########################
 
         ##### CURRENT OBSERVATION #####
-        if current_observation:
-            type, role, data = current_observation
-            history_out.append((Type.CURRENT_OBSERVATION ,role,"CURRENT OBSERVATION: " + data))
+        if current_perceptions:
+            type, role, data = current_perceptions
+            history_out.append((Type.CURRENT_OBSERVATION ,role, "CURRENT OBSERVATION: " + data + "\n"))
         ###############################
 
         #learning
 
         ##### PLAN #####
         if self.plan:
-            history_out.append((Type.PLAN, Role.USER, str(self.plan)))
+            history_out.append((Type.PLAN, Role.USER, "Plan: " + str(self.plan) + "\n"))
         ################
 
         #memories

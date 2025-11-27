@@ -11,6 +11,7 @@ from llm.memory.supermem import SuperMemory
 from llm.model import Model
 from llm.provider import Provider
 from llm.toolprovider import ToolProvider
+from util.console import Color, banner, bullet, pretty
 
 class Agent:
     def __init__(self, goal: str, entity: Entity, imaginator_model: Model, realisator_model: Model):
@@ -19,6 +20,7 @@ class Agent:
         self.realisator_model = realisator_model
 
         self.goal = goal
+        self.plan = None
         self.main_memory = SuperMemory(goal=goal, path="main_memory.txt")
 
         self.triggered_replan = None
@@ -26,8 +28,6 @@ class Agent:
 
         if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
             self.triggered_replan = "Main goal is not yet reached. Create an initial plan"
-
-        print(self.plan.to_string())
 
     def update(self, perception: str):
         current.AGENT = self
@@ -39,6 +39,8 @@ class Agent:
 
         if not self.triggered_replan:
             self._trial() # generiert List[str] mit ideen um das ziel im focused plannode zu erreichen
+            self.main_memory.set_plan(self.plan)
+            pretty(bullet("TRIAL: " + self.plan.get_trial().to_string(), color=Color.RED))
             self.main_memory.save()
 
         if not self.triggered_replan:
@@ -50,7 +52,9 @@ class Agent:
             self.main_memory.save()
 
         self._plan() # should set self.plan with a full Plan
+        self.main_memory.set_plan(self.plan)
         self.main_memory.save()
+        pretty(bullet("PLAN: " + self.plan.to_string(), color=Color.MAGENTA))
 
         current.AGENT = None
         current.ENTITY = None
@@ -81,10 +85,10 @@ class Agent:
             #self._memorize(observation, Type.OBSERVATION)
 
     def _trial(self):
-        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.DECOMPOSE:
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
             return
         
-        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agent.plan is config.TrialType.OFF:
             return
         
         #havent tried an idea yet
@@ -117,15 +121,16 @@ class Agent:
             return
 
     def _generate_trials(self):
-        if self.plan.trial_done:
+        pretty(banner("Generating trials"))
+        if self.plan.get_trial().completed:
             self._imaginator_realisator_step(
                 imagination_task=(
-                    f"Goal: {self.goal}\nPlan:\n{self.to_string()}\n"
+                    f"Plan:\n{self.plan.to_string(False)}\n"
                     " Brainstorm a few concrete ideas on how to achieve this task."
                     " Avoid repeating previously tried approaches."
                 ),
                 realization_context=(
-                    f"Goal: {self.goal}\nPlan:\n{self.to_string()}\n"
+                    f"Plan:\n{self.plan.to_string(False)}\n"
                     f"Tried approaches: {self.plan.focus.done}\n"
                     "Use add_trial(text) for each distinct idea to try. Keep them concise and actionable."
                     "Respond only with add_step() tool calls, one per idea. Dont do any that have been tried. If there is no new call noop."
@@ -136,11 +141,11 @@ class Agent:
         else:
             self._imaginator_realisator_step(
                 imagination_task=(
-                    f"Goal: {self.goal}\nPlan:\n{self.to_string()}\n"
+                    f"Plan:\n{self.plan.to_string(False)}\n"
                     "What would be the straight forward approach to this?"
                 ),
                 realization_context=(
-                    f"Goal: {self.goal}\nPlan:\n{self.to_string()}\n"
+                    f"Plan:\n{self.plan.to_string(False)}\n"
                     f"Tried approaches: {self.plan.focus.done}\n"
                     "Use add_trial(text) for each distinct idea to try. Keep them concise and actionable."
                     "Respond only with add_step() tool calls, one per idea. Dont do any that have been tried. If there is no new call noop."
@@ -159,6 +164,8 @@ class Agent:
             else:
                 raise Exception()
             self.triggered_replan = f"failed to get {plan} done"
+        else:
+            print(f"Current trial {self.plan.get_trial().current_step()}")
     
     def _act(self, perception: str):
         prompt = "Give best next action to perform (short answer)."
@@ -243,7 +250,7 @@ class Agent:
             )
 
             if ans2 is True:
-                self._replan(rationale2)
+                self.triggered_replan = rationale2
             else:
                 print(f"The {plan} is still promising because {rationale2}")
                 return #go on
@@ -278,7 +285,7 @@ class Agent:
         else:
             raise Exception()
 
-        self.main_memory.add_plan(self.plan)
+        self.main_memory.set_plan(self.plan)
         self.triggered_replan = None
                 
 
@@ -321,7 +328,7 @@ class Agent:
             replan = ""
 
         self.plan = TreePlan.new(self.goal)
-        self.main_memory.add_plan(self.plan)
+        self.main_memory.set_plan(self.plan)
 
         self._decompose_tree_plan()
 
@@ -331,8 +338,8 @@ class Agent:
 
         if isinstance(self.plan, TreePlan):
             self.plan.focus = active_node
-            plan_overview = self._format_plan_tree()
-            self.main_memory.add_plan(
+            plan_overview = self.plan.format_full()
+            self.main_memory.set_plan(
                 "FULL PLAN TREE:\n" + plan_overview +
                 f"\nCurrent target: [{active_node.id}] {active_node.data}"
             )
@@ -360,7 +367,7 @@ class Agent:
         chooser = Provider.build("leaf_selector", self.imaginator_model, memory=self.main_memory)
         leaf_listing = "\n".join([f"[{leaf.id}] {leaf.data}" for leaf in leaves])
         choice = chooser.call(
-            f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree()}\n"
+            f"Goal: {self.goal}\nPlan tree:\n{self.plan.format_full()}\n"
             f"Available leaf tasks:\n{leaf_listing}\n"
             "Select the best suited leaf task by replying with its id and a short justification.",
         )
@@ -380,7 +387,7 @@ class Agent:
 
     def _decompose_tree_plan(self):
         for _ in range(0, 3):
-            current_plan = self._format_plan_tree()
+            current_plan = self.plan.format_full()
             is_ready = self._ask_yes_no(
                 name="decompose",
                 context=(
