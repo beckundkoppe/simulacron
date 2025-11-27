@@ -11,7 +11,6 @@ from llm.memory.supermem import SuperMemory
 from llm.model import Model
 from llm.provider import Provider
 from llm.toolprovider import ToolProvider
-from util.console import Color, bullet, pretty, title
 
 class Agent:
     def __init__(self, goal: str, entity: Entity, imaginator_model: Model, realisator_model: Model):
@@ -22,26 +21,35 @@ class Agent:
         self.goal = goal
         self.main_memory = SuperMemory(goal=goal, path="main_memory.txt")
 
+        self.triggered_replan = None
+        self.finished = False
+
         if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
-            self._replan("Initial main goal is not yet reached")
+            self.triggered_replan = "Main goal is not yet reached. Create an initial plan"
+
+        print(self.plan.to_string())
 
     def update(self, perception: str):
         current.AGENT = self
         current.ENTITY = self.entity
 
-        self.plan = self._plan() # should set self.plan with a full Plan
-        self.main_memory.save()
+        if not self.triggered_replan:
+            self._observe(perception) # returns aufbereitete observation mit den für die aufgabe relevanten inhalte
+            self.main_memory.save()
 
-        observation = self._observe(perception) # returns aufbereitete observation mit den für die aufgabe relevanten inhalte
-        self.main_memory.save()
+        if not self.triggered_replan:
+            self._trial() # generiert List[str] mit ideen um das ziel im focused plannode zu erreichen
+            self.main_memory.save()
 
-        ideas = self._trial() # generiert List[str] mit ideen um das ziel im focused plannode zu erreichen
-        self.main_memory.save()
+        if not self.triggered_replan:
+            self._act(perception) # führt beste idee aus
+            self.main_memory.save()
 
-        self._act(perception) # führt beste idee aus
-        self.main_memory.save()
+        if not self.triggered_replan:
+            self._reflect(perception) # stellt fest, was das ergebniss der aktion ist. ziel im focused plannode schon erreicht? dann in planung, sonst Frage: sind wir noch auf einem guten weg? ja -> weiter; nein -> nächste idee
+            self.main_memory.save()
 
-        self._reflect(perception) # stellt fest, was das ergebniss der aktion ist. ziel im focused plannode schon erreicht? dann in planung, sonst Frage: sind wir noch auf einem guten weg? ja -> weiter; nein -> nächste idee
+        self._plan() # should set self.plan with a full Plan
         self.main_memory.save()
 
         current.AGENT = None
@@ -66,40 +74,91 @@ class Agent:
         observer = Provider.build("observer", self.imaginator_model, memory=self.main_memory)
         observation = observer.call(f"Perception: {perception}\nWhat do you observe? What is relevant for your {active_plan}? (short)")
 
-        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.OFF:
+        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.ON:
             self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
         else:
             pass
             #self._memorize(observation, Type.OBSERVATION)
 
-        #if config.ACTIVE_CONFIG.agent.observe is not config.ObserveType.ON:
-            #self._memorize(observation, "Do you now this room already?")
-
     def _trial(self):
         if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.DECOMPOSE:
-            return None
+            return
+        
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
+            return
+        
+        #havent tried an idea yet
+        if not self.plan.get_trial().ideas:
+            self._generate_trials()
+            return
 
-        if not isinstance(self.plan, TreePlan):
-            return None
-
-        active_node = self.plan.focus
-        if active_node is None or active_node.done:
-            return None
-
-        if self._ensure_active_goal(active_node):
-            return None
-
-        self._evaluate_current_idea(active_node)
-
-        active_idea = self.plan.plan_steps[0] if self.plan.plan_steps else "No idea available"
-        plan_overview = self._format_plan_tree(active_node=active_node)
-        self.main_memory.add_plan(
-            "FULL PLAN TREE:\n" + plan_overview +
-            f"\nCurrent target: [{active_node.id}] {active_node.data}\n" +
-            f"Current idea: {active_idea}"
+        completed = self._ask_yes_no(
+            name="trial",
+            context=(
+                f"{self.main_memory.get_history()}"
+            ),
+            question="Is the Plan completed?",
         )
 
-        return active_node
+        if not completed:
+            promising = self._ask_yes_no(
+                name="trial",
+                context=(
+                    f"{self.main_memory.get_history()}"
+                ),
+                question="Is the Plan still promising?",
+            )
+
+            if promising:
+                return
+
+        if self.plan.get_trial().mark_current_completed():
+            self._generate_trials()
+            return
+
+    def _generate_trials(self):
+        if self.plan.trial_done:
+            self._imaginator_realisator_step(
+                imagination_task=(
+                    f"Goal: {self.goal}\nPlan:\n{self.to_string()}\n"
+                    " Brainstorm a few concrete ideas on how to achieve this task."
+                    " Avoid repeating previously tried approaches."
+                ),
+                realization_context=(
+                    f"Goal: {self.goal}\nPlan:\n{self.to_string()}\n"
+                    f"Tried approaches: {self.plan.focus.done}\n"
+                    "Use add_trial(text) for each distinct idea to try. Keep them concise and actionable."
+                    "Respond only with add_step() tool calls, one per idea. Dont do any that have been tried. If there is no new call noop."
+                ),
+                tools=ToolGroup.TRIAL,
+                name="trial",
+            )
+        else:
+            self._imaginator_realisator_step(
+                imagination_task=(
+                    f"Goal: {self.goal}\nPlan:\n{self.to_string()}\n"
+                    "What would be the straight forward approach to this?"
+                ),
+                realization_context=(
+                    f"Goal: {self.goal}\nPlan:\n{self.to_string()}\n"
+                    f"Tried approaches: {self.plan.focus.done}\n"
+                    "Use add_trial(text) for each distinct idea to try. Keep them concise and actionable."
+                    "Respond only with add_step() tool calls, one per idea. Dont do any that have been tried. If there is no new call noop."
+                ),
+                tools=ToolGroup.TRIAL,
+                name="trial",
+            )
+
+        if not self.plan.get_trial().current_step():
+            if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
+                plan = "current plan"
+            elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
+                plan = "focused plan step"
+            elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
+                plan = "focused plan node"
+            else:
+                raise Exception()
+            self.triggered_replan = f"failed to get {plan} done"
     
     def _act(self, perception: str):
         prompt = "Give best next action to perform (short answer)."
@@ -128,7 +187,7 @@ class Agent:
                 name="action",
             )
 
-    def _reflect(self):
+    def _reflect(self, perception):
         results = ""
         for role, msg, msg_type in process_action_results():
             results += msg + "\n"
@@ -138,7 +197,7 @@ class Agent:
             return
 
         reflector = Provider.build("reflector", self.imaginator_model, memory=self.main_memory)
-        reflection = reflector.call("Result: {result}\nReflect what effect the performed Actions had. Only what you can say for sure. (short)")
+        reflection = reflector.call(f"Result: {results}\nReflect what effect the performed Actions had. Only what you can say for sure. (short)")
 
         self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
 
@@ -147,155 +206,11 @@ class Agent:
         #else:
         ##    self._memorize(reflection)
 
-    def _format_plan_tree(self, node=None, prefix: str = "", active_node=None) -> str:
-        if isinstance(self.plan, TreePlan):
-            return self.plan.format_plan_tree(node=node, prefix=prefix, active_node=active_node)
-        return ""
-
-    def _leaf_nodes(self, node=None) -> list[PlanNode]:
-        if isinstance(self.plan, TreePlan):
-            return self.plan.leaf_nodes(node=node)
-        return []
-
-    def _choose_active_leaf(self) -> "PlanNode | None":
-        leaves = self._leaf_nodes()
-        if not leaves:
-            return None
-
-        current_focus = self.plan.focus if isinstance(self.plan, TreePlan) and self.plan.focus in leaves else None
-
-        if current_focus:
-            should_keep = self._ask_yes_no(
-                context=(
-                    f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree(active_node=current_focus)}"
-                ),
-                question="Is the current focus still the best leaf task to pursue next?",
-            )
-            if should_keep:
-                return current_focus
-
-        chooser = Provider.build("leaf_selector", self.imaginator_model, memory=self.main_memory)
-        leaf_listing = "\n".join([f"[{leaf.id}] {leaf.data}" for leaf in leaves])
-        choice = chooser.call(
-            f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree()}\n"
-            f"Available leaf tasks:\n{leaf_listing}\n"
-            "Select the best suited leaf task by replying with its id and a short justification.",
-        )
-
-        selected_leaf = None
-        for leaf in leaves:
-            if str(leaf.id) in choice:
-                selected_leaf = leaf
-                break
-
-        if selected_leaf is None:
-            selected_leaf = leaves[0]
-
-        if isinstance(self.plan, TreePlan):
-            self.plan.focus = selected_leaf
-        return selected_leaf
-
-    def _decompose_tree_plan(self):
-        for _ in range(0, 3):
-            current_plan = self._format_plan_tree()
-            is_ready = self._ask_yes_no(
-                context=(
-                    f"Goal: {self.goal}\nCurrent plan tree:\n{current_plan}\n"
-                    "Focus is a leaf task that can be executed directly."
-                ),
-                question="Is the current plan tree sufficiently decomposed to start execution?",
-            )
-
-            if is_ready:
-                return
-
-            self._imaginator_realisator_step(
-                imagination_task=(
-                    f"Goal: {self.goal}\nCurrent plan tree:\n{current_plan}\n"
-                    "Study the current plan tree and decide how to refine it."
-                    " Suggest concise updates to decompose or prune nodes before execution."
-                ),
-                realization_context=(
-                    f"Goal: {self.goal}\nPlan tree:\n{current_plan}\n"
-                    "Use decompose_node(task_node_id, sub_nodes) to split tasks, delete_node(task_node_id, delete_children)"
-                    " to remove or merge tasks, mark_done(task_node_id) to label completed nodes, and"
-                    " mark_focued(task_node_id) to set the next focus."
-                ),
-                tools=ToolGroup.DECOMPOSE,
-                realisator_prompt="Use only the provided plan editing tools to update the plan tree.",
-                name="decompose",
-                allow_question_retry=False,
-            )
-
-    def _generate_low_level_plan(self, active_node):
-        if not isinstance(self.plan, TreePlan):
-            return
-
-        self.plan.plan_steps.clear()
-
-        self._imaginator_realisator_step(
-            imagination_task=(
-                f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree(active_node=active_node)}\n"
-                f"Active target: [{active_node.id}] {active_node.data}."
-                " Brainstorm concrete ideas on how to achieve this task."
-                " Avoid repeating previously tried approaches."
-                " If the naive approach hasent been tried yet, try it."
-            ),
-            realization_context=(
-                f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree(active_node=active_node)}\n"
-                f"Completed items: {self.plan.completed_steps}\n"
-                "Use add_step(text) for each distinct idea to try. Keep them concise and actionable."
-            ),
-            tools=ToolGroup.PLAN,
-            realisator_prompt="Respond only with add_step() tool calls, one per idea.",
-            imaginator_name="idea_imaginator",
-            realisator_name="idea_realisator",
-            allow_question_retry=False,
-        )
-
-    def _ensure_active_goal(self, active_node):
-        goal_completed = self._ask_yes_no(
-            context=(
-                f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree(active_node=active_node)}"
-            ),
-            question="Is the focused leaf task completed?",
-        )
-
-        if goal_completed and isinstance(self.plan, TreePlan):
-            self.plan.mark_node_done(active_node.id)
-            self.plan.plan_steps.clear()
-            self.plan.focus = self.plan.root
-            return True
-
-        return False
-
-    def _evaluate_current_idea(self, active_node):
-        if not isinstance(self.plan, TreePlan):
-            return
-
-        if not self.plan.plan_steps:
-            self._generate_low_level_plan(active_node)
-
-        if not self.plan.plan_steps:
-            return
-
-        current_idea = self.plan.plan_steps[0]
-        idea_viable = self._ask_yes_no(
-            context=(
-                f"Goal: {self.goal}\nActive task: [{active_node.id}] {active_node.data}\n"
-                f"Current idea: {current_idea}"
-            ),
-            question="Does this idea still seem promising based on the latest perception and reflection?",
-        )
-
-        if idea_viable:
-            return
-
-        self.plan.completed_steps.append(self.plan.plan_steps.pop(0))
-        if not self.plan.plan_steps:
-            self._generate_low_level_plan(active_node)
-
     def _plan(self):
+        if self.triggered_replan:
+            self._replan(self.triggered_replan)
+            return
+
         if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
             return
 
@@ -346,7 +261,7 @@ class Agent:
         )
 
         if ans:
-            self.finished = True
+            self.finished_reason = rationale
             return
         else:
             self._replan("Initial main goal is not yet reached")
@@ -355,24 +270,29 @@ class Agent:
         print(f"Replanning because: {reason}")
 
         if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
-            self.plan = self.plan_free()
+            self.plan = self._plan_free(reason)
         elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
-            self.plan = self.plan_steps()
+            self.plan = self._plan_steps(reason)
         elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
-            self.plan = self.plan_tree()
+            self.plan = self._plan_tree(reason)
         else:
             raise Exception()
 
         self.main_memory.add_plan(self.plan)
+        self.triggered_replan = None
                 
 
     def _plan_free(self, replan_reason=None) -> FreePlan:
+        if replan_reason:
+            replan = f"Replanning because {replan_reason}\n"
+        else:
+            replan = ""
+
         planner = Provider.build("planner", self.imaginator_model, memory=self.main_memory)
         plan_text = planner.call(
-            "MAIN GOAL: "
-            + self.goal
-            + "\n"
-            + "What goals are there. Can one be broken down into sub goals. You must drop a subgoal immediately if the environment state proves that the subgoal is completed or impossible. Do not repeat subgoals that cannot change the environment anymore. Give structured listing. Tell about how to structuredly approach the next step."
+            f"""Main goal: {self.goal}\n{replan}
+            Based on the current contex: Create a structured plan to reach the goal.
+            """
         )
 
         return FreePlan(goal=self.goal, description=plan_text)
@@ -381,8 +301,13 @@ class Agent:
         step_plan = StepPlan(goal=self.goal)
         self.plan = step_plan
 
+        if replan_reason:
+            replan = f"Replanning because {replan_reason}\n"
+        else:
+            replan = ""
+
         self._imaginator_realisator_step(
-            imagination_task=(f"Main goal: {self.goal}\nReplanning because {replan_reason}\nCreate a new strucutred plan to reach the goal."),
+            imagination_task=(f"Main goal: {self.goal}\n{replan}Create a new strucutred plan to reach the goal."),
             realization_context=(f"Plan: {{imagination}}\nUse toolcalls to add the steps specified in the plan for the user."),
             tools=ToolGroup.PLAN,
             name="plan"
@@ -390,6 +315,11 @@ class Agent:
 
         return step_plan
     def _plan_tree(self, replan_reason=None) -> TreePlan:
+        if replan_reason:
+            replan = f"Replanning because {replan_reason}\n"
+        else:
+            replan = ""
+
         self.plan = TreePlan.new(self.goal)
         self.main_memory.add_plan(self.plan)
 
@@ -401,13 +331,84 @@ class Agent:
 
         if isinstance(self.plan, TreePlan):
             self.plan.focus = active_node
-            plan_overview = self._format_plan_tree(active_node=active_node)
+            plan_overview = self._format_plan_tree()
             self.main_memory.add_plan(
                 "FULL PLAN TREE:\n" + plan_overview +
                 f"\nCurrent target: [{active_node.id}] {active_node.data}"
             )
 
         return self.plan
+    
+    def _choose_active_leaf(self) -> "PlanNode | None":
+        leaves = self.plan.leaf_nodes()
+        if not leaves:
+            return None
+
+        current_focus = self.plan.focus if isinstance(self.plan, TreePlan) and self.plan.focus in leaves else None
+
+        if current_focus:
+            should_keep = self._ask_yes_no(
+                name = "active_leaf",
+                context=(
+                    f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree()}"
+                ),
+                question="Is the current focus still the best leaf task to pursue next?",
+            )
+            if should_keep:
+                return current_focus
+
+        chooser = Provider.build("leaf_selector", self.imaginator_model, memory=self.main_memory)
+        leaf_listing = "\n".join([f"[{leaf.id}] {leaf.data}" for leaf in leaves])
+        choice = chooser.call(
+            f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree()}\n"
+            f"Available leaf tasks:\n{leaf_listing}\n"
+            "Select the best suited leaf task by replying with its id and a short justification.",
+        )
+
+        selected_leaf = None
+        for leaf in leaves:
+            if str(leaf.id) in choice:
+                selected_leaf = leaf
+                break
+
+        if selected_leaf is None:
+            selected_leaf = leaves[0]
+
+        if isinstance(self.plan, TreePlan):
+            self.plan.focus = selected_leaf
+        return selected_leaf
+
+    def _decompose_tree_plan(self):
+        for _ in range(0, 3):
+            current_plan = self._format_plan_tree()
+            is_ready = self._ask_yes_no(
+                name="decompose",
+                context=(
+                    f"Goal: {self.goal}\nCurrent plan tree:\n{current_plan}\n"
+                ),
+                question="Is the current plan tree sufficiently decomposed to start execution?",
+            )
+
+            if is_ready:
+                return
+
+            self._imaginator_realisator_step(
+                imagination_task=(
+                    f"Goal: {self.goal}\nCurrent plan tree:\n{current_plan}\n"
+                    "Study the current plan tree and decide how to refine it."
+                    " Suggest concise updates to decompose or (in rare cases) prune nodes before execution."
+                ),
+                realization_context=(
+                    f"""Goal: {self.goal}\nPlan tree:\n{current_plan}\n
+                    Use decompose_node(task_node_id, sub_nodes) to split tasks, delete_node(task_node_id, delete_children)
+                     to remove or merge tasks, mark_done(task_node_id) to label completed nodes
+                     mark_focued(task_node_id) to set the next focus. Use only the provided plan editing tools to update the plan tree.
+                    Update like this: {{imagination}}
+                    """
+                ),
+                tools=ToolGroup.DECOMPOSE,
+                name="decompose",
+            )
 
     def _imaginator_realisator_step(
         self,

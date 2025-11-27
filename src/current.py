@@ -15,16 +15,19 @@ ANSWER_BUFFER: bool = None
 ANSWER_BUFFER_REASON: str = None
 
 def get_answer() -> bool:
+    global ANSWER_BUFFER
     ans = ANSWER_BUFFER
     ANSWER_BUFFER = None
     return ans
 
 def get_rationale() -> str:
+    global ANSWER_BUFFER_REASON
     ans = ANSWER_BUFFER_REASON
     ANSWER_BUFFER_REASON = None
     return ans
 
 def any_action() -> bool:
+    global ANY_ACTION
     ans = ANY_ACTION
     ANY_ACTION = False
     return ans

@@ -603,18 +603,18 @@ class Model(Enum):
     # ----------------------------------------------------------
     class Remote(Enum):
             # institut
-            #GPT_OSS_20B = ModelSpec(
-            #    name="GPT-OSS-20B",
-            #    tag="gpt_oss_20b",
-            #    location=Location.REMOTE,
-            #    backend=Backend.OTHER,
-            #    agent_backend=AgentBackend.LANGCHAIN,
-            #    kind=ModelKind.HYBRID,
-            #    source=SourceRemote(
-            #        endpoint_url="http://127.0.0.1:11434/v1",
-            #        model_id="deepseek-r1:70b-llama-distill-fp16",
-            #    ),
-            #)
+            GPT_OSS_20B = ModelSpec(
+                name="GPT-OSS-20B",
+                tag="gpt_oss_20b",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="http://127.0.0.1:11434/v1",
+                    model_id="gpt-oss:120b",
+                ),
+            )
 
             # institut
             MISTRAL_SMALL_24B = ModelSpec(

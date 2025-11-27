@@ -3,6 +3,44 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+@dataclass
+class Trials:
+    goal: str = None
+    ideas: List[str] = field(default_factory=list)
+    current_index: int = 0
+    completed: List[str] = field(default_factory=list)
+
+    def add_step(self, step: str) -> None:
+        self.ideas.append(step)
+
+    def current_step(self) -> Optional[str]:
+        if self.current_index < len(self.ideas):
+            return self.ideas[self.current_index]
+        return None
+
+    def mark_current_completed(self) -> bool:
+        if self.current_index < len(self.ideas):
+            self.completed.append(self.ideas[self.current_index])
+            self.current_index += 1
+        return self.current_step() != None
+    
+    def to_string(self) -> str:
+        return self.ideas[self.current_index]
+
+    def format_full(self) -> str:
+        completed_text = "\n".join([f"- [x] {s}" for s in self.completed])
+        remaining_text = "\n".join(
+            [f"- [ ] {s}" for s in self.ideas[self.current_index :]]
+        )
+        sections = []
+        if self.goal:
+            [f"Main goal: {self.goal}"]
+        if completed_text:
+            sections.append("Completed steps:\n" + completed_text)
+        if remaining_text:
+            sections.append("Upcoming steps:\n" + remaining_text)
+        return "\n\n".join(sections)
+
 
 @dataclass
 class Plan:
@@ -19,14 +57,21 @@ class Plan:
 
     def __str__(self) -> str:
         return self.to_string()
-
+    
+    def format_full(self) -> str:
+        return self.to_string()
+    
+    def get_trial(self):
+        return self.trials
 
 @dataclass
 class FreePlan(Plan):
     description: str
 
+    trials: Trials = Trials()
+
     def to_string(self) -> str:
-        return f"Goal: {self.goal}\nPlan: {self.description}"
+        return f"Goal: {self.goal}\nPlan: {self.description}. To do this {self.trials.to_string()}"
 
 
 @dataclass
@@ -34,6 +79,8 @@ class StepPlan(Plan):
     steps: List[str] = field(default_factory=list)
     current_index: int = 0
     completed: List[str] = field(default_factory=list)
+
+    trials: Trials = Trials()
 
     def add_step(self, step: str) -> None:
         self.steps.append(step)
@@ -46,10 +93,14 @@ class StepPlan(Plan):
     def mark_current_completed(self) -> Optional[str]:
         if self.current_index < len(self.steps):
             self.completed.append(self.steps[self.current_index])
+            self.trials = Trials()
             self.current_index += 1
         return self.current_step()
-
+    
     def to_string(self) -> str:
+        return self.steps[self.current_index] + f"To do this {self.trials.to_string()}"
+
+    def format_full(self) -> str:
         completed_text = "\n".join([f"- [x] {s}" for s in self.completed])
         remaining_text = "\n".join(
             [f"- [ ] {s}" for s in self.steps[self.current_index :]]
@@ -71,6 +122,8 @@ class PlanNode:
     id: int | None = None
     children: list["PlanNode"] = field(default_factory=list)
     done: bool = False
+
+    trials: Trials = Trials()
 
     _counter: int = 0
 
@@ -198,7 +251,7 @@ class TreePlan(Plan):
 
         return leaves
 
-    def format_plan_tree(
+    def format_full(
         self, node: Optional[PlanNode] = None, prefix: str = "", active_node: Optional[PlanNode] = None
     ) -> str:
         node = node or self.root
@@ -214,7 +267,7 @@ class TreePlan(Plan):
         lines = [f"{prefix}- {id_label} {node.data}{marker}"]
 
         for child in node.children:
-            lines.append(self.format_plan_tree(child, prefix + "  ", active_node))
+            lines.append(self.format_full(child, prefix + "  ", active_node))
 
         return "\n".join(lines)
 
@@ -222,7 +275,7 @@ class TreePlan(Plan):
         return f"[{node.id}]"
 
     def to_string(self) -> str:
-        return self.format_plan_tree(active_node=self.focus)
+        return self.focus.data + f"To do this {self.trials.to_string()}"
 
     def clone(self) -> "TreePlan":
         root_clone = self.root.clone(None)
@@ -234,3 +287,6 @@ class TreePlan(Plan):
             plan_steps=list(self.plan_steps),
             completed_steps=list(self.completed_steps),
         )
+    
+    def get_trial(self):
+        return self.focus.trials

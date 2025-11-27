@@ -97,7 +97,7 @@ class Datum:
         if config.ACTIVE_CONFIG.perception == PerceptionType.ALL:
             perceived = True
 
-        if env.distance_m <= config.PERCEPTION_DISTANCE:
+        if env.distance_m <= config.ACTIVE_CONFIG.perception_distance:
             perceived = True
 
         if level < self.min_level:

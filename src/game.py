@@ -16,8 +16,6 @@ def _position_payload(pos: Position, room: Room) -> tuple[str, object]:
         return ("relative", {"x": pos.x, "y": pos.y})
 
     mapped = pos.map(room)
-    if mapped.type == PositionType.CHESSBOARD:
-        return ("chessboard", mapped.toString())
     if mapped.type == PositionType.ROOMLESS:
         return ("roomless", mapped.toString())
     return ("relative", {"x": mapped.x, "y": mapped.y})

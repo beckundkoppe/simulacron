@@ -26,7 +26,7 @@ def move_to_position(x: str, y: str) -> str:
 
     def _perform_move():
         try:
-            position = Position.from_input(x, y, room)
+            position = Position.from_input(x, y)
         except ValueError as exc:
             raise HardException(
                 "The provided coordinates could not be interpreted.",
@@ -168,6 +168,23 @@ def add_step(step: str) -> str:
     return ""
 
 @tool
+def add_trial(trial: str) -> str:
+    """Add the next plan step
+
+    Args:
+        trial (str): A short description of an approach to fullfill the plan.
+    """
+
+    agent = current.AGENT
+
+    if agent and hasattr(agent, "plan") and hasattr(agent.plan, "trial_ideas"):
+        agent.plan.trial_ideas.append(trial)
+    else:
+        raise ValueError("Current agent plan does not support adding trials")
+
+    return ""
+
+@tool
 def decompose_node(task_node_id: int, sub_nodes: list[str]) -> str:
     """Decompose a task node into a list of subtasks
 
@@ -221,7 +238,7 @@ def mark_done(task_node_id: int) -> str:
     return ""
 
 @tool
-def mark_focued(task_node_id: int) -> str:
+def mark_focused(task_node_id: int) -> str:
     """Marks a plan node as the current focus.
 
     Args:
@@ -324,6 +341,7 @@ class ToolGroup(Enum):
     DECOMPOSE    = auto()
     QA    = auto()
     QA_RATIO = auto()
+    TRIAL = auto()
 
 _TOOLS_ENV = [
         move_to_position,
@@ -343,11 +361,15 @@ _TOOLS_PLAN = [
         add_step,
     ]
 
+_TOOLS_TRIAL = [
+        add_trial,
+    ]
+
 _TOOLS_DECOMPOSE = [
         decompose_node,
         delete_node,
         mark_done,
-        mark_focued,
+        mark_focused,
     ]
 
 _TOOLS_QA = [
@@ -385,6 +407,9 @@ def register_tools(toolprovider: ToolProvider, tools):
     
     if ToolGroup.QA_RATIO in tools or is_all:
         selection.extend(_TOOLS_QA_RATIO)
+
+    if ToolGroup.TRIAL in tools or is_all:
+        selection.extend(_TOOLS_TRIAL)
 
     toolprovider.register_tools(tools=selection)
     

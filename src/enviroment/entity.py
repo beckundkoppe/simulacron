@@ -72,8 +72,6 @@ class Entity:
             return f"({pos.x:.1f}, {pos.y:.1f})"
 
         mapped = pos.map(room)
-        if mapped.type == config.PositionType.CHESSBOARD:
-            return mapped.toString()
         if mapped.type == config.PositionType.ROOMLESS:
             return mapped.toString()
         return f"({mapped.x:.1f}, {mapped.y:.1f})"
@@ -94,19 +92,19 @@ class Entity:
                     "target": self.readable_id,
                 },
             )
-        if dist > config.INTERACTION_DISTANCE:
+        if dist > config.ACTIVE_CONFIG.interaction_distance:
             raise SoftException(
                 f"{self.readable_id} is too far away to interact.",
                 console_message=(
                     f"Range check failed: distance={dist:.3f}, "
-                    f"limit={config.INTERACTION_DISTANCE:.3f}."
+                    f"limit={config.ACTIVE_CONFIG.interaction_distance:.3f}."
                 ),
                 hint="Move closer to the object before interacting.",
                 context={
                     "actor": getattr(actor_entity, "readable_id", None),
                     "target": self.readable_id,
                     "distance": dist,
-                    "limit": config.INTERACTION_DISTANCE,
+                    "limit": config.ACTIVE_CONFIG.interaction_distance,
                 },
             )
 

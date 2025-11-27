@@ -8,7 +8,7 @@ class PlanType(Enum):
     STEP = auto()           # structured step planning
     DECOMPOSE = auto()      # structured tree planning
 
-class TryType(Enum):
+class TrialType(Enum):
     ON = auto()             # no try step
     OFF = auto()            #
 
@@ -33,7 +33,7 @@ class ReflectType(Enum):
 @dataclass(frozen=True)
 class AgentConfiguration:
     plan: PlanType
-    trial: TryType
+    trial: TrialType
     action: ActionType
     observe: ObserveType
     reflect: ReflectType

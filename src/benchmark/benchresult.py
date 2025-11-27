@@ -24,30 +24,36 @@ class PerformanceResult:
     step_count: float = 0
 
     time_s: float = 0
+
+    img_time_s: float = 0
+    real_time_s: float = 0
+
+    plan_time_s: float = 0
+    observe_time_s: float = 0
+    trial_time_s: float = 0
+    action_time_s: float = 0
+    reflect_time_s: float = 0
     
-    def average(results: List["PerformanceResult"]) -> "PerformanceResult":
-        n = len(results)
-        if n == 0:
-            raise ValueError("No results to average.")
-
-        def mean(field: str) -> float:
-            return sum(getattr(r, field) for r in results) / n
-        
-        base = results[0]
-        return PerformanceResult(
-            run=base.run,
-            success_rate=(mean("success_rate")),
-            toolcall_count=mean("toolcall_count"),
-            actions_external=mean("actions_external"),
-            actions_internal=mean("actions_internal"),
-            softerror_count=mean("softerror_count"),
-            harderror_count=(mean("harderror_count")),
-            step_count=(mean("step_count")),
-            time_s=(mean("time_s")),
-        )
-    
-
-
+    #def average(results: List["PerformanceResult"]) -> "PerformanceResult":
+    #    n = len(results)
+    #    if n == 0:
+    #        raise ValueError("No results to average.")
+    #
+    #    def mean(field: str) -> float:
+    #        return sum(getattr(r, field) for r in results) / n
+    #    
+    #    base = results[0]
+    #    return PerformanceResult(
+    #        run=base.run,
+    #        success_rate=(mean("success_rate")),
+    #        toolcall_count=mean("toolcall_count"),
+    #        actions_external=mean("actions_external"),
+    #        actions_internal=mean("actions_internal"),
+    #        softerror_count=mean("softerror_count"),
+    #        harderror_count=(mean("harderror_count")),
+    #        step_count=(mean("step_count")),
+    #        time_s=(mean("time_s")),
+    #    )
 
     def toJSON(self) -> str:
         """
