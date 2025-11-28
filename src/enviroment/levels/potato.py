@@ -1,5 +1,11 @@
-from enviroment.blueprints.blueprints import Chest, IronChest, PaperBox, Shelf, Table, WoodenCabinet, WoodenChest, WoodenShelf, WoodenTable
-from enviroment.entity import AdvancedContainerEntity, AgentEntity, ConnectorEntity, ContainerEntity, Entity, connect_rooms_with_door
+from enviroment.blueprints.blueprints import (
+    PaperBox,
+    Table,
+    WoodenCabinet,
+    WoodenShelf,
+    WoodenTable,
+)
+from enviroment.entity import AdvancedContainerEntity, AgentEntity, ContainerEntity, Entity, connect_rooms_with_door
 from enviroment.levels.data import LevelSpec
 from enviroment.position import Position
 from enviroment.room import Room
@@ -12,7 +18,7 @@ detailed_instruction_str = "Find the potato in the other room, take it and place
 
 def build_easy(detailed_instruction: bool) -> LevelSpec:
     """
-    Easy Level, where the agent has to get the potato from the other room, and put it on the table. 
+    Easy Level, where the agent has to get the potato from the other room, and put it on the table.
     clear instruction.
     no object descriptions.
     """
@@ -25,23 +31,23 @@ def build_easy(detailed_instruction: bool) -> LevelSpec:
 
     key = Entity("key", Position(3.0, 1.0), is_collectible=True)
     key.enter(main)
-    
-    table = Table(pos=Position(0.0,3.0))
+
+    table = Table(pos=Position(0.0, 3.0))
     table.enter(main)
-    
-    connect_rooms_with_door(main, Position(4.0,4.0), chamber, Position(0.0,1.0))
+
+    connect_rooms_with_door(main, Position(4.0, 4.0), chamber, Position(0.0, 1.0))
 
     potato = Entity("potato", is_collectible=True)
     diamond = Entity("diamond", is_collectible=True)
 
-    chest = AdvancedContainerEntity(name="chest")
+    chest = ContainerEntity(name="chest")
     chest.add_child(potato)
 
-    shelf1 = ContainerEntity("shelf", pos=Position(0.0,0.0))
+    shelf1 = ContainerEntity("shelf", pos=Position(0.0, 0.0))
     shelf1.enter(chamber)
     shelf1.add_child(chest)
 
-    shelf2 = ContainerEntity("box",pos=Position(0.0,2.0))
+    shelf2 = ContainerEntity("box", pos=Position(0.0, 2.0))
     shelf2.enter(chamber)
     shelf2.add_child(diamond)
 
@@ -49,12 +55,12 @@ def build_easy(detailed_instruction: bool) -> LevelSpec:
         agent_entities=[(
             tron,
             detailed_instruction_str if detailed_instruction else vague_instruction_str
-            ),
-        ],
+        )],
         is_success=check_win_table_key,
     )
 
-def build_medium(detailed_instruction) -> LevelSpec:
+
+def build_medium(detailed_instruction: bool) -> LevelSpec:
     """
     Medium Level:
     The agent must find the correct container holding the potato. The container needs to be opened.
@@ -68,22 +74,20 @@ def build_medium(detailed_instruction) -> LevelSpec:
     tron.enter(main)
 
     # Main room:
-
     table = Table(pos=Position(0.0, 4.0))
     table.enter(main)
 
     diamond_main = Entity("diamond", Position(0.0, 0.0), is_collectible=True)
-    chest_fake = AdvancedContainerEntity(name="box", pos=Position(1.0,1.0),is_open=False, is_locked=False)
+    chest_fake = ContainerEntity(name="box", pos=Position(1.0, 1.0))
     chest_fake.enter(main)
     chest_fake.add_child(diamond_main)
 
     key = Entity("key", Position(3.0, 1.0), is_collectible=True)
     key.enter(main)
 
-    connect_rooms_with_door(main, Position(4.0,4.0), chamber, Position(0.0,1.0))
-    ##### Chamber:
+    connect_rooms_with_door(main, Position(4.0, 4.0), chamber, Position(0.0, 1.0))
 
-
+    # Chamber:
     potato = Entity("potato", is_collectible=True)
     diamond = Entity("diamond", is_collectible=True)
 
@@ -91,13 +95,13 @@ def build_medium(detailed_instruction) -> LevelSpec:
     shelf_fake.enter(chamber)
     shelf_fake.add_child(diamond)
 
-    chest = AdvancedContainerEntity("chest", is_locked=False, is_open=False)
+    chest = AdvancedContainerEntity("chest", is_locked=True, is_open=False)
+    chest.register_key(key)
     chest.add_child(potato)
 
     shelf_real = ContainerEntity("shelf", pos=Position(0.0, 2.0))
     shelf_real.enter(chamber)
     shelf_real.add_child(chest)
-
 
     return LevelSpec(
         agent_entities=[(
@@ -107,7 +111,8 @@ def build_medium(detailed_instruction) -> LevelSpec:
         is_success=check_win_table_key,
     )
 
-def build_hard(detailed_instruction) -> LevelSpec:
+
+def build_hard(detailed_instruction: bool) -> LevelSpec:
     """
     Hard Level:
     The potato is locked in a chest in the other room.
@@ -118,27 +123,24 @@ def build_hard(detailed_instruction) -> LevelSpec:
     """
     main = Room("main", 4, 4)
     chamber = Room.chamber()
-    
+
     tron = AgentEntity("tron", pos=Position(0.0, 0.0))
     tron.enter(main)
 
     # Main room:
-
     key = Entity("key", Position(3.0, 1.0), is_collectible=True)
     table = WoodenTable(pos=Position(0.0, 4.0))
     table.enter(main)
     table.add_child(key)
 
     diamond_main = Entity("diamond", Position(0.0, 0.0), is_collectible=True)
-    chest_fake = AdvancedContainerEntity(name="shelf", pos=Position(1.0,1.0),is_open=False, is_locked=False, description="An open shelf of rough pine planks, filled with dust and faint smell of resin.")
+    chest_fake = WoodenCabinet(pos=Position(1.0, 1.0))
     chest_fake.enter(main)
     chest_fake.add_child(diamond_main)
 
-    connect_rooms_with_door(main, Position(4.0,4.0), chamber, Position(0.0,1.0))
+    connect_rooms_with_door(main, Position(4.0, 4.0), chamber, Position(0.0, 1.0))
 
-    ##### Chamber:
-
-
+    # Chamber:
     potato = Entity("potato", is_collectible=True)
     diamond = Entity("diamond", is_collectible=True)
 
@@ -146,7 +148,7 @@ def build_hard(detailed_instruction) -> LevelSpec:
     shelf_fake.enter(chamber)
     shelf_fake.add_child(diamond)
 
-    chest = AdvancedContainerEntity("chest", is_locked=True, is_open=False, description="A compact chest of black iron, its hinges groaning faintly when moved.")
+    chest = AdvancedContainerEntity("chest", is_locked=True, is_open=False)
     chest.register_key(key)
     chest.add_child(potato)
 
@@ -154,12 +156,12 @@ def build_hard(detailed_instruction) -> LevelSpec:
     shelf_real.enter(chamber)
     shelf_real.add_child(chest)
 
-
-    instr = ""
-    if detailed_instruction:
-        instr = "Retrieve the potato locked in the chest in the other room. Use the key on the table to unlock it, take the potato, and place it on the table."
-    else:
-        instr = "Find the potato and place it on the table."
+    instr = (
+        "Retrieve the potato locked in the chest in the other room. Use the key on the table "
+        "to unlock it, take the potato, and place it on the table."
+        if detailed_instruction
+        else "Find the potato and place it on the table."
+    )
 
     return LevelSpec(
         agent_entities=[(
@@ -169,17 +171,18 @@ def build_hard(detailed_instruction) -> LevelSpec:
         is_success=check_win_table_key,
     )
 
+
 def check_win_table_key() -> bool:
     potato = None
-    table: ContainerEntity = None
+    table: ContainerEntity | None = None
 
     for ent in World.entities:
-        if(ent.name == "potato"):
+        if ent.name == "potato":
             potato = ent
-        if(ent.name == "table"):
+        if ent.name == "table":
             table = ent
-    
-    assert potato != None, "No potato"
-    assert table != None, "No table"
-    
+
+    assert potato is not None, "No potato"
+    assert table is not None, "No table"
+
     return potato in table.children
