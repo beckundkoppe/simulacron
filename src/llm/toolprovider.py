@@ -47,6 +47,9 @@ class LlamaToolprovider(ToolProvider):
     def __init__(self, name: str,  model: Model, memory: Optional[Memory] = None):
         super()._init(name, model, memory)
 
+        if isinstance(model.value.source, SourceRemote):
+            raise ValueError("Remote sources are not supported with LLAMACPPAGENT. Use LANGCHAIN backend instead.")
+
         LlamaCppProvider._init(self, name, model, memory)
 
         self.instance = LlamaCppAgent(LlamaCppPythonProvider(self.llm), debug_output=debug.VERBOSE_LLAMACPPAGENT)

@@ -20,7 +20,7 @@ def main():
 
     result1: PerformanceResult = dispatcher.run_single(Run(
         config,
-        main_model               = Model.Local.Ollama.GPT_OSS_20B,
+        main_model               = Model.Remote.MISTRAL_SMALL_24B,
         #main_model               = Model.Local.LlamaCpp.Qwen.VANILLA_8B,
         #imaginator               = Model.Remote.MISTRAL_SMALL_24B,
         level                    = Levels.DETAILED_INSTRUCT.ONION_EASY,

@@ -616,13 +616,26 @@ class Model(Enum):
                 ),
             )
 
+            MAGISTRAL_SMALL_24B = ModelSpec(
+                name="Magistral-Small-24B" ,
+                tag="mistral_small_24b",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LLAMACPPAGENT,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="http://127.0.0.1:11444/v1",
+                    model_id="magistral:24b-small-2506-q8_0",
+                ),
+            )
+
             # institut
             MISTRAL_SMALL_24B = ModelSpec(
                 name="Mistral-Small-24B" ,
                 tag="mistral_small_24b",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
-                agent_backend=AgentBackend.LANGCHAIN,
+                agent_backend=AgentBackend.LLAMACPPAGENT,
                 kind=ModelKind.HYBRID,
                 source=SourceRemote(
                     endpoint_url="http://127.0.0.1:11444/v1",
