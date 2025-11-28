@@ -12,5 +12,5 @@ class Run:
     level: Level
     reruns: int
     optimal_steps_multiplier: float
-    imaginator: Model = None
-    extra_model: Model = None
+    imaginator: Model | None = None
+    extra_model: Model | None = None
