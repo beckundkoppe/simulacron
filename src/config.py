@@ -2,15 +2,18 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 
+
 class PlanType(Enum):
     OFF = auto()            # no plan step
     FREE = auto()           # freeform planning
     STEP = auto()           # structured step planning
     DECOMPOSE = auto()      # structured tree planning
 
+
 class TrialType(Enum):
     ON = auto()             # no try step
     OFF = auto()            #
+
 
 class ActionType(Enum):
     DIRECT = auto()         # no extra step just realisation
@@ -18,17 +21,20 @@ class ActionType(Enum):
     IMG_RETRY = auto()      # += realisator has 3 retries
     IMG_QUESTION = auto()   # += img-real cycle has 3 retries
 
+
 class ObserveType(Enum):
     OFF = auto()            # off
     ON = auto()             # observation step
     MEMORIZE_ZERO = auto()  # += memorize important info
     MEMORIZE_FEW = auto()   # += examples what would be suficient
 
+
 class ReflectType(Enum):
     OFF = auto()            # off
     ON = auto()             # reflection step
     MEMORIZE_ZERO = auto()  # += memorize important info
     MEMORIZE_FEW = auto()   # += examples what would be suficient
+
 
 @dataclass(frozen=True)
 class AgentConfiguration:
@@ -38,13 +44,16 @@ class AgentConfiguration:
     observe: ObserveType
     reflect: ReflectType
 
+
 class PerceptionType(Enum):
     ALL = auto()
     DISTANCE = auto()
 
+
 class PositionType(Enum):
     ROOMLESS = auto()
     RELATIVE = auto()
+
 
 @dataclass(frozen=True)
 class Configuration:
@@ -57,11 +66,37 @@ class Configuration:
     perception_distance = 4.0
     interaction_distance = 1.5
 
-    depth_factor = 1 # higher value would make perception harder: less deep discouveries into children of containers
-    # factor=1 => 10 depth steps visible
-    # factor=2 => 5 depth steps visible
-    
-ACTIVE_CONFIG: Configuration = None
+    # Higher values make perception harder by reducing visible depth into
+    # container hierarchies. factor=1 => 10 depth steps visible, factor=2 =>
+    # 5 depth steps visible.
+    depth_factor = 1
+
+
+DEFAULT_AGENT_CONFIGURATION = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.DIRECT,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.OFF,
+)
+
+# A sensible default configuration so environment logic can run outside of the
+# benchmarking harness (e.g. unit tests) without having to bootstrap a full
+# benchmark run first.
+DEFAULT_CONFIGURATION = Configuration(
+    agent=DEFAULT_AGENT_CONFIGURATION,
+    perception=PerceptionType.ALL,
+    position=PositionType.RELATIVE,
+    temperature=0.0,
+    name="default",
+)
+
+# The active runtime configuration. Components should update this when running
+# with custom parameters (see benchmark.dispatcher), but a default is provided
+# to keep environment interactions functional in isolation.
+ACTIVE_CONFIG: Configuration = DEFAULT_CONFIGURATION
+
+# Flag indicating whether raw model output should be appended to logs.
 APPEND_RAW = None
 
 
