@@ -489,7 +489,7 @@ class ConnectorEntity(Entity):
 
             return (
                 f"Through {self.readable_id} you see into {destination_room.readable_id}: "
-                f"{observations or 'nothing of interest'}"
+                f"{str(observations) or 'nothing of interest'}"
             )
 
         if action.type in (ActionType.OPEN, ActionType.CLOSE):

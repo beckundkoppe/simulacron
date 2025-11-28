@@ -156,6 +156,28 @@ class TestEnvInteraction(unittest.TestCase):
         self.assertFalse(connector.is_locked)
         self.assertIn("Went through", connector.on_interact(self.agent, ActionTry(ActionType.USE)))
 
+    def test_look_through_requires_open_and_shows_destination_entities(self) -> None:
+        """LOOK_THROUGH needs an open door and returns observations from the far room."""
+
+        room_a = Room.default(name="room-a")
+        room_b = Room.default(name="room-b")
+        connector = connect_rooms_with_door(room_a, Position(0.5, 0.5), room_b, Position(0.5, 0.5))
+
+        agent = AgentEntity("agent", Position(0.5, 0.5))
+        agent.enter(room_a)
+
+        target = Entity("onion", Position(0.75, 0.5))
+        target.enter(room_b)
+
+        with self.assertRaises(SoftException):
+            connector.on_interact(agent, ActionTry(ActionType.LOOK_THROUGH))
+
+        connector.on_interact(agent, ActionTry(ActionType.OPEN))
+        description = connector.on_interact(agent, ActionTry(ActionType.LOOK_THROUGH))
+
+        self.assertIn("room-b", description)
+        self.assertIn("onion", description)
+
 
 if __name__ == "__main__":
     unittest.main()

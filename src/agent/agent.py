@@ -23,6 +23,7 @@ class Agent:
         self.plan = None
         self.main_memory = SuperMemory(goal=goal, path="main_memory.txt")
 
+        self.had_action = False
         self.triggered_replan = None
         self.finished = False
 
@@ -32,6 +33,17 @@ class Agent:
     def update(self, perception: str):
         current.AGENT = self
         current.ENTITY = self.entity
+
+        if not self.triggered_replan and self.had_action:
+            self._reflect(perception) # stellt fest, was das ergebniss der aktion ist. ziel im focused plannode schon erreicht? dann in planung, sonst Frage: sind wir noch auf einem guten weg? ja -> weiter; nein -> nächste idee
+            self.main_memory.save()
+            self.had_action = False
+
+        if self.triggered_replan:
+            self._plan() # should set self.plan with a full Plan
+            self.main_memory.set_plan(self.plan)
+            self.main_memory.save()
+            pretty(bullet("PLAN: " + self.plan.to_string(), color=Color.MAGENTA))
 
         if not self.triggered_replan:
             self._observe(perception) # returns aufbereitete observation mit den für die aufgabe relevanten inhalte
@@ -46,15 +58,7 @@ class Agent:
         if not self.triggered_replan:
             self._act(perception) # führt beste idee aus
             self.main_memory.save()
-
-        if not self.triggered_replan:
-            self._reflect(perception) # stellt fest, was das ergebniss der aktion ist. ziel im focused plannode schon erreicht? dann in planung, sonst Frage: sind wir noch auf einem guten weg? ja -> weiter; nein -> nächste idee
-            self.main_memory.save()
-
-        self._plan() # should set self.plan with a full Plan
-        self.main_memory.set_plan(self.plan)
-        self.main_memory.save()
-        pretty(bullet("PLAN: " + self.plan.to_string(), color=Color.MAGENTA))
+            self.had_action = True
 
         current.AGENT = None
         current.ENTITY = None
@@ -76,7 +80,7 @@ class Agent:
             raise Exception()
         
         observer = Provider.build("observer", self.imaginator_model, memory=self.main_memory)
-        observation = observer.call(f"Perception: {perception}\nWhat do you observe? What is relevant for your {active_plan}? (short)")
+        observation = observer.call(f"Perception: {perception}\nWhat do you observe? What is relevant for your {active_plan}? Only tell about new discouveries. (short)")
 
         if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.ON:
             self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
@@ -116,7 +120,12 @@ class Agent:
             if promising:
                 return
 
-        if self.plan.get_trial().mark_current_completed():
+        trials = self.plan.get_trial()
+        trials.mark_current_completed()
+        if not trials.current_step():
+            # Reset index so newly generated ideas start from the first new entry.
+            trials.ideas = []
+            trials.current_index = 0
             self._generate_trials()
             return
 
@@ -131,9 +140,9 @@ class Agent:
                 ),
                 realization_context=(
                     f"Plan:\n{self.plan.to_string(False)}\n"
-                    f"Tried approaches: {self.plan.focus.done}\n"
+                    f"Tried approaches: {self.plan.get_trial().completed}\n"
                     "Use add_trial(text) for each distinct idea to try. Keep them concise and actionable."
-                    "Respond only with add_step() tool calls, one per idea. Dont do any that have been tried. If there is no new call noop."
+                    "Respond only with add_trial() tool calls, one per idea. If there is no new idea call noop()."
                 ),
                 tools=ToolGroup.TRIAL,
                 name="trial",
@@ -143,12 +152,13 @@ class Agent:
                 imagination_task=(
                     f"Plan:\n{self.plan.to_string(False)}\n"
                     "What would be the straight forward approach to this?"
+                    "Tell the action to archive it."
                 ),
                 realization_context=(
                     f"Plan:\n{self.plan.to_string(False)}\n"
-                    f"Tried approaches: {self.plan.focus.done}\n"
+                    f"Tried approaches: {self.plan.get_trial().completed}\n"
                     "Use add_trial(text) for each distinct idea to try. Keep them concise and actionable."
-                    "Respond only with add_step() tool calls, one per idea. Dont do any that have been tried. If there is no new call noop."
+                    "Respond only with add_trial() tool calls, one per idea. If there is no new idea call noop()."
                 ),
                 tools=ToolGroup.TRIAL,
                 name="trial",
@@ -204,7 +214,7 @@ class Agent:
             return
 
         reflector = Provider.build("reflector", self.imaginator_model, memory=self.main_memory)
-        reflection = reflector.call(f"Result: {results}\nReflect what effect the performed Actions had. Only what you can say for sure. (short)")
+        reflection = reflector.call(f"Result: {results}. \nReflect what effect the performed Actions had. Only what you can say for sure. (short)")
 
         self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
 
@@ -357,7 +367,7 @@ class Agent:
             should_keep = self._ask_yes_no(
                 name = "active_leaf",
                 context=(
-                    f"Goal: {self.goal}\nPlan tree:\n{self._format_plan_tree()}"
+                    f"Goal: {self.goal}\nPlan tree:\n{self.plan.format_full()}"
                 ),
                 question="Is the current focus still the best leaf task to pursue next?",
             )

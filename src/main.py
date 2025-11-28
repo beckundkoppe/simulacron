@@ -20,9 +20,9 @@ def main():
 
     result1: PerformanceResult = dispatcher.run_single(Run(
         config,
-        main_model               = Model.Remote.MISTRAL_SMALL_24B,
-        #main_model               = Model.Local.LlamaCpp.Qwen.VANILLA_8B,
-        #imaginator               = Model.Remote.MISTRAL_SMALL_24B,
+        #main_model               = Model.Remote.MISTRAL_SMALL_24B,
+        #main_model               = Model.Local.Ollama.Qwen3.VANILLA_8B,
+        main_model               = Model.Remote.QWEN3,
         level                    = Levels.DETAILED_INSTRUCT.ONION_EASY,
         reruns                   = 30,
         optimal_steps_multiplier = 4.0,

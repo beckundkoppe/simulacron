@@ -57,7 +57,7 @@ def build_easy(detailed_instruction: bool) -> LevelSpec:
         is_success=check_salad_win,
     )
 
-def build_heard(detailed_instruction: bool) -> LevelSpec:
+def build_hard(detailed_instruction: bool) -> LevelSpec:
     main = Room("main", 5, 5)
 
     tron = AgentEntity("tron", pos=Position(0.0, 0.0))

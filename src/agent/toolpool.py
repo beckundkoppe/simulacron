@@ -102,7 +102,7 @@ def interact_with_object(object_id: str, operator: str) -> str:
 
     Args:
         object_id (str): the the id of the item A to be dropped.
-        operator (str): The action to perform. Allowed values: OPEN, CLOSE, GO_THROUGH, LOOK_THROUGH.
+        operator (str): The action to perform. Allowed values: OPEN, CLOSE, GO_THROUGH_DOOR, LOOK_THROUGH_DOOR.
     """
 
     entity: AgentEntity = current.ENTITY
@@ -112,9 +112,9 @@ def interact_with_object(object_id: str, operator: str) -> str:
             action = ActionTry(ActionType.OPEN)
         elif (operator.upper() == "CLOSE"):
             action = ActionTry(ActionType.CLOSE)
-        elif (operator.upper() == "GO_THROUGH"):
+        elif (operator.upper() == "GO_THROUGH_DOOR"):
             action = ActionTry(ActionType.USE)
-        elif (operator.upper() == "LOOK_THROUGH"):
+        elif (operator.upper() == "LOOK_THROUGH_DOOR"):
             action = ActionTry(ActionType.LOOK_THROUGH)
         else:
             raise HardException(f"unknown operator for this action: can not {operator} {object_id}")
