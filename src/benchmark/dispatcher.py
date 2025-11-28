@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from itertools import product
 import time
 from typing import List
@@ -23,6 +22,10 @@ class Dispatcher:
 
     def queue_run(self, run: Run):
         self.queued_runs.append(run)
+
+    @staticmethod
+    def _basename_for_run(run: Run, rerun_index: int) -> str:
+        return f"{run.level.value.getName()}_{run.main_model.value.name}_{run.configuration.name}_{rerun_index}"
 
 
     def append_raw(self, str: str) -> None:
@@ -67,55 +70,24 @@ class Dispatcher:
 
     def benchmark_single(self, run: Run):
         os.makedirs(self.folder, exist_ok=True)
-        
+
         config.ACTIVE_CONFIG = run.configuration
         config.APPEND_RAW = self.append_raw
         for i in range(run.reruns):
-            self.file = f"{run.level.value.getName()}_{run.main_model.value.name}_{run.configuration.name}_{i}"
-            filename = self.file + ".json"
-            path = os.path.join(self.folder, filename)
-
-            if os.path.exists(path):
-                continue
-
-            print(f"Starting: {filename}")
-            result = self._start_with_result(run)
-            #result = self._debug_result(run, i)
-            
-            self._write_file(path, result.toJSON())
-
-            print(result.toString())
+            # Reuse the rerun helper so claimed single runs and full runs share logic
+            self.benchmark_single_rerun(run, i)
 
 
 
     def benchmark_matrix(self,
                      configs: List[config.Configuration],
                      levels: List[Level],
-                     models: List[Model],
-                     reruns: int,
-                     phase: str | None = None # without .txt
-                     ):
+                    models: List[Model],
+                    reruns: int,
+                    phase: str | None = None # without .txt
+                    ):
         if phase:
-            write = ""
-            for mdl, conf, lvl in product(models, configs, levels):
-                run = Run(
-                    configuration=conf,
-                    main_model=mdl,
-                    level=lvl,
-                    reruns=reruns,
-                    optimal_steps_multiplier=1.0,   # falls nötig
-                    imaginator=None,                # falls du das setzen willst
-                    extra_model=None
-                )
-                for i in range(run.reruns):
-                    content = f"{run.level.value.getName()}_{run.main_model.value.name}_{run.configuration.name}_{i}.json"
-                    write += content + "\n"
-
-            os.makedirs(self.folder_phase, exist_ok=True)
-            path = os.path.join(self.folder_phase, phase+".txt")
-            self._write_file(path, write)
-
-
+            self.matrix_generate(configs, levels, models, reruns, phase)
 
         for mdl, conf, lvl in product(models, configs, levels):
             run = Run(
@@ -128,23 +100,57 @@ class Dispatcher:
                 extra_model=None
             )
             self.benchmark_single(run)
-        
-        
-        
+
+
+    def matrix_generate(self,
+                        configs: List[config.Configuration],
+                        levels: List[Level],
+                        models: List[Model],
+                        reruns: int,
+                        phase: str,
+                        ) -> list[str]:
+        todo_entries: list[str] = []
+
         for mdl, conf, lvl in product(models, configs, levels):
             run = Run(
                 configuration=conf,
                 main_model=mdl,
                 level=lvl,
                 reruns=reruns,
-                optimal_steps_multiplier=1.0,   # falls nötig
-                imaginator=None,                # falls du das setzen willst
-                extra_model=None
+                optimal_steps_multiplier=1.0,
+                imaginator=None,
+                extra_model=None,
             )
+            for i in range(run.reruns):
+                todo_entries.append(self._basename_for_run(run, i) + ".json")
 
-            self.benchmark_single(run)
+        os.makedirs(self.folder_phase, exist_ok=True)
+        path = os.path.join(self.folder_phase, phase + ".txt")
+        self._write_file(path, "\n".join(todo_entries) + ("\n" if todo_entries else ""))
+        return todo_entries
 
-        
+
+    def benchmark_single_rerun(self, run: Run, rerun_index: int):
+        os.makedirs(self.folder, exist_ok=True)
+
+        config.ACTIVE_CONFIG = run.configuration
+        config.APPEND_RAW = self.append_raw
+
+        self.file = self._basename_for_run(run, rerun_index)
+        filename = self.file + ".json"
+        path = os.path.join(self.folder, filename)
+
+        if os.path.exists(path):
+            return
+
+        print(f"Starting: {filename}")
+        result = self._start_with_result(run)
+
+        self._write_file(path, result.toJSON())
+
+        print(result.toString())
+
+
     def _debug_result(self, run,i):
         config.APPEND_RAW("Hello World")
         return PerformanceResult(run, 1, i, 8, 4, 1, 1, 7, 100)
