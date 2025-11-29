@@ -10,7 +10,7 @@ from benchmark.phase_settings import resolve_runner_config
 from benchmark.run_registry import (
     build_run,
     filter_by_models,
-    normalize_models,
+    normalize_model_teams,
     parse_filename,
 )
 
@@ -71,10 +71,11 @@ def claim_entry(repo_root: Path, entry: str) -> Path:
 
 def main():
     repo_root = Path.cwd()
-    runner_config = resolve_runner_config()
+    requested_phase = sys.argv[1] if len(sys.argv) > 1 else None
+    runner_config = resolve_runner_config(phase=requested_phase)
     phase = runner_config.phase
     phase_file = repo_root / "data/phase" / f"{phase}.txt"
-    allowed_models = normalize_models(None, runner_config.allowed_models or [])
+    allowed_model_teams = normalize_model_teams(None, runner_config.allowed_model_teams or [])
 
     dispatcher = Dispatcher()
 
@@ -85,9 +86,9 @@ def main():
             print("TODO list is empty. Done.")
             break
 
-        candidates = filter_by_models(todo_entries, allowed_models)
+        candidates = filter_by_models(todo_entries, allowed_model_teams)
         if not candidates:
-            print("No runnable entries for the allowed models. Sleeping.")
+            print("No runnable entries for the allowed model teams. Sleeping.")
             break
 
         claimed_entry = None
@@ -114,8 +115,8 @@ def main():
             print("No free entries after attempting claims.")
             break
 
-        level_name, model_name, config_name, rerun_index = parse_filename(claimed_entry)
-        run = build_run(level_name, model_name, config_name, rerun_index)
+        level_name, model_team, config_name, rerun_index = parse_filename(claimed_entry)
+        run = build_run(level_name, model_team, config_name, rerun_index)
         dispatcher.benchmark_single_rerun(run, rerun_index)
 
         todo_entries = [item for item in todo_entries if item != claimed_entry]

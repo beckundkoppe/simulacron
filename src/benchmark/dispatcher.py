@@ -10,7 +10,7 @@ import game
 import config
 import os
 
-from llm.model import Model
+from benchmark.model_team import ModelTeam
 
 class Dispatcher:
     def __init__(self):
@@ -25,7 +25,8 @@ class Dispatcher:
 
     @staticmethod
     def _basename_for_run(run: Run, rerun_index: int) -> str:
-        return f"{run.level.value.getName()}_{run.main_model.value.name}_{run.configuration.name}_{rerun_index}"
+        team_label = run.model_team.label()
+        return f"{run.level.value.getName()}_{team_label}_{run.configuration.name}_{rerun_index}"
 
 
     def append_raw(self, str: str) -> None:
@@ -82,22 +83,20 @@ class Dispatcher:
     def benchmark_matrix(self,
                      configs: List[config.Configuration],
                      levels: List[Level],
-                    models: List[Model],
+                    model_teams: List[ModelTeam],
                     reruns: int,
                     phase: str | None = None # without .txt
                     ):
         if phase:
-            self.matrix_generate(configs, levels, models, reruns, phase)
+            self.matrix_generate(configs, levels, model_teams, reruns, phase)
 
-        for mdl, conf, lvl in product(models, configs, levels):
+        for team, conf, lvl in product(model_teams, configs, levels):
             run = Run(
                 configuration=conf,
-                main_model=mdl,
+                model_team=team,
                 level=lvl,
                 reruns=reruns,
                 optimal_steps_multiplier=1.0,   # falls nötig
-                imaginator=None,                # falls du das setzen willst
-                extra_model=None
             )
             self.benchmark_single(run)
 
@@ -105,21 +104,19 @@ class Dispatcher:
     def matrix_generate(self,
                         configs: List[config.Configuration],
                         levels: List[Level],
-                        models: List[Model],
+                        model_teams: List[ModelTeam],
                         reruns: int,
                         phase: str,
                         ) -> list[str]:
         todo_entries: list[str] = []
 
-        for mdl, conf, lvl in product(models, configs, levels):
+        for team, conf, lvl in product(model_teams, configs, levels):
             run = Run(
                 configuration=conf,
-                main_model=mdl,
+                model_team=team,
                 level=lvl,
                 reruns=reruns,
                 optimal_steps_multiplier=1.0,
-                imaginator=None,
-                extra_model=None,
             )
             for i in range(run.reruns):
                 todo_entries.append(self._basename_for_run(run, i) + ".json")

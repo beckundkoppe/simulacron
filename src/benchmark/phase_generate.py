@@ -8,7 +8,7 @@ from benchmark.phase_settings import PHASES
 from benchmark.run_registry import (
     normalize_configurations,
     normalize_levels,
-    normalize_models,
+    normalize_model_teams,
 )
 
 
@@ -19,8 +19,8 @@ def main():
     def _generate(definition) -> tuple[str, Iterable[str]]:
         configs = normalize_configurations(None, definition.configs)
         levels = normalize_levels(None, definition.levels)
-        models = normalize_models(None, definition.models)
-        todos = dispatcher.matrix_generate(configs, levels, models, definition.reruns, definition.phase)
+        model_teams = normalize_model_teams(None, definition.model_teams)
+        todos = dispatcher.matrix_generate(configs, levels, model_teams, definition.reruns, definition.phase)
         return definition.phase, todos
 
     for phase, todos in (_generate(definition) for definition in PHASES):

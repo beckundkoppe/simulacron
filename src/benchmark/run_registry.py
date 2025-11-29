@@ -4,6 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 
+from benchmark.model_team import ModelTeam
 from benchmark.run import Run
 from config import (
     ActionType,
@@ -133,21 +134,70 @@ def _model_name(model: str | Enum | ModelSpec) -> str:
     return str(model)
 
 
-def normalize_models(models: Sequence[str | Enum | ModelSpec] | None, fallback: Sequence[Enum]) -> List[Enum]:
+def _resolve_model_enum(model_lookup: Dict[str, Enum], model: str | Enum | ModelSpec) -> Enum:
+    name = _model_name(model)
+    if name not in model_lookup:
+        raise KeyError(f"Unknown model '{name}'. Known: {', '.join(sorted(model_lookup))}")
+    return model_lookup[name]
+
+
+def _coerce_model_team(model_lookup: Dict[str, Enum], team: object) -> ModelTeam:
+    if isinstance(team, ModelTeam):
+        return team
+
+    if isinstance(team, Enum) and isinstance(team.value, ModelTeam):
+        return team.value
+
+    if isinstance(team, tuple) and len(team) in (2, 3):
+        real_input, imag_input, *rest = team
+        extra_input = rest[0] if rest else None
+        real_model = _resolve_model_enum(model_lookup, real_input)
+        imaginator_model = _resolve_model_enum(model_lookup, imag_input) if imag_input is not None else real_model
+        extra_model = _resolve_model_enum(model_lookup, extra_input) if extra_input is not None else None
+        return ModelTeam(realisator=real_model, imaginator=imaginator_model, extra=extra_model)
+
+    if isinstance(team, (str, Enum, ModelSpec)):
+        model_enum = _resolve_model_enum(model_lookup, team)
+        return ModelTeam(realisator=model_enum, imaginator=model_enum)
+
+    raise TypeError(f"Unsupported model team definition: {team!r}")
+
+
+def normalize_model_teams(
+    model_teams: Sequence[
+        str | Enum | ModelSpec | ModelTeam | tuple[object, object] | tuple[object, object, object]
+    ]
+    | None,
+    fallback: Sequence[ModelTeam | Enum | ModelSpec],
+) -> List[ModelTeam]:
     model_lookup = collect_models()
-    if models is None:
-        return list(fallback)
+    if model_teams is None:
+        return [_coerce_model_team(model_lookup, team) for team in fallback]
 
-    normalized: List[Enum] = []
-    for model in models:
-        name = _model_name(model)
-        if name not in model_lookup:
-            raise KeyError(f"Unknown model '{name}'. Known: {', '.join(sorted(model_lookup))}")
-        normalized.append(model_lookup[name])
-    return normalized
+    return [_coerce_model_team(model_lookup, team) for team in model_teams]
 
 
-def parse_filename(filename: str) -> Tuple[str, str, str, int]:
+def normalize_models(models: Sequence[str | Enum | ModelSpec] | None, fallback: Sequence[Enum]) -> List[Enum]:
+    """Backward-compatible wrapper to normalize single-model lists."""
+
+    teams = normalize_model_teams(models, [ModelTeam(realisator=model) for model in fallback])
+    return [team.realisator for team in teams]
+
+
+def parse_model_token(model_token: str, model_lookup: Dict[str, Enum] | None = None) -> ModelTeam:
+    lookup = model_lookup or collect_models()
+    if "+" in model_token:
+        real_name, imag_name = model_token.split("+", 1)
+        real_model = _resolve_model_enum(lookup, real_name)
+        imaginator_model = _resolve_model_enum(lookup, imag_name)
+    else:
+        real_model = _resolve_model_enum(lookup, model_token)
+        imaginator_model = real_model
+
+    return ModelTeam(realisator=real_model, imaginator=imaginator_model)
+
+
+def parse_filename(filename: str) -> Tuple[str, ModelTeam, str, int]:
     base = Path(filename).name
     if base.endswith(".json"):
         base = base[:-5]
@@ -156,43 +206,61 @@ def parse_filename(filename: str) -> Tuple[str, str, str, int]:
     try:
         base, rerun_str = base.rsplit("_", 1)
         base, config_name = base.rsplit("_", 1)
-        level_name, model_name = base.rsplit("_", 1)
+        level_name, model_token = base.rsplit("_", 1)
     except ValueError as exc:
         raise ValueError(f"Invalid run filename: {filename}") from exc
 
-    return level_name, model_name, config_name, int(rerun_str)
+    model_team = parse_model_token(model_token)
+
+    return level_name, model_team, config_name, int(rerun_str)
 
 
-def build_run(level_name: str, model_name: str, config_name: str, rerun_index: int) -> Run:
+def build_run(level_name: str, model_team: str | ModelTeam, config_name: str, rerun_index: int) -> Run:
     level_lookup = collect_levels()
-    model_lookup = collect_models()
     config_lookup = collect_configurations()
+    model_lookup = collect_models()
 
     if level_name not in level_lookup:
         raise KeyError(f"Unknown level '{level_name}' in filename")
-    if model_name not in model_lookup:
-        raise KeyError(f"Unknown model '{model_name}' in filename")
     if config_name not in config_lookup:
         raise KeyError(f"Unknown configuration '{config_name}' in filename")
 
+    if isinstance(model_team, ModelTeam):
+        resolved_team = ModelTeam(
+            realisator=_resolve_model_enum(model_lookup, model_team.realisator),
+            imaginator=_resolve_model_enum(model_lookup, model_team.imaginator or model_team.realisator),
+            extra=_resolve_model_enum(model_lookup, model_team.extra) if model_team.extra is not None else None,
+        )
+    else:
+        resolved_team = parse_model_token(str(model_team), model_lookup)
+
     return Run(
         configuration=config_lookup[config_name],
-        main_model=model_lookup[model_name],
+        model_team=resolved_team,
         level=level_lookup[level_name],
         reruns=rerun_index + 1,
         optimal_steps_multiplier=1.0,
-        imaginator=None,
-        extra_model=None,
     )
 
 
-def filter_by_models(entries: List[str], allowed_models: Sequence[str | Enum | ModelSpec] | None) -> List[str]:
+def filter_by_models(entries: List[str], allowed_models: Sequence[str | Enum | ModelSpec | ModelTeam] | None) -> List[str]:
     if not allowed_models:
         return entries
-    allowed_set = {_model_name(model) for model in allowed_models}
-    filtered: List[str] = []
+
+    normalized = normalize_model_teams(allowed_models, [])
+    # Preserve priority order from the allowlist
+    label_order = [team.label() for team in normalized]
+    label_set = set(label_order)
+
+    grouped: Dict[str, List[str]] = {label: [] for label in label_order}
     for entry in entries:
-        _, model_name, _, _ = parse_filename(entry)
-        if model_name in allowed_set:
-            filtered.append(entry)
+        _, model_team, _, _ = parse_filename(entry)
+        label = model_team.label()
+        if label in label_set:
+            grouped[label].append(entry)
+
+    filtered: List[str] = []
+    for label in label_order:
+        filtered.extend(grouped.get(label, []))
+
     return filtered

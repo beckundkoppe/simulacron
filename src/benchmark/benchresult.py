@@ -132,10 +132,7 @@ class PerformanceResult:
                 return f"{mins}m {secs}s"
             return f"{seconds:.2f}s"
 
-        model_name = self.run.main_model.value.name
-
-        if self.run.imaginator is not None:
-            model_name += " +" + self.run.imaginator.value.name
+        model_name = self.run.model_team.label()
 
         lines = [
             f"{BLUE}Model:{RESET} {model_name}",
