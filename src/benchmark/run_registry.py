@@ -282,7 +282,7 @@ def build_run(level_name: str, model_team: ModelTeam | Enum, config_name: str, r
         model_team=resolved_team,
         level=level_lookup[level_name],
         reruns=rerun_index + 1,
-        optimal_steps_multiplier=1.0,
+        optimal_steps_multiplier=3.0,
     )
 
 

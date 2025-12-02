@@ -1,7 +1,7 @@
 from benchmark.benchresult import PerformanceResult
 from benchmark.dispatcher import Dispatcher, Run
 from benchmark.model_team import ModelTeam
-from config import AgentConfiguration, Configuration, ActionType, ObserveType, PerceptionType, PlanType, PositionType, ReflectType, TrialType
+from config import AgentConfiguration, Configuration, ActionType, MemoryType, ObserveType, PerceptionType, PlanType, PositionType, ReflectType, TrialType
 from enviroment.levels.level import Levels
 from llm.model import Model
 
@@ -15,6 +15,7 @@ def main():
         trial      = TrialType.OFF,
         action     = ActionType.IMG_RETRY,
         reflect    = ReflectType.OFF,
+        memory_type= MemoryType.SUPER,
     )
 
     config = Configuration(agent_config, PerceptionType.ALL, PositionType.RELATIVE, temperature=0.0, name="test", seed=-1)

@@ -60,7 +60,7 @@ def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginat
             agents.append(agent)
 
 
-        for i in range(int(level.value.optimal_steps * optimal_steps_multilier)):
+        for i in range(int(level.value.optimal_steps * optimal_steps_multilier) + 1):
             console.pretty(console.bullet(f"Observation: {i}", color=console.Color.BLUE))
 
             for agent in agents:

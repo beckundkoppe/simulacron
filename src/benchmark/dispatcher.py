@@ -1,20 +1,22 @@
-from itertools import product
+import contextlib
 import json
-from datetime import datetime
+import os
+import sys
 import time
 import traceback
-from typing import List
+from datetime import datetime
+from itertools import product
 from pathlib import Path
-from benchmark.benchresult import PerformanceResult
-from benchmark.run import Run
+from typing import List
+
+import config
 import current
+import game
+from benchmark.benchresult import PerformanceResult
+from benchmark.model_team import ModelTeam
+from benchmark.run import Run
 from enviroment.levels.level import Level
 from enviroment.world import World
-import game
-import config
-import os
-
-from benchmark.model_team import ModelTeam
 
 class Dispatcher:
     def __init__(self):
@@ -23,7 +25,6 @@ class Dispatcher:
         results_root = Path(os.getenv("RESULTS_ROOT", "results"))
         self.folder = str(results_root / "runs/")
         self.folder_phase = str(results_root / "phase/")
-        self.file = None
 
     def queue_run(self, run: Run):
         self.queued_runs.append(run)
@@ -33,26 +34,20 @@ class Dispatcher:
         team_token = run.model_team.token()
         return f"{run.level.value.getName()}_{team_token}_{run.configuration.name}_{rerun_index}"
 
-
-    def append_raw(self, str: str) -> None:
-        folder_raw = os.path.join(self.folder, "raw/")
-        os.makedirs(folder_raw, exist_ok=True)
-        filename_raw = os.path.join(folder_raw, self.file+"_raw.txt")
-        with open(filename_raw, "a") as f: # -> nur am ende dranhängen
-            f.write(str)
-
-    def _prepare_raw_logging(self, run: Run, rerun_index: int) -> None:
-        """
-        Initialise the raw log file for the current run and enable append callback.
-        """
-        config.APPEND_RAW = self.append_raw
-        self.file = self._basename_for_run(run, rerun_index)
-
-        raw_folder = Path(self.folder) / "raw"
+    @staticmethod
+    def _raw_log_path(base_folder: str, basename: str) -> Path:
+        raw_folder = Path(base_folder) / "raw"
         raw_folder.mkdir(parents=True, exist_ok=True)
+        return raw_folder / f"{basename}_raw.txt"
 
-        raw_path = raw_folder / f"{self.file}_raw.txt"
-        raw_path.write_text("")
+    @contextlib.contextmanager
+    def _redirect_output_to_raw(self, run: Run, rerun_index: int):
+        basename = self._basename_for_run(run, rerun_index)
+        raw_path = self._raw_log_path(self.folder, basename)
+        with raw_path.open("w") as raw_file:
+            tee = _TeeStream(sys.stdout, raw_file)
+            with contextlib.redirect_stdout(tee), contextlib.redirect_stderr(tee):
+                yield raw_path
 
     def _log_run_failure(self, run: Run, rerun_index: int, error: Exception) -> None:
         """Persist failure details into the run's result file."""
@@ -83,25 +78,21 @@ class Dispatcher:
 
         config.ACTIVE_CONFIG = run.configuration
         for i in range(run.reruns):
-            print(f"Rerun: {i+1}")
+            with self._redirect_output_to_raw(run, i):
+                print(f"Rerun: {i+1}")
 
-            self._prepare_raw_logging(run, i)
-            try:
-                result = self._start_with_result(run)
-            except Exception as e:
-                self._log_run_failure(run, i, e)
-                config.APPEND_RAW = None
-                raise
-            finally:
-                config.APPEND_RAW = None
-            print(result.softerror_count)
-            print(result.harderror_count)
+                try:
+                    result = self._start_with_result(run)
+                except Exception as e:
+                    self._log_run_failure(run, i, e)
+                    raise
+                print(result.softerror_count)
+                print(result.harderror_count)
             
             results.append(result)
             current.RESULT = None
             print(PerformanceResult.average(results).toString())
         
-        config.APPEND_RAW = None
         return PerformanceResult.average(results)
 
     def _start_with_result(self, run: Run) -> PerformanceResult:
@@ -145,7 +136,7 @@ class Dispatcher:
                 model_team=team,
                 level=lvl,
                 reruns=reruns,
-                optimal_steps_multiplier=1.0,   # falls nötig
+                optimal_steps_multiplier=2.0,   # falls nötig
             )
             self.benchmark_single(run)
 
@@ -165,7 +156,7 @@ class Dispatcher:
                 model_team=team,
                 level=lvl,
                 reruns=reruns,
-                optimal_steps_multiplier=1.0,
+                optimal_steps_multiplier=2.0,
             )
             for i in range(run.reruns):
                 todo_entries.append(self._basename_for_run(run, i) + ".json")
@@ -188,23 +179,19 @@ class Dispatcher:
         if os.path.exists(path):
             return
 
-        self._prepare_raw_logging(run, rerun_index)
-
-        print(f"Starting: {filename}")
-        try:
-            result = self._start_with_result(run)
-            self._write_file(path, result.toJSON())
-            print(result.toString())
-        except Exception as e:
-            self._log_run_failure(run, rerun_index, e)
-            raise
-        finally:
-            config.APPEND_RAW = None
+        with self._redirect_output_to_raw(run, rerun_index):
+            print(f"Starting: {filename}")
+            try:
+                result = self._start_with_result(run)
+                self._write_file(path, result.toJSON())
+                print(result.toString())
+            except Exception as e:
+                self._log_run_failure(run, rerun_index, e)
+                raise
 
 
-    def _debug_result(self, run,i):
-        config.APPEND_RAW("Hello World")
-        return PerformanceResult(run, 1, i, 8, 4, 1, 1, 7, 100)
+    # def _debug_result(self, run,i):
+    #     return PerformanceResult(run, 1, i, 8, 4, 1, 1, 7, 100)
 
 
     def run_all(self):
@@ -223,3 +210,21 @@ class Dispatcher:
     def _write_file(self, path, content):
         with open(path, "w") as f:
             f.write(content)
+
+
+class _TeeStream:
+    """
+    Minimal stream duplicator so output still appears in the console while also
+    being captured into the raw log file.
+    """
+
+    def __init__(self, *targets):
+        self.targets = targets
+
+    def write(self, data):
+        for target in self.targets:
+            target.write(data)
+
+    def flush(self):
+        for target in self.targets:
+            target.flush()

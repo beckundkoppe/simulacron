@@ -107,15 +107,6 @@ class LlamaToolprovider(ToolProvider):
             print_output=debug.VERBOSE_LLAMACPPAGENT,
         )
 
-        self._log_raw_event(
-            "response",
-            {
-                "reply": reply,
-                "clean_reply": Provider._clean_reply(reply),
-            },
-            attempt=1,
-        )
-
         clean_reply = Provider._clean_reply(reply)
         self._invoke_post(reply=clean_reply, override=override, append=append)
 
@@ -255,15 +246,6 @@ class LangchainToolprovider(ToolProvider):
             return ""
 
         raw_reply = result.content
-        self._log_raw_event(
-            "response",
-            {
-                "reply": raw_reply,
-                "clean_reply": Provider._clean_reply(raw_reply),
-                "tool_calls": getattr(result, "tool_calls", None),
-            },
-            attempt=1,
-        )
 
         if debug.VERBOSE_LANGCHAIN_TOOL: console.json_dump(result)
 
