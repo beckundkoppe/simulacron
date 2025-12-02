@@ -231,4 +231,4 @@ class Memory(ABC):
         self._history.append((type, role, message))
     
     def set_plan(self, plan):
-        self.append_message(Role.SYSTEM, plan, Type.PLAN)
+        self.append_message(Role.SYSTEM, str(plan), Type.PLAN)
