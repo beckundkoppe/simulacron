@@ -44,26 +44,45 @@ IMAGINATOR_AGENT = AgentConfiguration(
 )
 
 CONFIGURATIONS: Dict[str, Configuration] = {
-    "baseline-naive": Configuration(NAIVE_AGENT, MemoryType.SIMPLE, PerceptionType.ALL, PositionType.RELATIVE, 0.0),
-    "baseline-img": Configuration(IMAGINATOR_AGENT, MemoryType.SIMPLE, PerceptionType.ALL, PositionType.RELATIVE, 0.0),
+    "baseline-naive": Configuration(
+        agents=NAIVE_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="baseline-naive",
+    ),
+    "baseline-img": Configuration(
+        agents=IMAGINATOR_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="baseline-img",
+    ),
 }
 
 
-def _walk_enum(obj: object) -> Iterable[Enum]:
+def _walk_enum(obj: object, _seen: set[type] | None = None) -> Iterable[Enum]:
     """
-    Recursively yield enum members and nested enums, even when the parent enum itself has no direct members.
+    Recursively yield enum members and nested enums.
+
+    Some enums in this codebase contain nested enum classes even when they
+    already declare members. We always traverse both the members and any nested
+    enums to ensure nothing is skipped.
     """
-    # If we receive an Enum subclass (e.g., Levels), iterate over its members if any.
+    if _seen is None:
+        _seen = set()
+
+    # If we receive an Enum subclass (e.g., Levels or Model.Local.LlamaCpp), walk
+    # its members and then any nested Enum classes declared on it.
     if isinstance(obj, type) and issubclass(obj, Enum):
-        found_member = False
+        if obj in _seen:
+            return
+        _seen.add(obj)
         for member in obj:
-            found_member = True
-            yield from _walk_enum(member)
-        # If no direct members, also inspect nested Enum classes defined on the type.
-        if not found_member:
-            for value in obj.__dict__.values():
-                if isinstance(value, type) and issubclass(value, Enum):
-                    yield from _walk_enum(value)
+            yield from _walk_enum(member, _seen)
+        for value in obj.__dict__.values():
+            if isinstance(value, type) and issubclass(value, Enum):
+                yield from _walk_enum(value, _seen)
         return
 
     # If we receive an Enum member, inspect its value.
@@ -71,7 +90,7 @@ def _walk_enum(obj: object) -> Iterable[Enum]:
         yield obj
         value = obj.value
         if isinstance(value, type) and issubclass(value, Enum):
-            yield from _walk_enum(value)
+            yield from _walk_enum(value, _seen)
         return
 
 
@@ -97,10 +116,39 @@ def collect_configurations() -> Dict[str, Configuration]:
     return CONFIGURATIONS
 
 
+def _resolve_configuration(config_token: str) -> Configuration:
+    """
+    Map a configuration token from the filename to a Configuration object.
+
+    Supports both named configurations (e.g., 'baseline-naive') and legacy
+    filenames that encode a raw temperature value (e.g., '0.0'). Temperature
+    tokens are applied on top of the first known configuration to preserve
+    other settings while matching the filename token for output paths.
+    """
+    lookup = collect_configurations()
+    if config_token in lookup:
+        return lookup[config_token]
+
+    try:
+        temperature = float(config_token)
+    except ValueError as exc:
+        raise KeyError(f"Unknown configuration '{config_token}' in filename") from exc
+
+    base_config = next(iter(lookup.values()))
+    return replace(base_config, temperature=temperature, name=config_token)
+
+
 def _resolve_model_enum(model_lookup: Dict[str, Enum], model_name: str) -> Enum:
     if model_name not in model_lookup:
         raise KeyError(f"Unknown model '{model_name}'. Known: {', '.join(sorted(model_lookup))}")
     return model_lookup[model_name]
+
+def _collect_model_teams() -> List[ModelTeam]:
+    teams: List[ModelTeam] = []
+    for member in _walk_enum(ModelTeams):
+        if isinstance(member.value, ModelTeam):
+            teams.append(member.value)
+    return teams
 
 
 def normalize_configurations(
@@ -184,13 +232,14 @@ def parse_model_token(model_token: str, model_lookup: Dict[str, Enum]) -> ModelT
 
 
 def _parse_model_team_token(team_token: str) -> ModelTeam:
-    tag_lookup = {team.value.tag: team.value for team in ModelTeams if team.value.tag}
-    if team_token in tag_lookup:
-        return tag_lookup[team_token]
+    lookup: Dict[str, ModelTeam] = {}
+    for team in _collect_model_teams():
+        for key in (team.tag, team.label(), team.token(), team.realisator.value.name):
+            if key:
+                lookup.setdefault(key, team)
 
-    label_lookup = {team.value.label(): team.value for team in ModelTeams}
-    if team_token in label_lookup:
-        return label_lookup[team_token]
+    if team_token in lookup:
+        return lookup[team_token]
 
     # Fallback: allow legacy filenames that encode raw model names
     model_lookup = collect_models()
@@ -217,12 +266,9 @@ def parse_filename(filename: str) -> Tuple[str, ModelTeam, str, int]:
 
 def build_run(level_name: str, model_team: ModelTeam | Enum, config_name: str, rerun_index: int) -> Run:
     level_lookup = collect_levels()
-    config_lookup = collect_configurations()
 
     if level_name not in level_lookup:
         raise KeyError(f"Unknown level '{level_name}' in filename")
-    if config_name not in config_lookup:
-        raise KeyError(f"Unknown configuration '{config_name}' in filename")
 
     if isinstance(model_team, ModelTeam):
         resolved_team = model_team
@@ -232,7 +278,7 @@ def build_run(level_name: str, model_team: ModelTeam | Enum, config_name: str, r
         raise TypeError("model_team must be a ModelTeam or ModelTeams enum")
 
     return Run(
-        configuration=config_lookup[config_name],
+        configuration=_resolve_configuration(config_name),
         model_team=resolved_team,
         level=level_lookup[level_name],
         reruns=rerun_index + 1,

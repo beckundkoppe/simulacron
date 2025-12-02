@@ -224,3 +224,11 @@ class Memory(ABC):
         summary = summarizer.call("Summarize only the valuable parts in few short sentences. (no 'summary:' or similar).")
         
         return (Type.SUMMARY, Role.USER, summary)
+    
+    def append_message(self, role: Role, message: str, type: Optional[Type] = None) -> None:
+        if not isinstance(message, str):
+            raise TypeError(f"Memory expects plain text messages, got {type(message).__name__}")
+        self._history.append((type, role, message))
+    
+    def set_plan(self, plan):
+        self.append_message(Role.SYSTEM, plan, Type.PLAN)

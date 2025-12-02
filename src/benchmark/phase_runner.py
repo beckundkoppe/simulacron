@@ -21,6 +21,25 @@ def _is_git_repo(repo: Path) -> bool:
     return (repo / ".git").exists()
 
 
+def _current_branch(repo: Path) -> str | None:
+    """
+    Return the current branch name or None if detached/unknown.
+    """
+    if not _is_git_repo(repo):
+        return None
+
+    result = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+
+    branch = result.stdout.strip()
+    return branch if branch and branch != "HEAD" else None
+
+
 def git(repo: Path, *args: str):
     if not _is_git_repo(repo):
         return
@@ -49,13 +68,17 @@ def git_commit_if_needed(repo: Path, paths: List[Path], message: str):
 
 
 def git_pull_rebase(repo: Path):
-    if not _is_git_repo(repo):
+    branch = _current_branch(repo)
+    if not branch:
+        print(f"Skipping git pull; no branch checked out in {repo}")
         return
     git(repo, "pull", "--rebase", "--autostash")
 
 
 def git_push(repo: Path):
-    if not _is_git_repo(repo):
+    branch = _current_branch(repo)
+    if not branch:
+        print(f"Skipping git push; no branch checked out in {repo}")
         return
     git(repo, "push")
 
