@@ -5,7 +5,7 @@ from enviroment.position import Position
 from enviroment.room import Room
 from enviroment.world import World
 
-detailed_instruction_str = "Place the carrot on the table. Only one step is necessary."
+detailed_instruction_str = "Place the carrot from your inventory on the table. Only one step is necessary."
 vague_instruction_str = "Place the carrot on the table."
 
 def build_easy(detailed_instruction: bool) -> LevelSpec:
