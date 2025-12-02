@@ -41,36 +41,42 @@ class ResolvedRunnerConfig:
 # Curated phase definitions. Add or adjust entries here to generate multiple TODO lists.
 PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
-        phase="phase1",
+        phase="baseline",
         configs=[
-            CONFIGURATIONS["baseline"]
+            CONFIGURATIONS["baseline-naive"],
+            CONFIGURATIONS["baseline-img"],
             ],
         levels=[
-            Levels.DETAILED_INSTRUCT.CARROT_EASY
+            Levels.DETAILED_INSTRUCT.CARROT_EASY,
+            Levels.DETAILED_INSTRUCT.CARROT_HARD,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+
+            Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            Levels.VAGUE_INSTRUCT.CARROT_HARD,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
             ],
-        model_teams=[ModelTeams.HYBRID_MISTRAL_SMALL],
-        reruns=5,
-    ),
-    PhaseDefinition(
-        phase="phase2",
-        configs=[CONFIGURATIONS["baseline"]],
-        levels=[Levels.DETAILED_INSTRUCT.CUCUMBER_EASY],
-        model_teams=[ModelTeams.LOCAL_QWEN_CODER30B],
-        reruns=1,
-    ),
-    PhaseDefinition(
-        phase="phase3",
-        configs=[CONFIGURATIONS["baseline"]],
-        levels=[Levels.DETAILED_INSTRUCT.ONION_EASY],
-        model_teams=[ModelTeams.LOCAL_QWEN_CODER30B],
-        reruns=1,
-    ),
-    PhaseDefinition(
-        phase="phase4",
-        configs=[CONFIGURATIONS["baseline"]],
-        levels=[Levels.DETAILED_INSTRUCT.POTATO_EASY],
-        model_teams=[ModelTeams.HYBRID_MISTRAL_SMALL],
-        reruns=1,
+        model_teams=[
+            ModelTeams.Hybrid.MISTRAL_SMALL,
+            ModelTeams.Hybrid.MAGISTRAL_SMALL,
+
+            ModelTeams.Remote.NEMOTRON_LLAMA,
+            ModelTeams.Remote.GPT_OSS,
+            ModelTeams.Remote.DEEPSEEK_LLAMA,
+            ModelTeams.Remote.QWEN,
+
+            ModelTeams.Local.GPT_OSS,
+            ModelTeams.Local.DOLPHIN_X_QWEN,
+            ModelTeams.Local.QWEN_8B,
+
+            ModelTeams.Local.GROQ_LLAMA8B,
+            ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.QWEN_30B,
+            ModelTeams.Local.QWEN_CODER30B,
+            ModelTeams.Local.NEMOTRON_NEMOTRON14B_XQWEN8B
+        ],
+        reruns=10,
     ),
 )
 
@@ -79,17 +85,37 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
     # Laptop profile: keep both imaginator and realisator local/small.
     "r2d2xxx": RunnerConfig(
         allowed_model_teams=[
-            ModelTeams.HYBRID_MISTRAL_SMALL,
+            ModelTeams.Hybrid.MISTRAL_SMALL,
+            ModelTeams.Hybrid.MAGISTRAL_SMALL,
+            ModelTeams.Remote.NEMOTRON_LLAMA,
+
+            ModelTeams.Remote.GPT_OSS,
+            ModelTeams.Remote.DEEPSEEK_LLAMA,
+            ModelTeams.Remote.QWEN,
         ],
-        allowed_phases=["phase1", "phase2", "phase3"],
+        allowed_phases=["baseline"],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
         allowed_model_teams=[
-            ModelTeams.HYBRID_MISTRAL_SMALL,
+            ModelTeams.Local.GPT_OSS,
+            ModelTeams.Local.DOLPHIN_X_QWEN,
+            ModelTeams.Local.QWEN_8B,
+
+            ModelTeams.Local.GROQ_LLAMA8B,
+            ModelTeams.Local.NEMOTRON_QWEN8B,
         ],
-        allowed_phases=["phase1", "phase4"],
+        allowed_phases=["baseline"],
     ),
+    "zedim-pc": RunnerConfig(
+        allowed_model_teams=[
+            ModelTeams.Local.GPT_OSS,
+            ModelTeams.Local.QWEN_30B,
+            ModelTeams.Local.QWEN_CODER30B,
+            ModelTeams.Local.NEMOTRON_NEMOTRON14B_XQWEN8B
+        ],
+        allowed_phases=["baseline"],
+    )
 }
 
 # Convenience defaults so other modules can import a single definition.

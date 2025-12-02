@@ -603,15 +603,15 @@ class Model(Enum):
     # ----------------------------------------------------------
     class Remote(Enum):
             # institut
-            GPT_OSS_20B = ModelSpec(
-                name="GPT-OSS-20B",
-                tag="gpt_oss_20b",
+            GPT_OSS_120B = ModelSpec(
+                name="GPT-OSS-120B",
+                tag="gpt_oss_120b",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
                 agent_backend=AgentBackend.LANGCHAIN,
                 kind=ModelKind.HYBRID,
                 source=SourceRemote(
-                    endpoint_url="http://127.0.0.1:11434/v1",
+                    endpoint_url="http://127.0.0.1:11444/v1",
                     model_id="gpt-oss:120b",
                 ),
             )
@@ -656,7 +656,7 @@ class Model(Enum):
                 ),
             )
 
-            DEEPSEEK_R1_70B = ModelSpec(
+            DEEPSEEK_R1_LLAMA_DISTILL_70B = ModelSpec(
                 name="Deepseek-R1-70B" ,
                 tag="deepseek_r1_70b",
                 location=Location.REMOTE,

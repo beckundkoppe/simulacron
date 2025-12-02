@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from typing import List
 from enviroment.action import ActionTry, ActionType
-from agent.helper import trycatch, check_id
+from agent.helper import trycatch, check_id, log_tool_usage
 import current
 from enviroment.entity import AgentEntity
 from enviroment.exception import HardException
@@ -39,7 +39,7 @@ def move_to_position(x: str, y: str) -> str:
     
         return entity.move_to_position(position)
 
-    trycatch(_perform_move, f"moved from ({old_x},{old_y}) to ({x},{y})")
+    trycatch(_perform_move, f"moved from ({old_x},{old_y}) to ({x},{y})", external=True)
 
     return ""
 
@@ -55,7 +55,7 @@ def move_to_object(object_id: str) -> str:
     old_x = entity.pos.x
     old_y = entity.pos.y
 
-    trycatch(lambda: entity.move_to_object(check_id(object_id)), f"moved from ({old_x},{old_y}) to {object_id}")
+    trycatch(lambda: entity.move_to_object(check_id(object_id)), f"moved from ({old_x},{old_y}) to {object_id}", external=True)
 
     return ""
         
@@ -71,10 +71,10 @@ def take_from(what_id: str, from_id: str) -> str:
     entity: AgentEntity = current.ENTITY
     
     if(from_id.upper() == "FLOOR"):
-        trycatch(lambda: entity.take(check_id(what_id)), f"collected {what_id}")
+        trycatch(lambda: entity.take(check_id(what_id)), f"collected {what_id}", external=True)
 
     else:
-        trycatch(lambda: entity.take_from(check_id(what_id), check_id(from_id)), f"collected {what_id} from {from_id}")
+        trycatch(lambda: entity.take_from(check_id(what_id), check_id(from_id)), f"collected {what_id} from {from_id}", external=True)
 
     return ""
 
@@ -90,9 +90,9 @@ def drop_to(what_id: str, to_id: str) -> str:
     entity: AgentEntity = current.ENTITY
 
     if(to_id.upper() == "FLOOR"):
-        trycatch(lambda: entity.drop(check_id(what_id)), f"dropped {what_id}")
+        trycatch(lambda: entity.drop(check_id(what_id)), f"dropped {what_id}", external=True)
     else:
-        trycatch(lambda: entity.drop_into(check_id(what_id), check_id(to_id)), f"dropped {what_id} into {to_id}")
+        trycatch(lambda: entity.drop_into(check_id(what_id), check_id(to_id)), f"dropped {what_id} into {to_id}", external=True)
 
     return ""
 
@@ -121,7 +121,7 @@ def interact_with_object(object_id: str, operator: str) -> str:
         
         return check_id(object_id).on_interact(entity, action)
     
-    trycatch(helper, f"succeded with {operator} {object_id}")
+    trycatch(helper, f"succeded with {operator} {object_id}", external=True)
 
     return ""
 
@@ -147,7 +147,7 @@ def interact_with_object_using_item(object_id: str, using_id: str, operator: str
 
         return check_id(object_id).on_interact(entity, action)
 
-    trycatch(helper, f"succeded with {operator} {object_id}")
+    trycatch(helper, f"succeded with {operator} {object_id}", external=True)
 
     return ""
 
@@ -160,6 +160,8 @@ def add_step(step: str) -> str:
     """
 
     agent = current.AGENT
+
+    log_tool_usage(external=False)
 
     if agent and hasattr(agent, "plan") and hasattr(agent.plan, "add_step"):
         try:
@@ -180,6 +182,7 @@ def add_trial(trial: str) -> str:
     """
 
     agent = current.AGENT
+    log_tool_usage(external=False)
 
     try:
         agent.plan.get_trial().add_step(trial)
@@ -198,6 +201,7 @@ def decompose_node(task_node_id: int, sub_nodes: list[str]) -> str:
     """
 
     agent = current.AGENT
+    log_tool_usage(external=False)
 
     if agent and isinstance(agent.plan, TreePlan):
         try:
@@ -219,6 +223,7 @@ def delete_node(task_node_id: int, delete_children:bool = True) -> str:
     """
 
     agent = current.AGENT
+    log_tool_usage(external=False)
 
     if agent and isinstance(agent.plan, TreePlan):
         try:
@@ -239,6 +244,7 @@ def mark_done(task_node_id: int) -> str:
     """
 
     agent = current.AGENT
+    log_tool_usage(external=False)
 
     if agent and isinstance(agent.plan, TreePlan):
         try:
@@ -259,6 +265,7 @@ def mark_focused(task_node_id: int) -> str:
     """
 
     agent = current.AGENT
+    log_tool_usage(external=False)
 
     if agent and isinstance(agent.plan, TreePlan):
         try:
@@ -279,6 +286,7 @@ def store_memory(information: str) -> str:
     """
 
     agent = current.AGENT
+    log_tool_usage(external=False)
 
     memory_id = agent.main_memory.store_permanent_memory(information)
 
@@ -293,6 +301,7 @@ def delete_memory(memory_id: int,) -> str:
     """
 
     agent = current.AGENT
+    log_tool_usage(external=False)
 
     agent.main_memory.delete_permanent_memory(memory_id)
 
@@ -306,6 +315,7 @@ def yes() -> str:
         None
     """
 
+    log_tool_usage(external=False)
     current.ANSWER_BUFFER = True
 
     return ""
@@ -318,6 +328,7 @@ def no() -> str:
         None
     """
 
+    log_tool_usage(external=False)
     current.ANSWER_BUFFER = False
 
     return ""
@@ -330,6 +341,7 @@ def yes_rationale(rationale: str) -> str:
         rationale (str): why yes
     """
 
+    log_tool_usage(external=False)
     current.ANSWER_BUFFER = True
     current.ANSWER_BUFFER_REASON = rationale
 
@@ -343,6 +355,7 @@ def no_rationale(rationale: str) -> str:
         rationale (str): why no
     """
 
+    log_tool_usage(external=False)
     current.ANSWER_BUFFER = False
     current.ANSWER_BUFFER_REASON = rationale
 

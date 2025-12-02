@@ -12,12 +12,6 @@ if TYPE_CHECKING:
     from llm.cache import Cache
     from llm.model import Model
 
-class MemoryType(str, Enum):
-    SIMPLE = "simple"
-    WINDOW = "window"
-    SUMMARY = "summary"
-    VECTOR = "vector"
-
 class Role(Enum):
     SYSTEM      = "system"
     USER        = "user"

@@ -345,7 +345,8 @@ class ConnectorEntity(Entity):
         self.rooms: dict[Room, Position] = {}
         self.keys: set[Entity] = set()
 
-        self._openable = OpenableCapability(self, initially_open=True)
+        # Doors start closed so operators like LOOK_THROUGH require an explicit OPEN first.
+        self._openable = OpenableCapability(self, initially_open=False)
         self.add_capability(self._openable)
 
         self._lockable = LockableCapability(self, initially_locked=is_locked)
@@ -515,13 +516,8 @@ class ConnectorEntity(Entity):
                     hint="Unlock it before trying to go through.",
                 )
             if not self._openable.is_open:
-                raise SoftException(
-                    "Open the door before going through.",
-                    console_message=(
-                        f"Use prevented because '{self.readable_id}' is closed."
-                    ),
-                    hint="Use the OPEN operator first.",
-                )
+                # Auto-open unlocked doors when the agent tries to use them.
+                self._openable.on_interact(actor_entity, ActionTry(ActionType.OPEN))
             destination_room = self.get_other_room(actor_entity.room)
             actor_entity.use_connector(self)
             destination_name = destination_room.name if destination_room else "the next room"

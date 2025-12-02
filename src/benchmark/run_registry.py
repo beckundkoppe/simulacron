@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from enum import Enum
+from itertools import product
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Sequence, Tuple, Any
 
 from benchmark.model_team import ModelTeam, ModelTeams
 from benchmark.run import Run
@@ -10,6 +12,7 @@ from config import (
     ActionType,
     AgentConfiguration,
     Configuration,
+    MemoryType,
     ObserveType,
     PerceptionType,
     PlanType,
@@ -21,24 +24,28 @@ from enviroment.levels.level import Level, Levels
 from llm.model import Model, ModelSpec
 
 
-# Preset configurations that can be referenced by name in the phase files.
-DEFAULT_AGENT = AgentConfiguration(
-    plan=PlanType.DECOMPOSE,
-    trial=TrialType.ON,
-    action=ActionType.IMG_RETRY,
-    observe=ObserveType.ON,
-    reflect=ReflectType.ON,
+# Preset configuration specs that can be referenced by name in the phase files.
+NAIVE_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.DIRECT,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.OFF,
+    memory_type=MemoryType.SIMPLE,
+)
+
+IMAGINATOR_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.IMAGINATOR,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.OFF,
+    memory_type=MemoryType.SIMPLE,
 )
 
 CONFIGURATIONS: Dict[str, Configuration] = {
-    "baseline": Configuration(
-        agent=DEFAULT_AGENT,
-        perception=PerceptionType.ALL,
-        position=PositionType.RELATIVE,
-        temperature=0.0,
-        name="baseline",
-        seed=-1,
-    ),
+    "baseline-naive": Configuration(NAIVE_AGENT, MemoryType.SIMPLE, PerceptionType.ALL, PositionType.RELATIVE, 0.0),
+    "baseline-img": Configuration(IMAGINATOR_AGENT, MemoryType.SIMPLE, PerceptionType.ALL, PositionType.RELATIVE, 0.0),
 }
 
 

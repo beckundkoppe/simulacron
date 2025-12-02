@@ -120,8 +120,6 @@ def build_hard(detailed_instruction: bool) -> LevelSpec:
         is_success=check_salad_win,
     )
 
-
-
 def check_salad_win() -> bool:
     box = None
     shelf = None

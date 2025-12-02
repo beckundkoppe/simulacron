@@ -1,5 +1,8 @@
 from itertools import product
+import json
+from datetime import datetime
 import time
+import traceback
 from typing import List
 from pathlib import Path
 from benchmark.benchresult import PerformanceResult
@@ -51,6 +54,29 @@ class Dispatcher:
         raw_path = raw_folder / f"{self.file}_raw.txt"
         raw_path.write_text("")
 
+    def _log_run_failure(self, run: Run, rerun_index: int, error: Exception) -> None:
+        """Persist failure details into the run's result file."""
+        try:
+            basename = self._basename_for_run(run, rerun_index)
+            os.makedirs(self.folder, exist_ok=True)
+            path = Path(self.folder) / f"{basename}.json"
+            entry = {
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "entry": basename,
+                "level": run.level.value.getName(),
+                "config": run.configuration.name,
+                "model_team": run.model_team.token(),
+                "rerun_index": rerun_index,
+                "status": "error",
+                "error": str(error),
+                "error_type": type(error).__name__,
+                "traceback": traceback.format_exc(),
+            }
+            path.write_text(json.dumps(entry, ensure_ascii=False, indent=2))
+        except Exception:
+            # Never let logging failure break execution flow.
+            pass
+
 
     def run_single(self, run: Run):
         results = []
@@ -60,7 +86,14 @@ class Dispatcher:
             print(f"Rerun: {i+1}")
 
             self._prepare_raw_logging(run, i)
-            result = self._start_with_result(run)
+            try:
+                result = self._start_with_result(run)
+            except Exception as e:
+                self._log_run_failure(run, i, e)
+                config.APPEND_RAW = None
+                raise
+            finally:
+                config.APPEND_RAW = None
             print(result.softerror_count)
             print(result.harderror_count)
             
@@ -158,13 +191,15 @@ class Dispatcher:
         self._prepare_raw_logging(run, rerun_index)
 
         print(f"Starting: {filename}")
-        result = self._start_with_result(run)
-
-        self._write_file(path, result.toJSON())
-
-        print(result.toString())
-
-        config.APPEND_RAW = None
+        try:
+            result = self._start_with_result(run)
+            self._write_file(path, result.toJSON())
+            print(result.toString())
+        except Exception as e:
+            self._log_run_failure(run, rerun_index, e)
+            raise
+        finally:
+            config.APPEND_RAW = None
 
 
     def _debug_result(self, run,i):

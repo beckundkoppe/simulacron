@@ -72,11 +72,20 @@ def write_todo(phase_file: Path, entries: List[str]):
 
 
 def claim_entry(claims_folder: Path, entry: str, hostname: str) -> Path:
-    claim_path = claims_folder / f"{entry}__{hostname}.claim"
+    """
+    Create a claim file for the given entry. File name no longer contains the
+    hostname; instead it is written inside the file for bookkeeping.
+    """
+    claim_path = claims_folder / f"{entry}.claim"
     claim_path.parent.mkdir(parents=True, exist_ok=True)
     if claim_path.exists():
-        raise FileExistsError(f"Claim already exists for {entry}")
-    claim_path.write_text("")
+        existing_owner = claim_path.read_text().strip()
+        # If we already own it, just reuse; otherwise raise to signal contention.
+        if existing_owner != hostname:
+            raise FileExistsError(f"Claim already exists for {entry}")
+        return claim_path
+
+    claim_path.write_text(hostname)
     return claim_path
 
 
@@ -84,11 +93,7 @@ def cleanup_stale_claims(claims_folder: Path, results_folder: Path, todo_entries
     claims_folder.mkdir(parents=True, exist_ok=True)
     todo_set = set(todo_entries)
     for claim_file in claims_folder.glob("*.claim"):
-        stem = claim_file.stem
-        if "__" in stem:
-            entry, _ = stem.split("__", 1)
-        else:
-            entry = stem
+        entry = claim_file.stem
         result_file = results_folder / entry
         # If the result exists or the entry is no longer in TODO, drop the claim.
         if result_file.exists() or entry not in todo_set:
@@ -97,10 +102,12 @@ def cleanup_stale_claims(claims_folder: Path, results_folder: Path, todo_entries
 
 def find_local_claim(claims_folder: Path, hostname: str, todo_entries: List[str]) -> Tuple[str, Path] | None:
     todo_set = set(todo_entries)
-    for claim_file in claims_folder.glob(f"*__{hostname}.claim"):
-        stem = claim_file.stem
-        entry, _ = stem.split("__", 1)
-        if entry in todo_set:
+    for claim_file in claims_folder.glob("*.claim"):
+        entry = claim_file.stem
+        if entry not in todo_set:
+            continue
+        owner = claim_file.read_text().strip()
+        if owner == hostname:
             return entry, claim_file
     return None
 

@@ -176,7 +176,7 @@ class TestLevel(unittest.TestCase):
         # Jetzt sollte das Level gewonnen sein
         self.assertTrue(lvl.is_success())
     def test_level_salad_hard(self):
-        lvl: LevelSpec = salad.build_heard(True)
+        lvl: LevelSpec = salad.build_hard(True)
 
         agent: AgentEntity
         instruction: str

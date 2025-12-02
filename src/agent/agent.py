@@ -1,3 +1,4 @@
+import time
 from typing import Tuple
 from agent.helper import process_action_results, process_formal_errors
 from agent.plan import FreePlan, PlanNode, StepPlan, TreePlan
@@ -21,42 +22,72 @@ class Agent:
 
         self.goal = goal
         self.plan = None
-        self.main_memory = SuperMemory(goal=goal, path="main_memory.txt")
+        self.main_memory = self._create_main_memory(goal)
+
+        self.main_memory.append_message(Role.SYSTEM, "The human can move, take/drop object, interact with object (open, close, lock, unlock, go/look through door). Dont assume to know, what room is behind doors.")
 
         self.had_action = False
         self.triggered_replan = None
         self.finished = False
 
-        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agents.plan is not config.PlanType.OFF:
             self.triggered_replan = "Main goal is not yet reached. Create an initial plan"
+
+    def _add_time(self, field: str, delta: float) -> None:
+        result = getattr(current, "RESULT", None)
+        if result is None:
+            return
+        setattr(result, field, getattr(result, field) + delta)
+
+    def _create_main_memory(self, goal: str) -> Memory:
+        mem_type = getattr(config.ACTIVE_CONFIG.agents, "memory_type", None)
+
+        if mem_type is config.MemoryType.SUPER:
+            return SuperMemory(goal=goal, path="main_memory.txt")
+
+        return Memory(goal=goal, path="main_memory.txt")
 
     def update(self, perception: str):
         current.AGENT = self
         current.ENTITY = self.entity
 
         if not self.triggered_replan and self.had_action:
+            t0 = time.time()
             self._reflect(perception) # stellt fest, was das ergebniss der aktion ist. ziel im focused plannode schon erreicht? dann in planung, sonst Frage: sind wir noch auf einem guten weg? ja -> weiter; nein -> nächste idee
+            self._add_time("reflect_time_s", time.time() - t0)
             self.main_memory.save()
             self.had_action = False
 
-        if self.triggered_replan:
+        if self.triggered_replan or config.ACTIVE_CONFIG.agents.trial is config.TrialType.OFF:
+            t0 = time.time()
             self._plan() # should set self.plan with a full Plan
+            self._add_time("plan_time_s", time.time() - t0)
             self.main_memory.set_plan(self.plan)
             self.main_memory.save()
+        
+        if config.ACTIVE_CONFIG.agents.plan is not config.PlanType.OFF:
             pretty(bullet("PLAN: " + self.plan.to_string(), color=Color.MAGENTA))
 
         if not self.triggered_replan:
+            t0 = time.time()
             self._observe(perception) # returns aufbereitete observation mit den für die aufgabe relevanten inhalte
+            self._add_time("observe_time_s", time.time() - t0)
             self.main_memory.save()
 
         if not self.triggered_replan:
+            t0 = time.time()
             self._trial() # generiert List[str] mit ideen um das ziel im focused plannode zu erreichen
+            self._add_time("trial_time_s", time.time() - t0)
             self.main_memory.set_plan(self.plan)
-            pretty(bullet("TRIAL: " + self.plan.get_trial().to_string(), color=Color.RED))
             self.main_memory.save()
 
+        if config.ACTIVE_CONFIG.agents.trial is not config.TrialType.OFF:
+            pretty(bullet("TRIAL: " + self.plan.get_trial().to_string(), color=Color.RED))
+
         if not self.triggered_replan:
+            t0 = time.time()
             self._act(perception) # führt beste idee aus
+            self._add_time("action_time_s", time.time() - t0)
             self.main_memory.save()
             self.had_action = True
 
@@ -64,35 +95,37 @@ class Agent:
         current.ENTITY = None
 
     def _observe(self, perception: str):
-        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.OFF:
-            self.main_memory.append_message(Role.USER, perception, Type.PERCEPTION)
+        if config.ACTIVE_CONFIG.agents.observe is config.ObserveType.OFF:
+            self.main_memory.append_message(Role.USER, perception, Type.OBSERVATION)
             return
 
-        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.OFF:
             active_plan = "goal"
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
+        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.FREE:
             active_plan = "current plan step"
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
+        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.STEP:
             active_plan = "focused plan step"
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
+        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.DECOMPOSE:
             active_plan = "focused plan node"
         else:
             raise Exception()
         
         observer = Provider.build("observer", self.imaginator_model, memory=self.main_memory)
-        observation = observer.call(f"Perception: {perception}\nWhat do you observe? What is relevant for your {active_plan}? Only tell about new discouveries. (short)")
+        start = time.time()
+        observation = observer.call(f"Perception: {perception}\nWhat do you observe? Make sure to verify facts. Respect facts, not assumptions. What is relevant for your {active_plan}? Only tell about new discouveries. (short)")
+        self._add_time("img_time_s", time.time() - start)
 
-        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.ON:
+        if config.ACTIVE_CONFIG.agents.observe is config.ObserveType.ON:
             self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
         else:
             pass
             #self._memorize(observation, Type.OBSERVATION)
 
     def _trial(self):
-        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.OFF:
             return
         
-        if config.ACTIVE_CONFIG.agent.plan is config.TrialType.OFF:
+        if config.ACTIVE_CONFIG.agents.trial is config.TrialType.OFF:
             return
         
         #havent tried an idea yet
@@ -109,19 +142,26 @@ class Agent:
         )
 
         if not completed:
-            promising = self._ask_yes_no(
+            promising, ratio = self._ask_yes_no_with_rationale(
                 name="trial",
                 context=(
                     f"{self.main_memory.get_history()}"
                 ),
-                question="Is the Plan still promising?",
+                #question="Is the Plan still promising?",
+                question="Is the plan still promising? Answer no when recent actions produced no new state change, no progress toward the focused plan step, or when the agent is repeating actions that do not modify the situation."
             )
 
             if promising:
                 return
 
+            self.triggered_replan = f"Failed to accomplish plan: {ratio}"
+            return
+
         trials = self.plan.get_trial()
+
         trials.mark_current_completed()
+        self.plan.mark_current_completed()
+
         if not trials.current_step():
             # Reset index so newly generated ideas start from the first new entry.
             trials.ideas = []
@@ -135,7 +175,7 @@ class Agent:
             self._imaginator_realisator_step(
                 imagination_task=(
                     f"Plan:\n{self.plan.to_string(False)}\n"
-                    " Brainstorm a few concrete ideas on how to achieve this task."
+                    " Brainstorm a few concrete ideas on how to achieve this task. But only approaches using actions the human can execute!"
                     " Avoid repeating previously tried approaches."
                 ),
                 realization_context=(
@@ -151,12 +191,11 @@ class Agent:
             self._imaginator_realisator_step(
                 imagination_task=(
                     f"Plan:\n{self.plan.to_string(False)}\n"
-                    "What would be the straight forward approach to this?"
-                    "Tell the action to archive it."
+                    "What would be the naive approach to this? Use only actions the human can execute!"
+                    "Tell the simpel action to archive it."
                 ),
                 realization_context=(
                     f"Plan:\n{self.plan.to_string(False)}\n"
-                    f"Tried approaches: {self.plan.get_trial().completed}\n"
                     "Use add_trial(text) for each distinct idea to try. Keep them concise and actionable."
                     "Respond only with add_trial() tool calls, one per idea. If there is no new idea call noop()."
                 ),
@@ -165,11 +204,11 @@ class Agent:
             )
 
         if not self.plan.get_trial().current_step():
-            if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
+            if config.ACTIVE_CONFIG.agents.plan is config.PlanType.FREE:
                 plan = "current plan"
-            elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
+            elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.STEP:
                 plan = "focused plan step"
-            elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
+            elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.DECOMPOSE:
                 plan = "focused plan node"
             else:
                 raise Exception()
@@ -180,13 +219,15 @@ class Agent:
     def _act(self, perception: str):
         prompt = "Give best next action to perform (short answer)."
 
-        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agents.plan is not config.PlanType.OFF:
             prompt += " Stick closely to the next step in the plan. But always tell the next action"
 
-        if config.ACTIVE_CONFIG.agent.action is config.ActionType.DIRECT:
+        if config.ACTIVE_CONFIG.agents.action is config.ActionType.DIRECT:
             realisator = ToolProvider.build("actor", self.realisator_model, memory=self.main_memory)
             register_tools(realisator, ToolGroup.ENV)
+            start = time.time()
             realisator.call(perception + ". " + prompt + "Use concise, executable actions. Your answer must only consist of toolcalls.")
+            self._add_time("real_time_s", time.time() - start)
         else:
             tc_prompt =  """
             Give exactly the toolcalls that arise from the planned action.
@@ -209,14 +250,16 @@ class Agent:
         for role, msg, msg_type in process_action_results():
             results += msg + "\n"
 
-        if config.ACTIVE_CONFIG.agent.reflect is config.ReflectType.OFF:
-            self.main_memory.append(Type.FEEDBACK, Role.USER, results)
+        if config.ACTIVE_CONFIG.agents.reflect is config.ReflectType.OFF:
+            self.main_memory.append_message(Role.USER, results, Type.FEEDBACK)
             return
 
         reflector = Provider.build("reflector", self.imaginator_model, memory=self.main_memory)
-        reflection = reflector.call(f"Result: {results}. \nReflect what effect the performed Actions had. Only what you can say for sure. (short)")
+        start = time.time()
+        reflection = reflector.call(f"Result: {results}. \nReflect what effect the performed Actions had. What are the facts? What are assumptions about the new state? Wich assumptions that were made proved right or wrong? (short)")
+        self._add_time("img_time_s", time.time() - start)
 
-        self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
+        self.main_memory.append_message(role=Role.USER, message=reflection, type=Type.REFLECT)
 
         #if config.ACTIVE_CONFIG.agent.reflect is config.ReflectType.ON:
         #    self.main_memory.append_message(Role.USER, reflection, Type.REFLECT)
@@ -228,16 +271,16 @@ class Agent:
             self._replan(self.triggered_replan)
             return
 
-        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.OFF:
             return
 
-        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
+        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.FREE:
             plan = "current plan"
             active_plan_completed = f"{plan} completed and the goal reached"
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
+        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.STEP:
             plan = "focused plan step"
             active_plan_completed = f"{plan} completed"
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
+        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.DECOMPOSE:
             plan = "focused plan node"
             active_plan_completed = f"{plan} completed"
         else:
@@ -259,7 +302,7 @@ class Agent:
                 question = f"The {plan} is not completed because: {rationale}. Does it still seem promising?",
             )
 
-            if ans2 is True:
+            if ans2 is False:
                 self.triggered_replan = rationale2
             else:
                 print(f"The {plan} is still promising because {rationale2}")
@@ -286,11 +329,11 @@ class Agent:
     def _replan(self, reason):
         print(f"Replanning because: {reason}")
 
-        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
+        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.FREE:
             self.plan = self._plan_free(reason)
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
+        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.STEP:
             self.plan = self._plan_steps(reason)
-        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
+        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.DECOMPOSE:
             self.plan = self._plan_tree(reason)
         else:
             raise Exception()
@@ -306,11 +349,13 @@ class Agent:
             replan = ""
 
         planner = Provider.build("planner", self.imaginator_model, memory=self.main_memory)
+        start = time.time()
         plan_text = planner.call(
             f"""Main goal: {self.goal}\n{replan}
             Based on the current contex: Create a structured plan to reach the goal.
             """
         )
+        self._add_time("img_time_s", time.time() - start)
 
         return FreePlan(goal=self.goal, description=plan_text)
 
@@ -376,11 +421,13 @@ class Agent:
 
         chooser = Provider.build("leaf_selector", self.imaginator_model, memory=self.main_memory)
         leaf_listing = "\n".join([f"[{leaf.id}] {leaf.data}" for leaf in leaves])
+        start = time.time()
         choice = chooser.call(
             f"Goal: {self.goal}\nPlan tree:\n{self.plan.format_full()}\n"
             f"Available leaf tasks:\n{leaf_listing}\n"
             "Select the best suited leaf task by replying with its id and a short justification.",
         )
+        self._add_time("img_time_s", time.time() - start)
 
         selected_leaf = None
         for leaf in leaves:
@@ -436,7 +483,9 @@ class Agent:
     ) -> None:
         imaginator = Provider.build(name + "_imaginator", self.imaginator_model, memory=self.main_memory)
 
+        start_imagination = time.time()
         imagination = imaginator.call(imagination_task)
+        self._add_time("img_time_s", time.time() - start_imagination)
 
         realisator = ToolProvider.build(
             name + "_realisator",
@@ -451,7 +500,9 @@ class Agent:
 
         for attempt in range(0, 3):
             ctx = realization_context.replace("{imagination}", imagination) + correction_suffix
+            start_real = time.time()
             reply = realisator.invoke(ctx)
+            self._add_time("real_time_s", time.time() - start_real)
 
             has_error, errors = process_formal_errors(realisator.memory, collect=True)
             final_has_error = has_error
@@ -472,7 +523,7 @@ class Agent:
                 else " Retry using valid tool calls with explicit object IDs."
             )
 
-            if config.ACTIVE_CONFIG.agent.action is config.ActionType.IMG_RETRY:
+            if config.ACTIVE_CONFIG.agents.action is config.ActionType.IMG_RETRY:
                 self.main_memory.append_message(
                     Role.USER,
                     "Last step was not specified well. Please provide more explicit instructions",

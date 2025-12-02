@@ -6,7 +6,25 @@ from llm.memory.memory import Role, Type
 from util import console
 
 
-def trycatch(action, success_msg):
+def log_tool_usage(external: bool) -> None:
+    """Track tool usage for performance metrics."""
+    if not getattr(current, "RESULT", None):
+        return
+
+    current.RESULT.toolcall_count += 1
+    if external:
+        current.RESULT.actions_external += 1
+    else:
+        current.RESULT.actions_internal += 1
+
+
+def trycatch(action, success_msg, *, external: bool | None = None):
+    # Count tool use upfront; default to internal when category not specified.
+    if external is None:
+        log_tool_usage(external=False)
+    else:
+        log_tool_usage(external=external)
+
     try:
         msg = ""
         message = action()
@@ -16,7 +34,6 @@ def trycatch(action, success_msg):
             msg = message
 
         Success(msg)
-        current.RESULT.toolcall_count += 1
     except SoftException as s:
         agent_msg = getattr(s, "agent_message", str(s))
         console_msg = getattr(s, "console_message", agent_msg)

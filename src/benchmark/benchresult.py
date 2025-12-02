@@ -12,48 +12,65 @@ from dataclasses import asdict, is_dataclass
 class PerformanceResult:
     run: Run
 
+    # 0.0 if failure, 1.0 if success
     success_rate: float = 0
 
     toolcall_count: float = 0
+
+    # all agent toolcalls that interact with the enviroment (agents body entity)
     actions_external: float = 0
+
+    # all toolcalls that are for e.g planning
     actions_internal: float = 0
 
     softerror_count: float = 0
     harderror_count: float = 0
 
+    # PAL cycles
     step_count: float = 0
 
+    # total time
     time_s: float = 0
 
+    # time in agent state
     img_time_s: float = 0
     real_time_s: float = 0
 
-    plan_time_s: float = 0
-    observe_time_s: float = 0
+    # time in agent state
+    plan_time_s: float = 0 
+    observe_time_s: float = 0 
     trial_time_s: float = 0
     action_time_s: float = 0
     reflect_time_s: float = 0
-    
-    #def average(results: List["PerformanceResult"]) -> "PerformanceResult":
-    #    n = len(results)
-    #    if n == 0:
-    #        raise ValueError("No results to average.")
-    #
-    #    def mean(field: str) -> float:
-    #        return sum(getattr(r, field) for r in results) / n
-    #    
-    #    base = results[0]
-    #    return PerformanceResult(
-    #        run=base.run,
-    #        success_rate=(mean("success_rate")),
-    #        toolcall_count=mean("toolcall_count"),
-    #        actions_external=mean("actions_external"),
-    #        actions_internal=mean("actions_internal"),
-    #        softerror_count=mean("softerror_count"),
-    #        harderror_count=(mean("harderror_count")),
-    #        step_count=(mean("step_count")),
-    #        time_s=(mean("time_s")),
-    #    )
+
+    @staticmethod
+    def average(results: list["PerformanceResult"]) -> "PerformanceResult":
+        n = len(results)
+        if n == 0:
+            raise ValueError("No results to average.")
+
+        def mean(field: str) -> float:
+            return sum(getattr(r, field) for r in results) / n
+
+        base = results[0]
+        return PerformanceResult(
+            run=base.run,
+            success_rate=mean("success_rate"),
+            toolcall_count=mean("toolcall_count"),
+            actions_external=mean("actions_external"),
+            actions_internal=mean("actions_internal"),
+            softerror_count=mean("softerror_count"),
+            harderror_count=mean("harderror_count"),
+            step_count=mean("step_count"),
+            time_s=mean("time_s"),
+            img_time_s=mean("img_time_s"),
+            real_time_s=mean("real_time_s"),
+            plan_time_s=mean("plan_time_s"),
+            observe_time_s=mean("observe_time_s"),
+            trial_time_s=mean("trial_time_s"),
+            action_time_s=mean("action_time_s"),
+            reflect_time_s=mean("reflect_time_s"),
+        )
 
     def toJSON(self) -> str:
         """

@@ -11,10 +11,10 @@ def main():
 
     agent_config = AgentConfiguration(
         plan       = PlanType.DECOMPOSE,
-        observe    = ObserveType.ON,
-        trial      = TrialType.ON,
+        observe    = ObserveType.OFF,
+        trial      = TrialType.OFF,
         action     = ActionType.IMG_RETRY,
-        reflect    = ReflectType.ON,
+        reflect    = ReflectType.OFF,
     )
 
     config = Configuration(agent_config, PerceptionType.ALL, PositionType.RELATIVE, temperature=0.0, name="test", seed=-1)
@@ -22,7 +22,7 @@ def main():
     model_team = ModelTeam(
         #realisator=Model.Remote.MISTRAL_SMALL_24B,
         #realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
-        realisator=Model.Remote.QWEN3,
+        realisator=Model.Remote.GPT_OSS_120B,
         #extra=Model.Local.Ollama.DOLPHIN3_8B,
     )
 

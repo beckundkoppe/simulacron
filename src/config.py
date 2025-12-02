@@ -1,7 +1,12 @@
 # config.py
-from dataclasses import dataclass
+from __future__ import annotations
+from dataclasses import dataclass, field
 from enum import Enum, auto
+from typing import Any, TYPE_CHECKING
 
+class MemoryType(str, Enum):
+    SIMPLE = "simple"
+    SUPER = "super"
 
 class PlanType(Enum):
     OFF = auto()            # no plan step
@@ -13,7 +18,6 @@ class PlanType(Enum):
 class TrialType(Enum):
     ON = auto()             # no try step
     OFF = auto()            #
-
 
 class ActionType(Enum):
     DIRECT = auto()         # no extra step just realisation
@@ -35,7 +39,6 @@ class ReflectType(Enum):
     MEMORIZE_ZERO = auto()  # += memorize important info
     MEMORIZE_FEW = auto()   # += examples what would be suficient
 
-
 @dataclass(frozen=True)
 class AgentConfiguration:
     plan: PlanType
@@ -43,6 +46,7 @@ class AgentConfiguration:
     action: ActionType
     observe: ObserveType
     reflect: ReflectType
+    memory_type: MemoryType
 
 
 class PerceptionType(Enum):
@@ -57,7 +61,7 @@ class PositionType(Enum):
 
 @dataclass(frozen=True)
 class Configuration:
-    agent: AgentConfiguration
+    agents: AgentConfiguration
     perception: PerceptionType
     position: PositionType
     temperature: float
@@ -78,13 +82,14 @@ DEFAULT_AGENT_CONFIGURATION = AgentConfiguration(
     action=ActionType.DIRECT,
     observe=ObserveType.OFF,
     reflect=ReflectType.OFF,
+    memory_type=None,
 )
 
 # A sensible default configuration so environment logic can run outside of the
 # benchmarking harness (e.g. unit tests) without having to bootstrap a full
 # benchmark run first.
 DEFAULT_CONFIGURATION = Configuration(
-    agent=DEFAULT_AGENT_CONFIGURATION,
+    agents=DEFAULT_AGENT_CONFIGURATION,
     perception=PerceptionType.ALL,
     position=PositionType.RELATIVE,
     temperature=0.0,
