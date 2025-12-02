@@ -49,20 +49,20 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.DETAILED_INSTRUCT.CARROT_EASY
             ],
         model_teams=[ModelTeams.HYBRID_MISTRAL_SMALL],
-        reruns=1,
+        reruns=5,
     ),
     PhaseDefinition(
         phase="phase2",
         configs=[CONFIGURATIONS["baseline"]],
         levels=[Levels.DETAILED_INSTRUCT.CUCUMBER_EASY],
-        model_teams=[ModelTeams.LOCAL_QWEN_CODER],
+        model_teams=[ModelTeams.LOCAL_QWEN_CODER30B],
         reruns=1,
     ),
     PhaseDefinition(
         phase="phase3",
         configs=[CONFIGURATIONS["baseline"]],
         levels=[Levels.DETAILED_INSTRUCT.ONION_EASY],
-        model_teams=[ModelTeams.LOCAL_QWEN_CODER],
+        model_teams=[ModelTeams.LOCAL_QWEN_CODER30B],
         reruns=1,
     ),
     PhaseDefinition(
@@ -79,7 +79,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
     # Laptop profile: keep both imaginator and realisator local/small.
     "r2d2xxx": RunnerConfig(
         allowed_model_teams=[
-            ModelTeams.LOCAL_QWEN_CODER,
+            ModelTeams.HYBRID_MISTRAL_SMALL,
         ],
         allowed_phases=["phase1", "phase2", "phase3"],
     ),

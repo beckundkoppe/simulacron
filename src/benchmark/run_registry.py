@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 
-from benchmark.model_team import ModelTeam
+from benchmark.model_team import ModelTeam, ModelTeams
 from benchmark.run import Run
 from config import (
     ActionType,
@@ -42,12 +42,30 @@ CONFIGURATIONS: Dict[str, Configuration] = {
 }
 
 
-def _walk_enum(enum_cls: type[Enum]) -> Iterable[Enum]:
-    for member in enum_cls:
-        yield member
-        value = member.value
+def _walk_enum(obj: object) -> Iterable[Enum]:
+    """
+    Recursively yield enum members and nested enums, even when the parent enum itself has no direct members.
+    """
+    # If we receive an Enum subclass (e.g., Levels), iterate over its members if any.
+    if isinstance(obj, type) and issubclass(obj, Enum):
+        found_member = False
+        for member in obj:
+            found_member = True
+            yield from _walk_enum(member)
+        # If no direct members, also inspect nested Enum classes defined on the type.
+        if not found_member:
+            for value in obj.__dict__.values():
+                if isinstance(value, type) and issubclass(value, Enum):
+                    yield from _walk_enum(value)
+        return
+
+    # If we receive an Enum member, inspect its value.
+    if isinstance(obj, Enum):
+        yield obj
+        value = obj.value
         if isinstance(value, type) and issubclass(value, Enum):
             yield from _walk_enum(value)
+        return
 
 
 def collect_levels() -> Dict[str, Enum]:
@@ -70,6 +88,12 @@ def collect_models() -> Dict[str, Enum]:
 
 def collect_configurations() -> Dict[str, Configuration]:
     return CONFIGURATIONS
+
+
+def _resolve_model_enum(model_lookup: Dict[str, Enum], model_name: str) -> Enum:
+    if model_name not in model_lookup:
+        raise KeyError(f"Unknown model '{model_name}'. Known: {', '.join(sorted(model_lookup))}")
+    return model_lookup[model_name]
 
 
 def normalize_configurations(
@@ -122,79 +146,48 @@ def normalize_levels(
     return [_level_enum_from_input(level_lookup, lvl) for lvl in levels]
 
 
-def _model_name(model: str | Enum | ModelSpec) -> str:
-    if isinstance(model, Enum):
-        value = model.value
-        if isinstance(value, ModelSpec):
-            return value.name
-        if isinstance(value, Enum) and isinstance(value.value, ModelSpec):
-            return value.value.name
-    if isinstance(model, ModelSpec):
-        return model.name
-    return str(model)
-
-
-def _resolve_model_enum(model_lookup: Dict[str, Enum], model: str | Enum | ModelSpec) -> Enum:
-    name = _model_name(model)
-    if name not in model_lookup:
-        raise KeyError(f"Unknown model '{name}'. Known: {', '.join(sorted(model_lookup))}")
-    return model_lookup[name]
-
-
-def _coerce_model_team(model_lookup: Dict[str, Enum], team: object) -> ModelTeam:
-    if isinstance(team, ModelTeam):
-        return team
-
-    if isinstance(team, Enum) and isinstance(team.value, ModelTeam):
-        return team.value
-
-    if isinstance(team, tuple) and len(team) in (2, 3):
-        real_input, imag_input, *rest = team
-        extra_input = rest[0] if rest else None
-        real_model = _resolve_model_enum(model_lookup, real_input)
-        imaginator_model = _resolve_model_enum(model_lookup, imag_input) if imag_input is not None else real_model
-        extra_model = _resolve_model_enum(model_lookup, extra_input) if extra_input is not None else None
-        return ModelTeam(realisator=real_model, imaginator=imaginator_model, extra=extra_model)
-
-    if isinstance(team, (str, Enum, ModelSpec)):
-        model_enum = _resolve_model_enum(model_lookup, team)
-        return ModelTeam(realisator=model_enum, imaginator=model_enum)
-
-    raise TypeError(f"Unsupported model team definition: {team!r}")
-
-
 def normalize_model_teams(
-    model_teams: Sequence[
-        str | Enum | ModelSpec | ModelTeam | tuple[object, object] | tuple[object, object, object]
-    ]
-    | None,
-    fallback: Sequence[ModelTeam | Enum | ModelSpec],
+    model_teams: Sequence[ModelTeam | Enum] | None,
+    fallback: Sequence[ModelTeam | Enum],
 ) -> List[ModelTeam]:
-    model_lookup = collect_models()
     if model_teams is None:
-        return [_coerce_model_team(model_lookup, team) for team in fallback]
+        model_teams = fallback
 
-    return [_coerce_model_team(model_lookup, team) for team in model_teams]
+    normalized: List[ModelTeam] = []
+    for team in model_teams:
+        if isinstance(team, ModelTeam):
+            normalized.append(team)
+        elif isinstance(team, Enum) and isinstance(team.value, ModelTeam):
+            normalized.append(team.value)
+        else:
+            raise TypeError(f"Unsupported model team definition: {team!r}")
+    return normalized
 
 
-def normalize_models(models: Sequence[str | Enum | ModelSpec] | None, fallback: Sequence[Enum]) -> List[Enum]:
-    """Backward-compatible wrapper to normalize single-model lists."""
-
-    teams = normalize_model_teams(models, [ModelTeam(realisator=model) for model in fallback])
-    return [team.realisator for team in teams]
-
-
-def parse_model_token(model_token: str, model_lookup: Dict[str, Enum] | None = None) -> ModelTeam:
-    lookup = model_lookup or collect_models()
+def parse_model_token(model_token: str, model_lookup: Dict[str, Enum]) -> ModelTeam:
     if "+" in model_token:
         real_name, imag_name = model_token.split("+", 1)
-        real_model = _resolve_model_enum(lookup, real_name)
-        imaginator_model = _resolve_model_enum(lookup, imag_name)
+        real_model = _resolve_model_enum(model_lookup, real_name)
+        imaginator_model = _resolve_model_enum(model_lookup, imag_name)
     else:
-        real_model = _resolve_model_enum(lookup, model_token)
+        real_model = _resolve_model_enum(model_lookup, model_token)
         imaginator_model = real_model
 
     return ModelTeam(realisator=real_model, imaginator=imaginator_model)
+
+
+def _parse_model_team_token(team_token: str) -> ModelTeam:
+    tag_lookup = {team.value.tag: team.value for team in ModelTeams if team.value.tag}
+    if team_token in tag_lookup:
+        return tag_lookup[team_token]
+
+    label_lookup = {team.value.label(): team.value for team in ModelTeams}
+    if team_token in label_lookup:
+        return label_lookup[team_token]
+
+    # Fallback: allow legacy filenames that encode raw model names
+    model_lookup = collect_models()
+    return parse_model_token(team_token, model_lookup)
 
 
 def parse_filename(filename: str) -> Tuple[str, ModelTeam, str, int]:
@@ -210,15 +203,14 @@ def parse_filename(filename: str) -> Tuple[str, ModelTeam, str, int]:
     except ValueError as exc:
         raise ValueError(f"Invalid run filename: {filename}") from exc
 
-    model_team = parse_model_token(model_token)
+    model_team = _parse_model_team_token(model_token)
 
     return level_name, model_team, config_name, int(rerun_str)
 
 
-def build_run(level_name: str, model_team: str | ModelTeam, config_name: str, rerun_index: int) -> Run:
+def build_run(level_name: str, model_team: ModelTeam | Enum, config_name: str, rerun_index: int) -> Run:
     level_lookup = collect_levels()
     config_lookup = collect_configurations()
-    model_lookup = collect_models()
 
     if level_name not in level_lookup:
         raise KeyError(f"Unknown level '{level_name}' in filename")
@@ -226,13 +218,11 @@ def build_run(level_name: str, model_team: str | ModelTeam, config_name: str, re
         raise KeyError(f"Unknown configuration '{config_name}' in filename")
 
     if isinstance(model_team, ModelTeam):
-        resolved_team = ModelTeam(
-            realisator=_resolve_model_enum(model_lookup, model_team.realisator),
-            imaginator=_resolve_model_enum(model_lookup, model_team.imaginator or model_team.realisator),
-            extra=_resolve_model_enum(model_lookup, model_team.extra) if model_team.extra is not None else None,
-        )
+        resolved_team = model_team
+    elif isinstance(model_team, Enum) and isinstance(model_team.value, ModelTeam):
+        resolved_team = model_team.value
     else:
-        resolved_team = parse_model_token(str(model_team), model_lookup)
+        raise TypeError("model_team must be a ModelTeam or ModelTeams enum")
 
     return Run(
         configuration=config_lookup[config_name],
@@ -243,7 +233,7 @@ def build_run(level_name: str, model_team: str | ModelTeam, config_name: str, re
     )
 
 
-def filter_by_models(entries: List[str], allowed_models: Sequence[str | Enum | ModelSpec | ModelTeam] | None) -> List[str]:
+def filter_by_models(entries: List[str], allowed_models: Sequence[ModelTeam | Enum] | None) -> List[str]:
     if not allowed_models:
         return entries
 

@@ -123,7 +123,7 @@ class Model(Enum):
                     ),
                 )
 
-            class Qwen(Enum):
+            class Qwen3(Enum):
                 NEMOTRON_14B_Q8 = ModelSpec(
                     name="Nemotron-Qwen2.4-14B-Q8",
                     tag="nemotron_qwen_14B",
@@ -626,6 +626,19 @@ class Model(Enum):
                 source=SourceRemote(
                     endpoint_url="http://127.0.0.1:11444/v1",
                     model_id="magistral:24b-small-2506-q8_0",
+                ),
+            )
+
+            NEMOTRON_SUPER_49B = ModelSpec(
+                name="Llama-3.3-Nemotron-Super-49B" ,
+                tag="nemotron_super_49b",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LLAMACPPAGENT,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="http://127.0.0.1:11444/v1",
+                    model_id="MHKetbi/nvidia_Llama-3.3-Nemotron-Super-49B-v1:q8_0",
                 ),
             )
 

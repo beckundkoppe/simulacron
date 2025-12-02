@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
+import socket
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from benchmark.dispatcher import Dispatcher
 from benchmark.phase_settings import resolve_runner_config
@@ -15,14 +17,19 @@ from benchmark.run_registry import (
 )
 
 
-CLAIMS_FOLDER = Path("data/runs/claims")
+def _is_git_repo(repo: Path) -> bool:
+    return (repo / ".git").exists()
 
 
 def git(repo: Path, *args: str):
+    if not _is_git_repo(repo):
+        return
     subprocess.run(["git", "-C", str(repo), *args], check=True)
 
 
 def git_commit_if_needed(repo: Path, paths: List[Path], message: str):
+    if not _is_git_repo(repo):
+        return
     staged_targets = []
     for path in paths:
         if path is None:
@@ -42,10 +49,14 @@ def git_commit_if_needed(repo: Path, paths: List[Path], message: str):
 
 
 def git_pull_rebase(repo: Path):
+    if not _is_git_repo(repo):
+        return
     git(repo, "pull", "--rebase", "--autostash")
 
 
 def git_push(repo: Path):
+    if not _is_git_repo(repo):
+        return
     git(repo, "push")
 
 
@@ -60,8 +71,8 @@ def write_todo(phase_file: Path, entries: List[str]):
     phase_file.write_text("\n".join(entries) + ("\n" if entries else ""))
 
 
-def claim_entry(repo_root: Path, entry: str) -> Path:
-    claim_path = repo_root / CLAIMS_FOLDER / f"{entry}.claim"
+def claim_entry(claims_folder: Path, entry: str, hostname: str) -> Path:
+    claim_path = claims_folder / f"{entry}__{hostname}.claim"
     claim_path.parent.mkdir(parents=True, exist_ok=True)
     if claim_path.exists():
         raise FileExistsError(f"Claim already exists for {entry}")
@@ -69,13 +80,45 @@ def claim_entry(repo_root: Path, entry: str) -> Path:
     return claim_path
 
 
+def cleanup_stale_claims(claims_folder: Path, results_folder: Path, todo_entries: List[str]) -> None:
+    claims_folder.mkdir(parents=True, exist_ok=True)
+    todo_set = set(todo_entries)
+    for claim_file in claims_folder.glob("*.claim"):
+        stem = claim_file.stem
+        if "__" in stem:
+            entry, _ = stem.split("__", 1)
+        else:
+            entry = stem
+        result_file = results_folder / entry
+        # If the result exists or the entry is no longer in TODO, drop the claim.
+        if result_file.exists() or entry not in todo_set:
+            claim_file.unlink(missing_ok=True)
+            
+
+def find_local_claim(claims_folder: Path, hostname: str, todo_entries: List[str]) -> Tuple[str, Path] | None:
+    todo_set = set(todo_entries)
+    for claim_file in claims_folder.glob(f"*__{hostname}.claim"):
+        stem = claim_file.stem
+        entry, _ = stem.split("__", 1)
+        if entry in todo_set:
+            return entry, claim_file
+    return None
+
+
 def main():
-    repo_root = Path.cwd()
+    results_root = Path(os.getenv("RESULTS_ROOT", "results")).resolve()
+    repo_root = Path(os.getenv("RESULTS_GIT_ROOT", results_root)).resolve()
+    if not _is_git_repo(repo_root):
+        print(f"Git repo not found at {repo_root}, running without pushes.")
+    data_root = results_root
+    claims_folder = results_root / "runs/claims"
+    results_folder = results_root / "runs"
     requested_phase = sys.argv[1] if len(sys.argv) > 1 else None
     runner_config = resolve_runner_config(phase=requested_phase)
     phase = runner_config.phase
-    phase_file = repo_root / "data/phase" / f"{phase}.txt"
+    phase_file = data_root / "phase" / f"{phase}.txt"
     allowed_model_teams = normalize_model_teams(None, runner_config.allowed_model_teams or [])
+    hostname = socket.gethostname()
 
     dispatcher = Dispatcher()
 
@@ -86,7 +129,16 @@ def main():
             print("TODO list is empty. Done.")
             break
 
-        candidates = filter_by_models(todo_entries, allowed_model_teams)
+        cleanup_stale_claims(claims_folder, results_folder, todo_entries)
+
+        # Resume existing claim for this host if present.
+        local_claim = find_local_claim(claims_folder, hostname, todo_entries)
+        if local_claim:
+            claimed_entry, claim_file = local_claim
+            print(f"Resuming claimed entry: {claimed_entry}")
+            candidates = [claimed_entry]
+        else:
+            candidates = filter_by_models(todo_entries, allowed_model_teams)
         if not candidates:
             print("No runnable entries for the allowed model teams. Sleeping.")
             break
@@ -95,8 +147,11 @@ def main():
         claim_file = None
 
         for entry in candidates:
+            if local_claim and entry == claimed_entry:
+                claimed_entry = entry
+                break
             try:
-                claim_file = claim_entry(repo_root, entry)
+                claim_file = claim_entry(claims_folder, entry, hostname)
             except FileExistsError:
                 continue
 

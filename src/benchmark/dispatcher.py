@@ -1,6 +1,7 @@
 from itertools import product
 import time
 from typing import List
+from pathlib import Path
 from benchmark.benchresult import PerformanceResult
 from benchmark.run import Run
 import current
@@ -16,8 +17,9 @@ class Dispatcher:
     def __init__(self):
         self.queued_runs: list[Run] = []
         self.average_time = 30.0
-        self.folder = "data/runs/"
-        self.folder_phase = "data/phase/"
+        results_root = Path(os.getenv("RESULTS_ROOT", "results"))
+        self.folder = str(results_root / "runs/")
+        self.folder_phase = str(results_root / "phase/")
         self.file = None
 
     def queue_run(self, run: Run):
@@ -25,8 +27,8 @@ class Dispatcher:
 
     @staticmethod
     def _basename_for_run(run: Run, rerun_index: int) -> str:
-        team_label = run.model_team.label()
-        return f"{run.level.value.getName()}_{team_label}_{run.configuration.name}_{rerun_index}"
+        team_token = run.model_team.token()
+        return f"{run.level.value.getName()}_{team_token}_{run.configuration.name}_{rerun_index}"
 
 
     def append_raw(self, str: str) -> None:

@@ -83,8 +83,9 @@ This launches the main executable.
 ## Benchmarks
 
 1. Configure the benchmark matrix in `src/benchmark/phase_settings.py` (`PHASES`) and per-host allowlists (`RUNNER_CONFIGS`). The order of `allowed_model_teams` matters: runs for the first team are claimed before later entries.
-2. Generate TODO lists: `PYTHONPATH=src python -m benchmark.phase_generate`.
-3. Execute on a runner (optional phase override): `PYTHONPATH=src python -m benchmark.phase_runner [phase]`.
+2. Generate TODO lists: `PYTHONPATH=src python -m benchmark.phase_generate` (writes into `results/phase/`).
+3. Execute on a runner (optional phase override): `PYTHONPATH=src python -m benchmark.phase_runner [phase]` (reads `results/phase/`, writes `results/runs/`).
+4. You can keep `results/` as a separate git repo to sync TODOs/results independently from code.
 4. See `doc/distributed_benchmark.md` for multi-host coordination details.
 
 ## Repository Structure
@@ -92,6 +93,7 @@ This launches the main executable.
 ```
 simulacron/
 ├─ data/        # Model and embedding files
+├─ results/     # Benchmark TODOs and run outputs (can be its own repo)
 ├─ doc/         # Documentation
 ├─ ressources/  # Icon and Assets
 ├─ script/      # Helper scripts
