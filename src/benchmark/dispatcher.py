@@ -38,6 +38,19 @@ class Dispatcher:
         with open(filename_raw, "a") as f: # -> nur am ende dranhängen
             f.write(str)
 
+    def _prepare_raw_logging(self, run: Run, rerun_index: int) -> None:
+        """
+        Initialise the raw log file for the current run and enable append callback.
+        """
+        config.APPEND_RAW = self.append_raw
+        self.file = self._basename_for_run(run, rerun_index)
+
+        raw_folder = Path(self.folder) / "raw"
+        raw_folder.mkdir(parents=True, exist_ok=True)
+
+        raw_path = raw_folder / f"{self.file}_raw.txt"
+        raw_path.write_text("")
+
 
     def run_single(self, run: Run):
         results = []
@@ -46,6 +59,7 @@ class Dispatcher:
         for i in range(run.reruns):
             print(f"Rerun: {i+1}")
 
+            self._prepare_raw_logging(run, i)
             result = self._start_with_result(run)
             print(result.softerror_count)
             print(result.harderror_count)
@@ -54,6 +68,7 @@ class Dispatcher:
             current.RESULT = None
             print(PerformanceResult.average(results).toString())
         
+        config.APPEND_RAW = None
         return PerformanceResult.average(results)
 
     def _start_with_result(self, run: Run) -> PerformanceResult:
@@ -75,7 +90,6 @@ class Dispatcher:
         os.makedirs(self.folder, exist_ok=True)
 
         config.ACTIVE_CONFIG = run.configuration
-        config.APPEND_RAW = self.append_raw
         for i in range(run.reruns):
             # Reuse the rerun helper so claimed single runs and full runs share logic
             self.benchmark_single_rerun(run, i)
@@ -133,14 +147,15 @@ class Dispatcher:
         os.makedirs(self.folder, exist_ok=True)
 
         config.ACTIVE_CONFIG = run.configuration
-        config.APPEND_RAW = self.append_raw
 
-        self.file = self._basename_for_run(run, rerun_index)
-        filename = self.file + ".json"
+        basename = self._basename_for_run(run, rerun_index)
+        filename = basename + ".json"
         path = os.path.join(self.folder, filename)
 
         if os.path.exists(path):
             return
+
+        self._prepare_raw_logging(run, rerun_index)
 
         print(f"Starting: {filename}")
         result = self._start_with_result(run)
@@ -148,6 +163,8 @@ class Dispatcher:
         self._write_file(path, result.toJSON())
 
         print(result.toString())
+
+        config.APPEND_RAW = None
 
 
     def _debug_result(self, run,i):

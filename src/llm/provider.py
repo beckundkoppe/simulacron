@@ -1,9 +1,13 @@
 from abc import ABC, abstractmethod
+import copy
+from datetime import datetime
+import json
 from pathlib import Path
 import re
 from typing import List, Optional, Tuple
 from langchain_openai import ChatOpenAI
 
+import config
 import debug
 from llm.cache import Cache
 from llm.memory.memory import Memory, Role, Type
@@ -67,6 +71,12 @@ class Provider(ABC):
                 "content": transient
             })
 
+        self._log_raw_event(
+            "request",
+            {"messages": out},
+            attempt=1,
+        )
+
         return out
 
     def _clean_reply(reply: str) -> str:
@@ -93,6 +103,28 @@ class Provider(ABC):
             else:
                 if append and len(reply) > 0:
                     self.memory.append_message(Role.ASSISTANT, reply)
+
+    def _log_raw_event(self, event: str, payload: dict, attempt: Optional[int] = None) -> None:
+        if config.APPEND_RAW is None:
+            return
+
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "provider": self.name,
+            "model": getattr(self.model.value, "name", str(self.model)),
+            "event": event,
+        }
+
+        if attempt is not None:
+            entry["attempt"] = attempt
+
+        entry.update(payload)
+
+        try:
+            config.APPEND_RAW(json.dumps(entry, default=str) + "\n")
+        except Exception:
+            # Logging failures should not break inference.
+            pass
 
     def build(name: str, model: Model, memory: Optional[Memory] = None) -> "Provider":
         src = model.value.source
@@ -125,6 +157,14 @@ class LlamaCppProvider(Provider):
 
         #response_format={"type": "text"}
         reply = self.llm.create_chat_completion(temp)["choices"][0]["message"]["content"]
+        self._log_raw_event(
+            "response",
+            {
+                "reply": reply,
+                "clean_reply": Provider._clean_reply(reply),
+            },
+            attempt=1,
+        )
 
         clean_reply = Provider._hard_clean_reply(reply)
 
@@ -132,9 +172,22 @@ class LlamaCppProvider(Provider):
             print(clean_reply)
 
         if len(clean_reply) <= 0:
-            hist = temp
+            hist = copy.deepcopy(temp)
             hist[-1]["content"] = hist[-1]["content"] + " /nothink"
+            self._log_raw_event(
+                "request",
+                {"messages": hist, "note": "retry_without_think"},
+                attempt=2,
+            )
             reply = self.llm.create_chat_completion(hist)["choices"][0]["message"]["content"]
+            self._log_raw_event(
+                "response",
+                {
+                    "reply": reply,
+                    "clean_reply": Provider._clean_reply(reply),
+                },
+                attempt=2,
+            )
 
         clean_reply = Provider._clean_reply(reply)
 
@@ -156,6 +209,14 @@ class LangchainProvider(Provider):
             print(temp)
 
         reply = self.llm.invoke(temp).content
+        self._log_raw_event(
+            "response",
+            {
+                "reply": reply,
+                "clean_reply": Provider._clean_reply(reply),
+            },
+            attempt=1,
+        )
 
         if debug.VERBOSE_LANGCHAIN:
             print(reply)
