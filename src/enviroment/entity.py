@@ -154,19 +154,18 @@ class Entity:
         return False
 
     def on_interact(self, actor_entity, action: ActionTry) -> str:
-        #if self not in actor_entity.get_inventory():
-        #    raise SoftException(
-        #        "You can only drop items that are in your inventory.",
-        #        console_message=(
-        #            f"The object '{self.readable_id}' is not in your inventory."
-        #        ),
-        #        hint="Select an item from your inventory if you want to drop it.",
-        #        context={
-        #            "entity": self.readable_id,
-        #            "inventory": [e.readable_id for e in actor_entity.get_inventory()],
-        #        },
-        #    )
-
+        if self not in actor_entity.get_inventory():
+            raise SoftException(
+                "You can only drop items that are in your inventory.",
+                console_message=(
+                    f"The object '{self.readable_id}' is not in your inventory."
+                ),
+                hint="Select an item from your inventory if you want to drop it.",
+                context={
+                    "entity": self.readable_id,
+                    "inventory": [e.readable_id for e in actor_entity.get_inventory()],
+                },
+            )
 
         self._ensure_same_room(actor_entity)
         self._ensure_in_range(actor_entity)

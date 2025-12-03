@@ -10,28 +10,28 @@ def main():
     dispatcher = Dispatcher()
 
     agent_config = AgentConfiguration(
-        plan       = PlanType.DECOMPOSE,
+        plan       = PlanType.OFF,
         observe    = ObserveType.OFF,
         trial      = TrialType.OFF,
-        action     = ActionType.IMG_RETRY,
+        action     = ActionType.DIRECT,
         reflect    = ReflectType.OFF,
-        memory_type= MemoryType.SUPER,
+        memory_type= MemoryType.SIMPLE,
     )
 
     config = Configuration(agent_config, PerceptionType.ALL, PositionType.RELATIVE, temperature=0.0, name="test", seed=-1)
 
     model_team = ModelTeam(
-        #realisator=Model.Remote.MISTRAL_SMALL_24B,
+        realisator=Model.Local.LlamaCpp.PHI4_MINI_THINK_3_8B,
         #realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
-        realisator=Model.Remote.GPT_OSS_120B,
+        #realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
         #extra=Model.Local.Ollama.DOLPHIN3_8B,
     )
 
-    result1: PerformanceResult = dispatcher.run_single(
+    result1: PerformanceResult = dispatcher.benchmark_single(
         Run(
             config,
             model_team=model_team,
-            level=Levels.DETAILED_INSTRUCT.ONION_EASY,
+            level=Levels.DETAILED_INSTRUCT.CARROT_HARD,
             reruns=30,
             optimal_steps_multiplier=4.0,
         )

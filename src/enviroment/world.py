@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Set
 
+from enviroment.resultbuffer import Resultbuffer
+
 
 class World:
     entities: Set["Entity"] = set()
@@ -35,6 +37,9 @@ class World:
 
     @staticmethod
     def clear():
+        # Wipe execution results alongside world state so stale actions
+        # from previous runs don't leak into the next level.
+        Resultbuffer.buffer.clear()
         World.entities.clear()
         World.rooms.clear()
         World._id_counter = 0

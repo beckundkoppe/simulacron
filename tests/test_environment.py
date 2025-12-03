@@ -27,6 +27,7 @@ from enviroment.entity import (
 from enviroment.exception import HardException, SoftException
 from enviroment.position import Position
 from enviroment.room import Room
+from enviroment.resultbuffer import Resultbuffer, Success
 from enviroment.world import World
 
 
@@ -177,6 +178,15 @@ class TestEnvInteraction(unittest.TestCase):
 
         self.assertIn("room-b", description)
         self.assertIn("onion", description)
+
+    def test_world_clear_resets_resultbuffer(self) -> None:
+        """Clearing the world also clears any leftover action results."""
+
+        Success("dummy-result")
+        self.assertGreater(len(Resultbuffer.buffer), 0)
+
+        World.clear()
+        self.assertEqual(len(Resultbuffer.buffer), 0)
 
 
 if __name__ == "__main__":

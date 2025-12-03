@@ -5,6 +5,7 @@ from agent.plan import FreePlan, PlanNode, StepPlan, TreePlan
 from agent.toolpool import ToolGroup, register_tools
 import config
 import current
+import debug
 from enviroment.entity import Entity
 from enviroment.resultbuffer import FormalError
 from llm.memory.memory import Memory, Role, Type
@@ -24,7 +25,11 @@ class Agent:
         self.plan = None
         self.main_memory = self._create_main_memory(goal)
 
-        self.main_memory.append_message(Role.SYSTEM, "The human can move, take/drop object, interact with object (open, close, lock, unlock, go/look through door). Dont assume to know, what room is behind doors.")
+        self.main_memory.append_message(
+            Role.SYSTEM,
+                "The human agent can move, take and drop objects, and interact with objects (open, close, lock, unlock, go through or look through doors). Always choose the minimal action sequence that achieves the requsted goal and nothing else.",
+            Type.GOAL
+        )
 
         self.had_action = False
         self.triggered_replan = None
@@ -32,6 +37,8 @@ class Agent:
 
         if config.ACTIVE_CONFIG.agents.plan is not config.PlanType.OFF:
             self.triggered_replan = "Main goal is not yet reached. Create an initial plan"
+
+        debug.print_to_file(self.main_memory.get_history())
 
     def _add_time(self, field: str, delta: float) -> None:
         result = getattr(current, "RESULT", None)
@@ -226,7 +233,7 @@ class Agent:
             realisator = ToolProvider.build("actor", self.realisator_model, memory=self.main_memory)
             register_tools(realisator, ToolGroup.ENV)
             start = time.time()
-            realisator.call(perception + ". " + prompt + "Use concise, executable actions. Your answer must only consist of toolcalls.")
+            realisator.invoke(perception + ". " + prompt + "Use concise, executable actions. Your answer must only consist of toolcalls.")
             self._add_time("real_time_s", time.time() - start)
         else:
             tc_prompt =  """

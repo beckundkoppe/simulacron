@@ -621,7 +621,7 @@ class Model(Enum):
                 tag="mistral_small_24b",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
-                agent_backend=AgentBackend.LLAMACPPAGENT,
+                agent_backend=AgentBackend.LANGCHAIN,
                 kind=ModelKind.HYBRID,
                 source=SourceRemote(
                     endpoint_url="http://127.0.0.1:11444/v1",
@@ -634,7 +634,7 @@ class Model(Enum):
                 tag="nemotron_super_49b",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
-                agent_backend=AgentBackend.LLAMACPPAGENT,
+                agent_backend=AgentBackend.LANGCHAIN,
                 kind=ModelKind.HYBRID,
                 source=SourceRemote(
                     endpoint_url="http://127.0.0.1:11444/v1",
@@ -648,7 +648,7 @@ class Model(Enum):
                 tag="mistral_small_24b",
                 location=Location.REMOTE,
                 backend=Backend.OTHER,
-                agent_backend=AgentBackend.LLAMACPPAGENT,
+                agent_backend=AgentBackend.LANGCHAIN,
                 kind=ModelKind.HYBRID,
                 source=SourceRemote(
                     endpoint_url="http://127.0.0.1:11444/v1",
@@ -669,7 +669,7 @@ class Model(Enum):
                 ),
             )
 
-            QWEN3 = ModelSpec(
+            QWEN3_235B = ModelSpec(
                 name="Qwen3" ,
                 tag="qwen3",
                 location=Location.REMOTE,

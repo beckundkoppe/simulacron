@@ -52,7 +52,9 @@ class Provider(ABC):
 
         assert isinstance(msg, str), "message ist no string"
 
-        console.pretty(console.bullet(f"[{role.to_string()}] {msg + (" " + transient if transient is not None else "")}", color=console.Color.CYAN))
+        debug.print_to_file(f"[{role.to_string()}] {msg + ("\n" + transient if transient is not None else "")}")
+
+        console.pretty(console.bullet(f"[{role.to_string()}] {msg + (" \n" + transient if transient is not None else "")}", color=console.Color.CYAN))
 
         if override is not None:
             mem = override
@@ -75,15 +77,33 @@ class Provider(ABC):
         return out
 
     def _clean_reply(reply: str) -> str:
-        if isinstance(reply, str):
-            return re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL)
-        else:
+        if not isinstance(reply, str):
             return ""
+        
+        lowered = reply.lower()
+
+        open_idx = lowered.find("<think>")
+        close_idx = lowered.find("</think>")
+
+        # Fall 1: <think> ohne </think> → komplett verwerfen
+        if open_idx != -1 and close_idx == -1:
+            return ""
+
+        # Fall 2: </think> ohne <think> oder davor → alles bis einschließlich </think> entfernen
+        if close_idx != -1 and (open_idx == -1 or close_idx < open_idx):
+            end_idx = close_idx + len("</think>")
+            return reply[end_idx:].lstrip()
+
+        # Fall 3: vollständigen <think>...</think>-Block entfernen (auch mehrere)
+        reply = re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL | re.IGNORECASE)
+
+        return reply.strip()
         
     def _hard_clean_reply(reply: str) -> str:
         if "<think>" in reply and "</think>" not in reply:
             return ""
         return reply
+    
     def _invoke_post(self, reply: str, override: Optional[Memory] = None, append: bool = True) -> None:
         assert isinstance(reply, str)
 
@@ -129,21 +149,24 @@ class LlamaCppProvider(Provider):
         if debug.VERBOSE_LLAMACPP:
             print(temp)
 
-        #response_format={"type": "text"}
         reply = self.llm.create_chat_completion(temp)["choices"][0]["message"]["content"]
 
-        clean_reply = Provider._hard_clean_reply(reply)
+        hard_cleaned = Provider._hard_clean_reply(reply)
 
         if debug.VERBOSE_LLAMACPP:
-            print(clean_reply)
+            print(hard_cleaned)
 
-        if len(clean_reply) <= 0:
+        if len(hard_cleaned) <= 0:
+            print("/nothink")
             hist = copy.deepcopy(temp)
             hist[-1]["content"] = hist[-1]["content"] + " /nothink"
             reply = self.llm.create_chat_completion(hist)["choices"][0]["message"]["content"]
+        else:
+            reply = hard_cleaned
 
         clean_reply = Provider._clean_reply(reply)
 
+        debug.print_to_file(f"[{self.name}] {clean_reply}")
         self._invoke_post(reply=clean_reply, override=override, append=append)
 
         return clean_reply
@@ -167,7 +190,10 @@ class LangchainProvider(Provider):
             print(reply)
         
         clean_reply = Provider._clean_reply(reply)
+
+        debug.print_to_file(f"[{self.name}] {clean_reply}")
         self._invoke_post(reply=clean_reply, override=override, append=append)
+        
         return clean_reply
 
 class LangchainLocalProvider(LangchainProvider):

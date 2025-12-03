@@ -1,7 +1,6 @@
 import contextlib
-import json
 import os
-import sys
+import socket
 import time
 import traceback
 from datetime import datetime
@@ -44,10 +43,15 @@ class Dispatcher:
     def _redirect_output_to_raw(self, run: Run, rerun_index: int):
         basename = self._basename_for_run(run, rerun_index)
         raw_path = self._raw_log_path(self.folder, basename)
-        with raw_path.open("w") as raw_file:
-            tee = _TeeStream(sys.stdout, raw_file)
-            with contextlib.redirect_stdout(tee), contextlib.redirect_stderr(tee):
-                yield raw_path
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_path.write_text("")
+
+        previous_raw = config.APPEND_RAW
+        config.APPEND_RAW = raw_path
+        try:
+            yield raw_path
+        finally:
+            config.APPEND_RAW = previous_raw
 
     def _log_run_failure(self, run: Run, rerun_index: int, error: Exception) -> None:
         """Persist failure details into the run's result file."""
@@ -65,6 +69,7 @@ class Dispatcher:
                 "status": "error",
                 "error": str(error),
                 "error_type": type(error).__name__,
+                "hostname": socket.gethostname(),
                 "traceback": traceback.format_exc(),
             }
             path.write_text(json.dumps(entry, ensure_ascii=False, indent=2))
@@ -98,7 +103,7 @@ class Dispatcher:
     def _start_with_result(self, run: Run) -> PerformanceResult:
         config.ACTIVE_CONFIG = run.configuration
         World.clear()
-        result = PerformanceResult(run)
+        result = PerformanceResult(run, hostname=socket.gethostname())
         current.RESULT = result
         start_time = time.time()
         game.run_level(run.level, run.optimal_steps_multiplier, run.main_model, run.imaginator, run.extra_model)
@@ -210,21 +215,3 @@ class Dispatcher:
     def _write_file(self, path, content):
         with open(path, "w") as f:
             f.write(content)
-
-
-class _TeeStream:
-    """
-    Minimal stream duplicator so output still appears in the console while also
-    being captured into the raw log file.
-    """
-
-    def __init__(self, *targets):
-        self.targets = targets
-
-    def write(self, data):
-        for target in self.targets:
-            target.write(data)
-
-    def flush(self):
-        for target in self.targets:
-            target.flush()

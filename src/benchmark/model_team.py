@@ -16,6 +16,18 @@ class ModelTeam:
     extra: Model | None = None
     tag: str | None = None
 
+    def toObject(self):
+        return {
+            "name": self.getName(),
+            "imaginator": self.imaginator.value.name if self.imaginator else "None",
+            "realisator": self.realisator.value.name
+        }
+    
+    def getName(self):
+        if self.imaginator:
+            return f"{self.imaginator.value.name}_+_{self.realisator.value.name}"
+        return self.realisator.value.name
+
     def label(self) -> str:
         imaginator = self.imaginator or self.realisator
         if imaginator == self.realisator:
@@ -58,10 +70,6 @@ class ModelTeam:
 
 class ModelTeams(Enum):
     class Local(Enum):
-        QWEN_CODER30B = ModelTeam(
-            realisator=Model.Local.Ollama.Qwen3.CODER_30B,
-        )
-
         GROQ_LLAMA8B = ModelTeam(
             realisator=Model.Local.LlamaCpp.Llama3.LLAMA3_GROQ_8B_Q8,
         )
@@ -70,17 +78,28 @@ class ModelTeams(Enum):
             realisator=Model.Local.LlamaCpp.Qwen3.NEMOTRON_14B_Q8,
         )
 
-        NEMOTRON_NEMOTRON14B_XQWEN8B = ModelTeam(
+        PHI4_8B = ModelTeam(
+            realisator=Model.Local.LlamaCpp.PHI4_MINI_THINK_3_8B,
+        )
+
+        QWEN_4B = ModelTeam(
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_4B,
+        )
+
+        QWEN_8B = ModelTeam(
             realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
-            imaginator=Model.Local.LlamaCpp.Qwen3.NEMOTRON_14B_Q8,
         )
 
         QWEN_30B = ModelTeam(
             realisator=Model.Local.Ollama.Qwen3.VANILLA_30B,        
         )
 
-        QWEN_8B = ModelTeam(
-            realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
+        QWEN_CODER30B = ModelTeam(
+            realisator=Model.Local.Ollama.Qwen3.CODER_30B,
+        )
+
+        GPT_OSS_20B = ModelTeam(
+            realisator=Model.Local.Ollama.GPT_OSS_20B,
         )
 
         DOLPHIN_X_QWEN = ModelTeam(
@@ -88,8 +107,9 @@ class ModelTeams(Enum):
             imaginator=Model.Local.Ollama.DOLPHIN3_8B,
         )
 
-        GPT_OSS = ModelTeam(
-            realisator=Model.Local.Ollama.GPT_OSS_20B,
+        NEMOTRON_NEMOTRON14B_X_QWEN8B = ModelTeam(
+            realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
+            imaginator=Model.Local.LlamaCpp.Qwen3.NEMOTRON_14B_Q8,
         )
 
 # # # # # # # # # remote # # # # # # # # # # #
@@ -100,26 +120,27 @@ class ModelTeams(Enum):
             imaginator=Model.Remote.MISTRAL_SMALL_24B,
         )
 
-        MAGISTRAL_SMALL = ModelTeam(
+        NEMOTRON_LLAMA = ModelTeam(
             realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
-            imaginator=Model.Remote.MAGISTRAL_SMALL_24B,
-        )
-
-    class Remote(Enum):
-        GPT_OSS = ModelTeam(
-            realisator=Model.Remote.GPT_OSS_120B,
-        )
-
-        QWEN = ModelTeam(
-            realisator=Model.Remote.QWEN3,
+            imaginator=Model.Remote.NEMOTRON_SUPER_49B,
         )
 
         DEEPSEEK_LLAMA = ModelTeam(
-            realisator=Model.Remote.DEEPSEEK_R1_LLAMA_DISTILL_70B,
+            realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
+            imaginator=Model.Remote.DEEPSEEK_R1_LLAMA_DISTILL_70B,
         )
 
-        NEMOTRON_LLAMA = ModelTeam(
-            realisator=Model.Remote.NEMOTRON_SUPER_49B,
+    class Remote(Enum):
+        GPT_OSS_120B = ModelTeam(
+            realisator=Model.Remote.GPT_OSS_120B,
+        )
+
+        QWEN_235B = ModelTeam(
+            realisator=Model.Remote.QWEN3_235B,
+        )
+
+        MAGISTRAL_SMALL = ModelTeam(
+            realisator=Model.Remote.MAGISTRAL_SMALL_24B,
         )
 
 MODEL_TEAM_PRESETS: Sequence[ModelTeams] = tuple(ModelTeams)

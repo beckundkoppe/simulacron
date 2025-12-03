@@ -98,14 +98,19 @@ class LlamaToolprovider(ToolProvider):
                 raise ValueError(f"Unknown role: {role_str}")
 
             history.add_message({"role": r, "content": msg})
-            
-        reply = self.instance.get_chat_response(
-            message=message,
-            chat_history=history,
-            #system_prompt=transient,
-            structured_output_settings=self._output_settings,
-            print_output=debug.VERBOSE_LLAMACPPAGENT,
-        )
+        
+        with debug.capture_stdout() as buf:
+            reply = self.instance.get_chat_response(
+                message=message,
+                chat_history=history,
+                #system_prompt=transient,
+                structured_output_settings=self._output_settings,
+                print_output=True,
+            )
+
+        debug.print_to_file(buf)
+
+        if debug.VERBOSE_LLAMACPPAGENT: print(buf)
 
         clean_reply = Provider._clean_reply(reply)
         self._invoke_post(reply=clean_reply, override=override, append=append)
@@ -200,6 +205,25 @@ class LangchainToolprovider(ToolProvider):
 
                 return cls(**data)
         
+        #def _normalize_args(args: Any) -> dict:
+        #    """Normalize tool call args into a plain dict."""
+        #    if isinstance(args, dict):
+        #        return args
+        #    if isinstance(args, str):
+        #        for parser in (json.loads, ast.literal_eval):
+        #            try:
+        #                parsed = parser(args)
+        #                return _normalize_args(parsed)
+        #            except Exception:
+        #                continue
+        #        return {}
+        #    if isinstance(args, list):
+        #        # Accept list of {"name": k, "value": v} pairs
+        #        if all(isinstance(a, dict) and "name" in a and "value" in a for a in args):
+        #            return {a["name"]: a["value"] for a in args}
+        #        return {}
+        #    return {}
+
         def _execute_toolcall(tool_call: ToolCall) -> str:
             if not self._tools:
                 FormalError("toolcall failed: no tools registered for agent.")
@@ -213,6 +237,7 @@ class LangchainToolprovider(ToolProvider):
 
             name = tool_call.name
             args = tool_call.args
+            #args = _normalize_args(tool_call.args)
 
             print(f"[TOOLCALL] {name}, args: {args}")
 
@@ -229,6 +254,8 @@ class LangchainToolprovider(ToolProvider):
                 raise Exception("unknown tool")
             
         def _try_execute(raw: str, heuristic: bool = False) -> bool:
+            
+
             try:
                 tc = ToolCall.from_raw(raw, heuristic)
                 _execute_toolcall(tc)
@@ -244,32 +271,43 @@ class LangchainToolprovider(ToolProvider):
         except Exception as e:
             FormalError(f"no valid reply: " + str(e))
             return ""
+        
+        debug.print_to_file(result)
+
+        if debug.VERBOSE_LANGCHAIN_TOOL: print(result)
 
         raw_reply = result.content
-
-        if debug.VERBOSE_LANGCHAIN_TOOL: console.json_dump(result)
 
         clean_reply = Provider._clean_reply(raw_reply)
 
         if self._tools is not None:
             valid_toolcall = False
+
+
             for raw in result.tool_calls:
                 if _try_execute(raw) is True:
                     valid_toolcall = True
 
             if(not valid_toolcall):
-                parsing_options = [ ast.literal_eval, json.loads, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
+                parsing_options = [ _parse_python_multicall, ast.literal_eval, json.loads, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
 
+                parsed_calls = None
                 for parse in parsing_options:
                     try:
-                        data = parse(clean_reply)
+                        parsed_calls = parse(clean_reply)
                         break
-                    except:
-                        data = None
+                    except Exception:
+                        parsed_calls = None
                         continue
 
-                if data is not None:
-                    _try_execute(data, True)
+                if parsed_calls is not None:
+                    if isinstance(parsed_calls, list):
+                        for call in parsed_calls:
+                            if _try_execute(call, True):
+                                valid_toolcall = True
+                    else:
+                        if _try_execute(parsed_calls, True):
+                            valid_toolcall = True
 
         self._invoke_post(reply=clean_reply, override=override, append=append)
 
@@ -378,3 +416,100 @@ def _parse_call_syntax(cmd: str):
     arg_dicts = [{"name": f"arg{i}", "value": val} for i, val in enumerate(cleaned)]
 
     return [{"name": func_name, "args": arg_dicts}]
+
+
+def _parse_python_multicall(cmd: str):
+    """
+    Parse outputs like:
+    python move_to_object(object_id="table_3") drop_to(what_id="carrot_4", to_id="table_3")
+    into a list of tool call dicts.
+    """
+    match = re.match(r"\s*python\s+(.*)", cmd, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        raise ValueError("Not a python multi-call")
+
+    payload = match.group(1).strip()
+    if not payload:
+        raise ValueError("Empty python payload")
+
+    calls = []
+    current = []
+    depth = 0
+    in_string = False
+    string_char = None
+
+    for ch in payload:
+        if ch in ("'", '"'):
+            if not in_string:
+                in_string = True
+                string_char = ch
+            elif string_char == ch:
+                in_string = False
+        if ch == "(" and not in_string:
+            depth += 1
+        elif ch == ")" and not in_string:
+            depth -= 1
+
+        if ch.isspace() and depth == 0 and not in_string:
+            if current:
+                calls.append("".join(current).strip())
+                current = []
+        else:
+            current.append(ch)
+
+    if current:
+        calls.append("".join(current).strip())
+
+    def _parse_single_call(call: str) -> dict[str, dict]:
+        func_match = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*", call, flags=re.DOTALL)
+        if not func_match:
+            raise ValueError(f"Invalid call syntax: {call}")
+
+        func_name = func_match.group(1)
+        args_str = func_match.group(2).strip()
+
+        if not args_str:
+            return {"name": func_name, "args": {}}
+
+        args: dict[str, str] = {}
+        current_arg: list[str] = []
+        depth_arg = 0
+        in_string_arg = False
+        string_char_arg = None
+
+        for ch in args_str:
+            if ch in ("'", '"'):
+                if not in_string_arg:
+                    in_string_arg = True
+                    string_char_arg = ch
+                elif string_char_arg == ch:
+                    in_string_arg = False
+            if ch == "(" and not in_string_arg:
+                depth_arg += 1
+            elif ch == ")" and not in_string_arg:
+                depth_arg -= 1
+
+            if ch == "," and depth_arg == 0 and not in_string_arg:
+                arg_text = "".join(current_arg).strip()
+                if arg_text:
+                    _add_arg(arg_text, args)
+                current_arg = []
+            else:
+                current_arg.append(ch)
+
+        if current_arg:
+            _add_arg("".join(current_arg).strip(), args)
+
+        return {"name": func_name, "args": args}
+
+    def _add_arg(arg_text: str, args: dict[str, str]) -> None:
+        if "=" in arg_text:
+            key, val = arg_text.split("=", 1)
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            args[key] = val
+        else:
+            arg_name = f"arg{len(args)}"
+            args[arg_name] = arg_text.strip().strip('"').strip("'")
+
+    return [_parse_single_call(call) for call in calls if call]

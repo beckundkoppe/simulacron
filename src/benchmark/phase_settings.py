@@ -41,7 +41,7 @@ class ResolvedRunnerConfig:
 # Curated phase definitions. Add or adjust entries here to generate multiple TODO lists.
 PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
-        phase="baseline",
+        phase="baseline_solo",
         configs=[
             CONFIGURATIONS["baseline-naive"],
             CONFIGURATIONS["baseline-img"],
@@ -58,23 +58,48 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
             ],
         model_teams=[
-            ModelTeams.Hybrid.MISTRAL_SMALL,
-            ModelTeams.Hybrid.MAGISTRAL_SMALL,
-
-            ModelTeams.Remote.NEMOTRON_LLAMA,
-            ModelTeams.Remote.GPT_OSS,
-            ModelTeams.Remote.DEEPSEEK_LLAMA,
-            ModelTeams.Remote.QWEN,
-
-            ModelTeams.Local.GPT_OSS,
-            ModelTeams.Local.DOLPHIN_X_QWEN,
-            ModelTeams.Local.QWEN_8B,
+            ModelTeams.Remote.MAGISTRAL_SMALL,
+            ModelTeams.Remote.GPT_OSS_120B,
+            ModelTeams.Remote.QWEN_235B,
 
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.PHI4_8B,
+
+            ModelTeams.Local.QWEN_4B,
+            ModelTeams.Local.QWEN_8B,
             ModelTeams.Local.QWEN_30B,
             ModelTeams.Local.QWEN_CODER30B,
-            ModelTeams.Local.NEMOTRON_NEMOTRON14B_XQWEN8B
+
+            ModelTeams.Local.GPT_OSS_20B,
+
+        ],
+        reruns=10,
+    ),
+
+     PhaseDefinition(
+        phase="baseline_mix",
+        configs=[
+            CONFIGURATIONS["baseline-img"],
+            ],
+        levels=[
+            Levels.DETAILED_INSTRUCT.CARROT_EASY,
+            Levels.DETAILED_INSTRUCT.CARROT_HARD,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+
+            Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            Levels.VAGUE_INSTRUCT.CARROT_HARD,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+            ],
+        model_teams=[
+            ModelTeams.Hybrid.DEEPSEEK_LLAMA,
+            ModelTeams.Hybrid.MISTRAL_SMALL,
+            ModelTeams.Hybrid.NEMOTRON_LLAMA,
+
+            ModelTeams.Local.DOLPHIN_X_QWEN,
+            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN8B,
         ],
         reruns=10,
     ),
@@ -85,34 +110,56 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
     # Laptop profile: keep both imaginator and realisator local/small.
     "r2d2xxx": RunnerConfig(
         allowed_model_teams=[
+            ModelTeams.Hybrid.DEEPSEEK_LLAMA,
             ModelTeams.Hybrid.MISTRAL_SMALL,
-            ModelTeams.Hybrid.MAGISTRAL_SMALL,
-            ModelTeams.Remote.NEMOTRON_LLAMA,
+            ModelTeams.Hybrid.NEMOTRON_LLAMA,
 
-            ModelTeams.Remote.GPT_OSS,
-            ModelTeams.Remote.DEEPSEEK_LLAMA,
-            ModelTeams.Remote.QWEN,
+            ModelTeams.Remote.MAGISTRAL_SMALL,
+            ModelTeams.Remote.GPT_OSS_120B,
+            ModelTeams.Remote.QWEN_235B,
+
+            # simple <8B
+            ModelTeams.Local.QWEN_4B,
+            ModelTeams.Local.GROQ_LLAMA8B,
+            ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.PHI4_8B,
+            ModelTeams.Local.QWEN_8B,
         ],
         allowed_phases=["baseline"],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
         allowed_model_teams=[
-            ModelTeams.Local.GPT_OSS,
             ModelTeams.Local.DOLPHIN_X_QWEN,
-            ModelTeams.Local.QWEN_8B,
 
+            # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.PHI4_8B,
+            ModelTeams.Local.QWEN_8B,
+            ModelTeams.Local.QWEN_4B,
+
+            ModelTeams.Local.GPT_OSS_20B,
+
         ],
         allowed_phases=["baseline"],
     ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
-            ModelTeams.Local.GPT_OSS,
             ModelTeams.Local.QWEN_30B,
             ModelTeams.Local.QWEN_CODER30B,
-            ModelTeams.Local.NEMOTRON_NEMOTRON14B_XQWEN8B
+            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN8B,
+
+            ModelTeams.Local.GPT_OSS_20B,
+
+            # simple <8B
+            ModelTeams.Local.GROQ_LLAMA8B,
+            ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.PHI4_8B,
+            ModelTeams.Local.QWEN_8B,
+            ModelTeams.Local.QWEN_4B,
+
+            ModelTeams.Local.DOLPHIN_X_QWEN,
         ],
         allowed_phases=["baseline"],
     )

@@ -1,16 +1,20 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from enum import Enum
 
 from llama_cpp import List
 
+from benchmark.model_team import ModelTeam
 from benchmark.run import Run
 import json
 from dataclasses import asdict, is_dataclass
+
+from enviroment.levels.level import Level
 
 
 @dataclass()
 class PerformanceResult:
     run: Run
+    hostname: str | None = None
 
     # 0.0 if failure, 1.0 if success
     success_rate: float = 0
@@ -79,27 +83,37 @@ class PerformanceResult:
         """
 
         def serialize(obj):
-            # Dataclass → dict
-            if is_dataclass(obj):
-                return {k: serialize(v) for k, v in asdict(obj).items()}
+            # 1. Wenn das Objekt eine toObject-Methode hat → zuerst verwenden
+            if hasattr(obj, "toObject") and callable(obj.toObject):
+                return serialize(obj.toObject())
 
-            # Enum → Name
+            # 2. Enum behandeln
             if isinstance(obj, Enum):
-                return obj.name
+                # Enthält der Enum ein Objekt mit toObject()? → Sonderfall
+                if hasattr(obj.value, "toObject") and callable(obj.value.toObject):
+                    return serialize(obj.value.toObject())
+                return obj.name.lower()
 
-            # dict → rekursiv
+            # 3. Dataclass → Felder manuell durchlaufen (aber nicht asdict!)
+            if is_dataclass(obj):
+                data = {}
+                for f in fields(obj):
+                    data[f.name] = serialize(getattr(obj, f.name))
+                return data
+
+            # 4. dict
             if isinstance(obj, dict):
                 return {k: serialize(v) for k, v in obj.items()}
 
-            # list/tuple → rekursiv
+            # 5. list/tuple
             if isinstance(obj, (list, tuple)):
                 return [serialize(x) for x in obj]
 
-            # Primitive
+            # 6. primitive Werte
             if isinstance(obj, (str, int, float, bool)) or obj is None:
                 return obj
 
-            # Fallback für alles andere
+            # 7. fallback
             return str(obj)
             
 
@@ -150,11 +164,13 @@ class PerformanceResult:
             return f"{seconds:.2f}s"
 
         model_name = self.run.model_team.label()
+        host = self.hostname or "unknown"
 
         lines = [
             f"{BLUE}Model:{RESET} {model_name}",
             f"{BLUE}Level:{RESET} {self.run.level.value.getName()}",
             f"{BLUE}Optimal Steps:{RESET} {self.run.level.value.optimal_steps}",
+            f"{BLUE}Host:{RESET} {host}",
 
             # Toolcalls and steps
             fmt_pair_fixed(

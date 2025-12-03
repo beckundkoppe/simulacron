@@ -70,11 +70,14 @@ def run_level(level: Level, optimal_steps_multilier: float, main_model, imaginat
                 agent.update(perception)
 
                 if spec.is_success():
-                    current.RESULT.success_rate = 1.0 if success else 0.0
+                    current.RESULT.success_rate = 1.0
                     console.pretty(console.banner(f"Finished after {i} steps", char="+", color=console.Color.BLUE))
                     return
+                
+        current.RESULT.success_rate = 0.0
 
-    #except Exception as a:
-        #console.pretty(console.banner(f"Execution failed: {str(a)}", color=console.Color.RED))
+    except Exception as a:
+        console.pretty(console.banner(f"Execution failed: {str(a)}", color=console.Color.RED))
+        return
     finally:
         pass

@@ -22,6 +22,15 @@ class Level:
         det = "detailed" if self.detailed else "vague"
 
         return self.name + "-" + dif + "-" + det
+    
+    def toObject(self):
+        return {
+            "name": self.getName(),
+            "difficulty": "easy" if self.easy else "hard",
+            "accuracy": "detailed" if self.detailed else "vague",
+            "optimal_steps": self.optimal_steps,
+
+        }
 
 class Levels(Enum):
     class DETAILED_INSTRUCT(Enum):
@@ -44,8 +53,8 @@ class Levels(Enum):
         ONION_HARD = Level("onion", False, True, 10, lambda d:  onion.build_hard)
 
     class VAGUE_INSTRUCT(Enum):
-        CARROT_EASY = Level("carrot", True, False, 8, lambda d: carrot.build_easy(d))
-        CARROT_HARD = Level("carrot", False, False, 8, lambda d: carrot.build_hard(d))
+        CARROT_EASY = Level("carrot", True, False, 1, lambda d: carrot.build_easy(d))
+        CARROT_HARD = Level("carrot", False, False, 1, lambda d: carrot.build_hard(d))
 
         CUCUMBER_EASY = Level("cucumber", True, False, 3, lambda d: cucumber.build_easy(d))
         CUCUMBER_HARD = Level("cucumber", False, False, 3, lambda d: cucumber.build_hard(d))

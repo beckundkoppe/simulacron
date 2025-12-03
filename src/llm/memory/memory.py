@@ -103,6 +103,12 @@ class Memory(ABC):
                 "role": role_str,
                 "content": msg
             })
+
+        messages.insert(0, {
+                "role": role_str,
+                "content": self._goal
+            })
+
         return messages
     
     def debug_print(self, is_agent: bool = False, name: Optional[str] = None) -> None:
