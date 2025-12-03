@@ -10,6 +10,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 from enviroment.action import ActionTry, ActionType
 from enviroment.levels.data import LevelSpec
+from enviroment.levels.level import Levels
 from enviroment.levels import carrot, cucumber, onion, potato, salad, tomato
 from enviroment.world import World
 from enviroment.entity import AdvancedContainerEntity, AgentEntity, ConnectorEntity, Entity, ContainerEntity
@@ -629,6 +630,27 @@ class TestLevel(unittest.TestCase):
         agent.drop_into(target, compost)
 
         self.assertTrue(lvl.is_success())
+
+    def test_level_enum_tomato_builders_execute(self):
+        """Tomato enum entries should execute builder callables."""
+
+        detailed_spec = Levels.DETAILED_INSTRUCT.TOMATO_EASY.value.build(True)
+        self.assertIsInstance(detailed_spec, LevelSpec)
+        agent, _ = detailed_spec.agent_entities[0]
+        self.assertIsInstance(agent, AgentEntity)
+
+        vague_spec = Levels.VAGUE_INSTRUCT.TOMATO_EASY.value.build(False)
+        self.assertIsInstance(vague_spec, LevelSpec)
+        agent, _ = vague_spec.agent_entities[0]
+        self.assertIsInstance(agent, AgentEntity)
+
+    def test_level_enum_onion_hard_executes(self):
+        """Onion hard enum should return a LevelSpec (not a callable)."""
+
+        spec = Levels.VAGUE_INSTRUCT.ONION_HARD.value.build(False)
+        self.assertIsInstance(spec, LevelSpec)
+        agent, _ = spec.agent_entities[0]
+        self.assertIsInstance(agent, AgentEntity)
 
 if __name__ == "__main__":
     unittest.main()

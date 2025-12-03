@@ -31,7 +31,7 @@ def main():
         Run(
             config,
             model_team=model_team,
-            level=Levels.DETAILED_INSTRUCT.CARROT_HARD,
+            level=Levels.DETAILED_INSTRUCT.TOMATO_EASY,
             reruns=30,
             optimal_steps_multiplier=4.0,
         )
