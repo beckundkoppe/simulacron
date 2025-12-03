@@ -169,14 +169,14 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.NEMOTRON_QWEN8B,
 
             ModelTeams.Local.QWEN_8B_LLAMA,
-            ModelTeams.Local.QWEN_8B_OLLAMA,
             ModelTeams.Local.QWEN_4B_LLAMA,
-            ModelTeams.Local.QWEN_4B_OLLAMA,
             ModelTeams.Local.QWEN_4B_Q4_LLAMA,
+
+            ModelTeams.Local.QWEN_8B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_OLLAMA,
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
 
             ModelTeams.Local.GPT_OSS_20B,
-
         ],
         allowed_phases=["backend", "baseline-solo", "baseline-mix"],
     ),

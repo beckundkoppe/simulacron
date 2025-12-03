@@ -67,13 +67,15 @@ Select the desired backend. If unsure, press **Enter** to use the default.
 
 ## Running Simulacron
 
-Once the setup is complete run Ollama:
+Ollama is now started automatically when a run needs a local Ollama model and
+stopped afterwards. If you prefer to keep it running manually you still can:
 
 ```bash
+# optional
 ollama serve
 ```
 
-In another console, inside the simulacron folder, run:
+Then, inside the simulacron folder, run:
 ```bash
 ./start.sh
 ```

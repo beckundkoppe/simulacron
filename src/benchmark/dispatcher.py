@@ -1,4 +1,5 @@
 import contextlib
+import json
 import os
 import socket
 import time
@@ -16,6 +17,9 @@ from benchmark.model_team import ModelTeam
 from benchmark.run import Run
 from enviroment.levels.level import Level
 from enviroment.world import World
+from llm.model import Backend
+from llm.ollama_service import OllamaServiceManager
+
 
 class Dispatcher:
     def __init__(self):
@@ -24,6 +28,7 @@ class Dispatcher:
         results_root = Path(os.getenv("RESULTS_ROOT", "results"))
         self.folder = str(results_root / "runs/")
         self.folder_phase = str(results_root / "phase/")
+        self._ollama = OllamaServiceManager()
 
     def queue_run(self, run: Run):
         self.queued_runs.append(run)
@@ -77,26 +82,32 @@ class Dispatcher:
             # Never let logging failure break execution flow.
             pass
 
+    @staticmethod
+    def _run_needs_ollama(run: Run) -> bool:
+        models = [run.main_model, run.imaginator, run.extra_model]
+        return any(model.value.backend is Backend.OLLAMA for model in models if model)
+
 
     def run_single(self, run: Run):
         results = []
 
         config.ACTIVE_CONFIG = run.configuration
-        for i in range(run.reruns):
-            with self._redirect_output_to_raw(run, i):
-                print(f"Rerun: {i+1}")
+        with self._ollama.ensure_running(self._run_needs_ollama(run)):
+            for i in range(run.reruns):
+                with self._redirect_output_to_raw(run, i):
+                    print(f"Rerun: {i+1}")
 
-                try:
-                    result = self._start_with_result(run)
-                except Exception as e:
-                    self._log_run_failure(run, i, e)
-                    raise
-                print(result.softerror_count)
-                print(result.harderror_count)
-            
-            results.append(result)
-            current.RESULT = None
-            print(PerformanceResult.average(results).toString())
+                    try:
+                        result = self._start_with_result(run)
+                    except Exception as e:
+                        self._log_run_failure(run, i, e)
+                        raise
+                    print(result.softerror_count)
+                    print(result.harderror_count)
+                
+                results.append(result)
+                current.RESULT = None
+                print(PerformanceResult.average(results).toString())
         
         return PerformanceResult.average(results)
 
@@ -119,9 +130,10 @@ class Dispatcher:
         os.makedirs(self.folder, exist_ok=True)
 
         config.ACTIVE_CONFIG = run.configuration
-        for i in range(run.reruns):
-            # Reuse the rerun helper so claimed single runs and full runs share logic
-            self.benchmark_single_rerun(run, i)
+        with self._ollama.ensure_running(self._run_needs_ollama(run)):
+            for i in range(run.reruns):
+                # Reuse the rerun helper so claimed single runs and full runs share logic
+                self.benchmark_single_rerun(run, i, manage_ollama=False)
 
 
 
@@ -172,10 +184,11 @@ class Dispatcher:
         return todo_entries
 
 
-    def benchmark_single_rerun(self, run: Run, rerun_index: int):
+    def benchmark_single_rerun(self, run: Run, rerun_index: int, manage_ollama: bool = True):
         os.makedirs(self.folder, exist_ok=True)
 
         config.ACTIVE_CONFIG = run.configuration
+        context = self._ollama.ensure_running(self._run_needs_ollama(run)) if manage_ollama else contextlib.nullcontext()
 
         basename = self._basename_for_run(run, rerun_index)
         filename = basename + ".json"
@@ -184,15 +197,16 @@ class Dispatcher:
         if os.path.exists(path):
             return
 
-        with self._redirect_output_to_raw(run, rerun_index):
-            print(f"Starting: {filename}")
-            try:
-                result = self._start_with_result(run)
-                self._write_file(path, result.toJSON())
-                print(result.toString())
-            except Exception as e:
-                self._log_run_failure(run, rerun_index, e)
-                raise
+        with context:
+            with self._redirect_output_to_raw(run, rerun_index):
+                print(f"Starting: {filename}")
+                try:
+                    result = self._start_with_result(run)
+                    self._write_file(path, result.toJSON())
+                    print(result.toString())
+                except Exception as e:
+                    self._log_run_failure(run, rerun_index, e)
+                    raise
 
 
     # def _debug_result(self, run,i):
