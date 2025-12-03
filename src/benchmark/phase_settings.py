@@ -125,7 +125,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.PHI4_8B,
             ModelTeams.Local.QWEN_8B,
         ],
-        allowed_phases=["baseline"],
+        allowed_phases=["baseline-naive", "baseline-img"],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
@@ -142,7 +142,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.GPT_OSS_20B,
 
         ],
-        allowed_phases=["baseline"],
+        allowed_phases=["baseline-naive", "baseline-img"],
     ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
@@ -161,7 +161,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             ModelTeams.Local.DOLPHIN_X_QWEN,
         ],
-        allowed_phases=["baseline"],
+        allowed_phases=["baseline-naive", "baseline-img"],
     )
 }
 
