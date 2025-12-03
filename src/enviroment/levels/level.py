@@ -43,14 +43,14 @@ class Levels(Enum):
         SALAD_EASY = Level("salad", True, True, 24, lambda d: salad.build_easy(d))
         SALAD_HARD = Level("salad", False, True, 24, lambda d: salad.build_hard(d))
 
-        TOMATO_EASY = Level("tomato", True, True, 10, lambda d: tomato.build_easy)
-        TOMATO_HARD = Level("tomato", False, True, 10, lambda d: tomato.build_hard)
+        TOMATO_EASY = Level("tomato", True, True, 10, lambda d: tomato.build_easy(d))
+        TOMATO_HARD = Level("tomato", False, True, 10, lambda d: tomato.build_hard(d))
 
         POTATO_EASY = Level("potato", True, True, 8, lambda d: potato.build_easy(d))
         POTATO_HARD = Level("potato", False, True, 8, lambda d: potato.build_medium(d))
 
         ONION_EASY = Level("onion", True, True, 10, lambda d: onion.build_easy(d))
-        ONION_HARD = Level("onion", False, True, 10, lambda d:  onion.build_hard)
+        ONION_HARD = Level("onion", False, True, 10, lambda d: onion.build_hard(d))
 
     class VAGUE_INSTRUCT(Enum):
         CARROT_EASY = Level("carrot", True, False, 1, lambda d: carrot.build_easy(d))
@@ -62,11 +62,11 @@ class Levels(Enum):
         SALAD_EASY = Level("salad", True, False, 24, lambda d: salad.build_easy(d))
         SALAD_HARD = Level("salad", False, False, 24, lambda d: salad.build_hard(d))
 
-        TOMATO_EASY = Level("tomato", True, False, 10, lambda d: tomato.build_easy)
-        TOMATO_HARD = Level("tomato", False, False, 10, lambda d: tomato.build_hard)
+        TOMATO_EASY = Level("tomato", True, False, 10, lambda d: tomato.build_easy(d))
+        TOMATO_HARD = Level("tomato", False, False, 10, lambda d: tomato.build_hard(d))
 
         POTATO_EASY = Level("potato", True, False, 8, lambda d: potato.build_easy(d))
         POTATO_HARD = Level("potato", False, False, 8, lambda d: potato.build_medium(d))
 
         ONION_EASY = Level("onion", True, False, 10, lambda d: onion.build_easy(d))
-        ONION_HARD = Level("onion", False, False, 10, lambda: onion.build_hard)
+        ONION_HARD = Level("onion", False, False, 10, lambda d: onion.build_hard(d))
