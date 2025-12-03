@@ -117,17 +117,17 @@ class ModelTeams(Enum):
         )
 
         PHI4_X_QWEN = ModelTeam(
-            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_4B_Q4,
             imaginator=Model.Local.Ollama.PHI4_MINI_3_8B,
         )
 
         DOLPHIN_X_QWEN = ModelTeam(
-            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_4B_Q4,
             imaginator=Model.Local.Ollama.DOLPHIN3_8B,
         )
 
         NEMOTRON_NEMOTRON14B_X_QWEN = ModelTeam(
-            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_4B_Q4,
             imaginator=Model.Local.LlamaCpp.Qwen3.NEMOTRON_14B_Q8,
         )
 
@@ -135,17 +135,17 @@ class ModelTeams(Enum):
                            
     class Hybrid(Enum):
         MISTRAL_SMALL = ModelTeam(
-            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_4B_Q4,
             imaginator=Model.Remote.MISTRAL_SMALL_24B,
         )
 
         NEMOTRON_LLAMA = ModelTeam(
-            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_4B_Q4,
             imaginator=Model.Remote.NEMOTRON_SUPER_49B,
         )
 
         DEEPSEEK_LLAMA = ModelTeam(
-            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_4B_Q4,
             imaginator=Model.Remote.DEEPSEEK_R1_LLAMA_DISTILL_70B,
         )
 
