@@ -235,6 +235,7 @@ class Agent:
             start = time.time()
             realisator.invoke(perception + ". " + prompt + "Use concise, executable actions. Your answer must only consist of toolcalls.")
             self._add_time("real_time_s", time.time() - start)
+            process_formal_errors(self.main_memory)
         else:
             tc_prompt =  """
             Give exactly the toolcalls that arise from the planned action.

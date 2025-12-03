@@ -78,10 +78,6 @@ class ModelTeams(Enum):
             realisator=Model.Local.LlamaCpp.Qwen3.NEMOTRON_14B_Q8,
         )
 
-        PHI4_8B = ModelTeam(
-            realisator=Model.Local.LlamaCpp.PHI4_MINI_THINK_3_8B,
-        )
-
         QWEN_4B = ModelTeam(
             realisator=Model.Local.Ollama.Qwen3.VANILLA_4B,
         )
@@ -100,6 +96,11 @@ class ModelTeams(Enum):
 
         GPT_OSS_20B = ModelTeam(
             realisator=Model.Local.Ollama.GPT_OSS_20B,
+        )
+
+        PHI4_X_QWEN = ModelTeam(
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+            imaginator=Model.Local.Ollama.PHI4_MINI_3_8B,
         )
 
         DOLPHIN_X_QWEN = ModelTeam(
