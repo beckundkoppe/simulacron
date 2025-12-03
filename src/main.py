@@ -13,7 +13,7 @@ def main():
         plan       = PlanType.OFF,
         observe    = ObserveType.OFF,
         trial      = TrialType.OFF,
-        action     = ActionType.DIRECT,
+        action     = ActionType.IMAGINATOR,
         reflect    = ReflectType.OFF,
         memory_type= MemoryType.SIMPLE,
     )
@@ -21,8 +21,8 @@ def main():
     config = Configuration(agent_config, PerceptionType.ALL, PositionType.RELATIVE, temperature=0.0, name="test", seed=-1)
 
     model_team = ModelTeam(
-        realisator=Model.Local.LlamaCpp.PHI4_MINI_THINK_3_8B,
-        #realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+        imaginator=Model.Local.Ollama.PHI4_MINI_3_8B,
+        realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
         #realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
         #extra=Model.Local.Ollama.DOLPHIN3_8B,
     )

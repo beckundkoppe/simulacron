@@ -235,21 +235,57 @@ class LangchainToolprovider(ToolProvider):
                     raise ValueError(f"Tool {t} is missing required _tool_meta attribute.")
                 tool_map[t._tool_meta["name"]] = t
 
-            name = tool_call.name
-            args = tool_call.args
-            #args = _normalize_args(tool_call.args)
+            def _normalize_args(raw_args: Any) -> dict[str, Any]:
+                """Normalize toolcall args into a plain dict while preserving order where possible."""
+                if isinstance(raw_args, dict):
+                    return raw_args
+                if isinstance(raw_args, list):
+                    # Accept list of {"name": k, "value": v} pairs
+                    if all(isinstance(a, dict) and "name" in a for a in raw_args):
+                        norm = {}
+                        for a in raw_args:
+                            key = a["name"]
+                            if "value" in a:
+                                norm[key] = a["value"]
+                            elif "val" in a:
+                                norm[key] = a["val"]
+                            else:
+                                norm[key] = a
+                        return norm
+                return {}
 
-            print(f"[TOOLCALL] {name}, args: {args}")
+            name = tool_call.name
+            args = _normalize_args(tool_call.args)
+
+            def _arg_index(key: str) -> int:
+                try:
+                    return int(key.replace("arg", ""))
+                except Exception:
+                    return -1
+
+            ordered_args = None
+            if isinstance(args, dict) and all(k.startswith("arg") for k in args.keys()):
+                ordered_args = [v for k, v in sorted(args.items(), key=lambda kv: _arg_index(kv[0]))]
 
             if name in tool_map:
                 sig = inspect.signature(tool_map[name])
-                valid_params = set(sig.parameters.keys())
-                filtered_args = {k: v for k, v in args.items() if k in valid_params}
+                valid_params = list(sig.parameters.keys())
+                filtered_args = {k: v for k, v in args.items() if k in valid_params} if isinstance(args, dict) else {}
+
+                # Fall back to positional mapping when only arg0/arg1... are present.
+                if ordered_args is not None and len(ordered_args) <= len(valid_params):
+                    positional_mapped = {}
+                    for idx, param in enumerate(valid_params):
+                        if idx < len(ordered_args):
+                            positional_mapped[param] = ordered_args[idx]
+                    if positional_mapped:
+                        filtered_args = positional_mapped
             else:
                 filtered_args = {}
 
             if name in tool_map:
-                    tool_map[name](**filtered_args)                    
+                print(f"[TOOLCALL] {name}, args: {filtered_args}")
+                tool_map[name](**filtered_args)                    
             else:
                 raise Exception("unknown tool")
             
@@ -289,7 +325,7 @@ class LangchainToolprovider(ToolProvider):
                     valid_toolcall = True
 
             if(not valid_toolcall):
-                parsing_options = [ _parse_python_multicall, ast.literal_eval, json.loads, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
+                parsing_options = [ _parse_python_multicall, _parse_multi_call_syntax, ast.literal_eval, json.loads, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
 
                 parsed_calls = None
                 for parse in parsing_options:
@@ -416,6 +452,51 @@ def _parse_call_syntax(cmd: str):
     arg_dicts = [{"name": f"arg{i}", "value": val} for i, val in enumerate(cleaned)]
 
     return [{"name": func_name, "args": arg_dicts}]
+
+
+def _parse_multi_call_syntax(cmd: str):
+    """
+    Parse strings containing multiple function calls separated by whitespace,
+    e.g. "move_to_position(1.0, 4.0) drop_to(table_3)".
+    """
+    calls = []
+    current = []
+    depth = 0
+    in_string = False
+    string_char = None
+
+    for ch in cmd:
+        if ch in ("'", '"'):
+            if not in_string:
+                in_string = True
+                string_char = ch
+            elif string_char == ch:
+                in_string = False
+        if ch == "(" and not in_string:
+            depth += 1
+        elif ch == ")" and not in_string:
+            depth -= 1
+
+        if ch.isspace() and depth == 0 and not in_string:
+            if current:
+                calls.append("".join(current).strip())
+                current = []
+        else:
+            current.append(ch)
+
+    if current:
+        calls.append("".join(current).strip())
+
+    parsed = []
+    for call in calls:
+        if not call:
+            continue
+        parsed.extend(_parse_call_syntax(call))
+
+    if not parsed:
+        raise ValueError("No callable patterns found")
+
+    return parsed
 
 
 def _parse_python_multicall(cmd: str):

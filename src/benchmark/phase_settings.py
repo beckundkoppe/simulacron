@@ -64,7 +64,6 @@ PHASES: Sequence[PhaseDefinition] = (
 
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.PHI4_8B,
 
             ModelTeams.Local.QWEN_4B,
             ModelTeams.Local.QWEN_8B,
@@ -99,6 +98,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Hybrid.NEMOTRON_LLAMA,
 
             ModelTeams.Local.DOLPHIN_X_QWEN,
+            ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN8B,
         ],
         reruns=10,
@@ -122,7 +122,6 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_4B,
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.PHI4_8B,
             ModelTeams.Local.QWEN_8B,
         ],
         allowed_phases=["baseline-solo", "baseline-mix"],
@@ -131,11 +130,11 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
     "c3poxxx": RunnerConfig(
         allowed_model_teams=[
             ModelTeams.Local.DOLPHIN_X_QWEN,
+            ModelTeams.Local.PHI4_X_QWEN,
 
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.PHI4_8B,
             ModelTeams.Local.QWEN_8B,
             ModelTeams.Local.QWEN_4B,
 
@@ -155,10 +154,10 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.PHI4_8B,
             ModelTeams.Local.QWEN_8B,
             ModelTeams.Local.QWEN_4B,
 
+            ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,
         ],
         allowed_phases=["baseline-solo", "baseline-mix"],
