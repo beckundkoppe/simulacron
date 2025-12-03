@@ -108,9 +108,11 @@ class LlamaToolprovider(ToolProvider):
                 print_output=True,
             )
 
-        debug.print_to_file(buf)
+        captured_stdout = buf.getvalue()
+        debug.print_to_file(captured_stdout)
 
-        if debug.VERBOSE_LLAMACPPAGENT: print(buf)
+        if debug.VERBOSE_LLAMACPPAGENT:
+            print(captured_stdout)
 
         clean_reply = Provider._clean_reply(reply)
         self._invoke_post(reply=clean_reply, override=override, append=append)
