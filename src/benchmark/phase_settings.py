@@ -41,7 +41,7 @@ class ResolvedRunnerConfig:
 # Curated phase definitions. Add or adjust entries here to generate multiple TODO lists.
 PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
-        phase="baseline_solo",
+        phase="baseline-solo",
         configs=[
             CONFIGURATIONS["baseline-naive"],
             CONFIGURATIONS["baseline-img"],
@@ -78,7 +78,7 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
      PhaseDefinition(
-        phase="baseline_mix",
+        phase="baseline-mix",
         configs=[
             CONFIGURATIONS["baseline-img"],
             ],
@@ -125,7 +125,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.PHI4_8B,
             ModelTeams.Local.QWEN_8B,
         ],
-        allowed_phases=["baseline-naive", "baseline-img"],
+        allowed_phases=["baseline-solo", "baseline-mix"],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
@@ -142,7 +142,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.GPT_OSS_20B,
 
         ],
-        allowed_phases=["baseline-naive", "baseline-img"],
+        allowed_phases=["baseline-solo", "baseline-mix"],
     ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
@@ -161,7 +161,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             ModelTeams.Local.DOLPHIN_X_QWEN,
         ],
-        allowed_phases=["baseline-naive", "baseline-img"],
+        allowed_phases=["baseline-solo", "baseline-mix"],
     )
 }
 
