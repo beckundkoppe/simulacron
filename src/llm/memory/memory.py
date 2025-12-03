@@ -177,47 +177,46 @@ class Memory(ABC):
         pretty(*lines)
 
     def get_token_count(self) -> int:
-        return Memory._approximate_token_count(self._history)
+        return Memory._history_token_count(self._history)
 
+    @staticmethod
     def _approximate_token_count(text: str) -> int:
         """Heuristic token estimator that roughly matches LLM tokenization behavior."""
         tokens = re.findall(r"\w+|[^\w\s]", text, re.UNICODE)
         return max(1, len(tokens))
+
+    @staticmethod
+    def _history_token_count(history: List[Tuple[Type, Role, str]]) -> int:
+        total = 0
+        for type, role, msg in history:
+            total += Memory._approximate_token_count(role.to_string() + " " + str(msg))
+        return total
     
     def assure_max_token_count(self, max_count: int):
-        size = Memory._approximate_token_count(str(self._history))
+        """
+        Trim oldest messages so that the approximate token count stays under max_count.
+        Keeps the most recent messages that fit under the limit.
+        """
+        size = self.get_token_count()
+        if size <= max_count:
+            return
 
-        while(size > max_count):
-            todo = min(max(size - max_count, (size - max_count) * 10), int(config.Backend.n_context / 4))
+        kept: List[Tuple[Type, Role, str]] = []
+        running = Memory._approximate_token_count(str(self._goal)) if self._goal else 0
 
-            staged = []
+        for entry in reversed(self._history):
+            type, role, msg = entry
+            cost = Memory._approximate_token_count(role.to_string() + " " + str(msg))
+            if kept and running + cost > max_count:
+                break
+            kept.append(entry)
+            running += cost
 
-            his = self._history.copy()
+        if not kept:
+            kept = [self._history[-1]]
 
-            for x in his:
-                type, role, msg = x
-                todo -= Memory._approximate_token_count(role.to_string() + msg)
-                staged.append(x)
-
-                if(todo < 0) and len(staged) > 1:
-                    break
-
-            if len(staged) <= 1:
-                raise Exception("context to small")
-
-            for s in staged:
-                self._history.remove(s)
-
-            print(f"staged token for summary: {Memory._approximate_token_count(str(staged))}")
-            type, role, summary = self.summarize(staged)
-
-            print(f"token after summary: {Memory._approximate_token_count(str((type, role, summary)))}")
-                        
-            self.prepend_message(role, summary, type)
-            
-            print(f"new memory token size: {Memory._approximate_token_count(str(self._history))}")
-
-            size = Memory._approximate_token_count(str(self._history))
+        kept.reverse()
+        self._history = kept
 
     def summarize(self, messages: List[Tuple[Type, Role, str]]) -> Tuple[Type, Role, str]:
         from llm.provider import Provider
