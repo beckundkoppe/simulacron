@@ -109,4 +109,4 @@ APPEND_RAW = None
 class Backend:
     n_gpu_layers: int = -1
     n_threads: int = 24
-    n_context: int = 16384
+    n_context: int = 8192
