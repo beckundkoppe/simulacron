@@ -263,11 +263,9 @@ def push_with_retry(repo: Path, context: str | None = None) -> bool:
 
 
 def main():
-    # Haupt-Repository ist das Projektverzeichnis, nicht der results-Ordner
     project_root = Path(__file__).resolve().parent.parent.parent
     repo_root = project_root  # Git-Repo = Projekt-Root
 
-    # results ist jetzt ein normaler Ordner – KEIN Repo mehr
     results_root = repo_root / "results"
     if not _is_git_repo(repo_root):
         print(f"Git repo not found at {repo_root}, running without pushes.")
