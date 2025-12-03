@@ -41,11 +41,29 @@ if [ -d "${RESULTS_ROOT}/.git" ]; then
     git -C "$RESULTS_ROOT" pull --rebase --autostash
 fi
 
-echo "Starting phase runner${PHASE_NAME:+ for phase '${PHASE_NAME}'}..."
-# Run from the results repo so results/phase and results/runs live there.
 mkdir -p "$RESULTS_ROOT"
+
+# Decide which phases to run: explicit argument or all *.txt files in results/phase.
 if [[ -n "$PHASE_NAME" ]]; then
-    python -m benchmark.phase_runner "$PHASE_NAME"
+    PHASES=("$PHASE_NAME")
 else
-    python -m benchmark.phase_runner
+    PHASES=()
+    if compgen -G "${RESULTS_ROOT}/phase/*.txt" > /dev/null; then
+        while IFS= read -r -d '' file; do
+            phase_name="$(basename "${file%.txt}")"
+            PHASES+=("$phase_name")
+        done < <(find "${RESULTS_ROOT}/phase" -maxdepth 1 -type f -name '*.txt' -print0 | sort -z)
+    fi
 fi
+
+if [[ ${#PHASES[@]} -eq 0 ]]; then
+    echo "No phases found to run (results/phase/*.txt is empty)."
+    exit 0
+fi
+
+echo "Starting phase runner for phases: ${PHASES[*]}"
+# Run from the results repo so results/phase and results/runs live there.
+for phase in "${PHASES[@]}"; do
+    echo "Running phase '${phase}'..."
+    python -m benchmark.phase_runner "$phase"
+done
