@@ -150,6 +150,7 @@ PHASES: Sequence[PhaseDefinition] = (
             CONFIGURATIONS["plan-agent"],
             ],
         levels=[
+
             Levels.DETAILED_INSTRUCT.CARROT_EASY,
             Levels.DETAILED_INSTRUCT.CARROT_HARD,
             Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
@@ -174,6 +175,8 @@ PHASES: Sequence[PhaseDefinition] = (
             ],
         model_teams=[
             ModelTeams.Remote.QWEN_235B,
+            ModelTeams.Local.GPT_OSS_20B,
+            ModelTeams.Local.QWEN_8B_OLLAMA,
         ],
         reruns=3,
     ),
@@ -203,7 +206,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_4B_Q4_LLAMA,
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
@@ -225,7 +228,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             ModelTeams.Local.GPT_OSS_20B,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
     ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
@@ -249,7 +252,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
     )
 }
 
