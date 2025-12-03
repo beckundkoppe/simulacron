@@ -126,8 +126,8 @@ class ModelTeams(Enum):
             imaginator=Model.Local.Ollama.DOLPHIN3_8B,
         )
 
-        NEMOTRON_NEMOTRON14B_X_QWEN8B = ModelTeam(
-            realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
+        NEMOTRON_NEMOTRON14B_X_QWEN = ModelTeam(
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
             imaginator=Model.Local.LlamaCpp.Qwen3.NEMOTRON_14B_Q8,
         )
 
@@ -135,17 +135,17 @@ class ModelTeams(Enum):
                            
     class Hybrid(Enum):
         MISTRAL_SMALL = ModelTeam(
-            realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
             imaginator=Model.Remote.MISTRAL_SMALL_24B,
         )
 
         NEMOTRON_LLAMA = ModelTeam(
-            realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
             imaginator=Model.Remote.NEMOTRON_SUPER_49B,
         )
 
         DEEPSEEK_LLAMA = ModelTeam(
-            realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
             imaginator=Model.Remote.DEEPSEEK_R1_LLAMA_DISTILL_70B,
         )
 

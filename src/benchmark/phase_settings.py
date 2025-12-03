@@ -92,8 +92,8 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
 
-            #ModelTeams.Local.QWEN_4B,
-            #ModelTeams.Local.QWEN_8B_LLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
+            ModelTeams.Local.QWEN_8B_OLLAMA,
             ModelTeams.Local.QWEN_30B,
             ModelTeams.Local.QWEN_CODER30B,
 
@@ -102,34 +102,34 @@ PHASES: Sequence[PhaseDefinition] = (
         ],
         reruns=5,
     ),
-#
-    #PhaseDefinition(
-    #    phase="baseline-mix",
-    #    configs=[
-    #        CONFIGURATIONS["baseline-img"],
-    #        ],
-    #    levels=[
-    #        Levels.DETAILED_INSTRUCT.CARROT_EASY,
-    #        Levels.DETAILED_INSTRUCT.CARROT_HARD,
-    #        Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
-    #        Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
-#
-    #        Levels.VAGUE_INSTRUCT.CARROT_EASY,
-    #        Levels.VAGUE_INSTRUCT.CARROT_HARD,
-    #        Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
-    #        Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
-    #        ],
-    #    model_teams=[
-    #        ModelTeams.Hybrid.DEEPSEEK_LLAMA,
-    #        ModelTeams.Hybrid.MISTRAL_SMALL,
-    #        ModelTeams.Hybrid.NEMOTRON_LLAMA,
-#
-    #        ModelTeams.Local.DOLPHIN_X_QWEN,
-    #        ModelTeams.Local.PHI4_X_QWEN,
-    #        ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN8B,
-    #    ],
-    #    reruns=5,
-    #),
+
+    PhaseDefinition(
+        phase="baseline-mix",
+        configs=[
+            CONFIGURATIONS["baseline-img"],
+            ],
+        levels=[
+            Levels.DETAILED_INSTRUCT.CARROT_EASY,
+            Levels.DETAILED_INSTRUCT.CARROT_HARD,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+
+            Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            Levels.VAGUE_INSTRUCT.CARROT_HARD,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+            ],
+        model_teams=[
+            ModelTeams.Hybrid.DEEPSEEK_LLAMA,
+            ModelTeams.Hybrid.MISTRAL_SMALL,
+            ModelTeams.Hybrid.NEMOTRON_LLAMA,
+
+            ModelTeams.Local.DOLPHIN_X_QWEN,
+            ModelTeams.Local.PHI4_X_QWEN,
+            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
+        ],
+        reruns=5,
+    ),
 )
 
 # Map of hostname → runner configuration. Edit the keys to match your devices.
@@ -184,14 +184,14 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
         allowed_model_teams=[
             ModelTeams.Local.QWEN_30B,
             ModelTeams.Local.QWEN_CODER30B,
-            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN8B,
+            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
 
             ModelTeams.Local.GPT_OSS_20B,
 
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
-            
+
             ModelTeams.Local.QWEN_8B_LLAMA,
             ModelTeams.Local.QWEN_8B_OLLAMA,
             ModelTeams.Local.QWEN_4B_LLAMA,
