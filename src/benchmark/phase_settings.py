@@ -147,7 +147,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.NEMOTRON_QWEN8B,
             ModelTeams.Local.QWEN_8B_LLAMA,
         ],
-        allowed_phases=["baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
@@ -164,7 +164,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.GPT_OSS_20B,
 
         ],
-        allowed_phases=["baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
     ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
@@ -183,7 +183,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,
         ],
-        allowed_phases=["baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
     )
 }
 
