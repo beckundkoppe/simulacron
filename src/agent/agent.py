@@ -27,7 +27,7 @@ class Agent:
 
         self.main_memory.append_message(
             Role.SYSTEM,
-                "The human agent can move, take and drop objects, and interact with objects (open, close, lock, unlock, go through or look through doors). Always choose the minimal action sequence that achieves the requsted goal and nothing else.",
+                "You control a human in a 2D room-based environment. The human agent can move, take and drop objects, and interact with objects (open, close, lock, unlock, go through or look through doors). Always choose the minimal action sequence that achieves the requsted goal and nothing else.",
             Type.GOAL
         )
 
