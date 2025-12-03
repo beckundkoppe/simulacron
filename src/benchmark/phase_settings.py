@@ -59,6 +59,10 @@ PHASES: Sequence[PhaseDefinition] = (
         model_teams=[
             ModelTeams.Local.QWEN_8B_LLAMA,
             ModelTeams.Local.QWEN_8B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_LLAMA,
+            ModelTeams.Local.QWEN_4B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_LLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
         reruns=5,
     ),
@@ -142,10 +146,14 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.QWEN_235B,
 
             # simple <8B
-            ModelTeams.Local.QWEN_4B,
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
             ModelTeams.Local.QWEN_8B_LLAMA,
+            ModelTeams.Local.QWEN_8B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_LLAMA,
+            ModelTeams.Local.QWEN_4B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_LLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
         allowed_phases=["backend", "baseline-solo", "baseline-mix"],
     ),
@@ -159,7 +167,11 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
             ModelTeams.Local.QWEN_8B_LLAMA,
-            ModelTeams.Local.QWEN_4B,
+            ModelTeams.Local.QWEN_8B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_LLAMA,
+            ModelTeams.Local.QWEN_4B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_LLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
 
             ModelTeams.Local.GPT_OSS_20B,
 
@@ -178,7 +190,11 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
             ModelTeams.Local.QWEN_8B_LLAMA,
-            ModelTeams.Local.QWEN_4B,
+            ModelTeams.Local.QWEN_8B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_LLAMA,
+            ModelTeams.Local.QWEN_4B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_LLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
 
             ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,

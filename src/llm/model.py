@@ -169,6 +169,36 @@ class Model(Enum):
                     ),
                 )
 
+                VANILLA_4B = ModelSpec(
+                    name="Qwen3-4B-LLAMA",
+                    tag="qwen3_4b",
+                    location=Location.LOCAL,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="Qwen/Qwen3-4B-GGUF",
+                        filename="Qwen3-4B-Q4_K_M.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/Qwen/Qwen3-4B-GGUF?show_file_info=Qwen3-4B-Q5_K_M.gguf
+                    ),
+                )
+
+                VANILLA_4B_Q4 = ModelSpec(
+                    name="Qwen3-4B-Q4-LLAMA",
+                    tag="qwen3_4b_q4",
+                    location=Location.LOCAL,
+                    backend=Backend.LLAMACPP,
+                    agent_backend=AgentBackend.LLAMACPPAGENT,
+                    kind=ModelKind.HYBRID,
+                    source=SourceHuggingface(
+                        repo_id="Qwen/Qwen3-4B-GGUF",
+                        filename="Qwen3-4B-Q8_0.gguf",
+                        local_dir="data/model/"
+                        #https://huggingface.co/Qwen/Qwen3-4B-GGUF?show_file_info=Qwen3-4B-Q5_K_M.gguf
+                    ),
+                )
+
             class Llama3(Enum):
                 LLAMA3_GROQ_8B_Q8 = ModelSpec(
                     name="Llama3-Groq-8B-Q8-Toolcalling",
@@ -346,7 +376,7 @@ class Model(Enum):
                 )
 
                 VANILLA_4B = ModelSpec(
-                    name="Qwen3-4B",
+                    name="Qwen3-4B-OLLAMA",
                     tag="qwen3_4b",
                     location=Location.LOCAL,
                     backend=Backend.OLLAMA,
@@ -354,6 +384,19 @@ class Model(Enum):
                     kind=ModelKind.HYBRID,
                     source=SourceOllama(
                         model_id="qwen3:4b",
+                        #https://ollama.com/library/qwen3
+                    ),
+                )
+
+                VANILLA_4B_Q4 = ModelSpec(
+                    name="Qwen3-4B-Q4-OLLAMA",
+                    tag="qwen3_4b_q4",
+                    location=Location.LOCAL,
+                    backend=Backend.OLLAMA,
+                    agent_backend=AgentBackend.LANGCHAIN,
+                    kind=ModelKind.HYBRID,
+                    source=SourceOllama(
+                        model_id="qwen3:4b-q4_K_M",
                         #https://ollama.com/library/qwen3
                     ),
                 )
