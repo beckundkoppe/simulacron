@@ -8,15 +8,15 @@ from enviroment.world import World
 
 
 vague_instruction_tomato = (
-    "Pack the tomato: put it into the box, then put the box into the crate, "
-    "close everything and place the crate on the shelf."
+    "Pack the tomato: put it into the box, then put the box into the chest, "
+    "close everything and place the chest on the shelf."
 )
 
 detailed_instruction_tomato = (
-    "A tomato lies on the table. A box, a crate and a shelf are in the room. "
+    "A tomato lies on the table. A box, a chest and a shelf are in the room. "
     "First take the tomato from the table. Then put the tomato into the box and close the box. "
-    "After that put the box into the crate and close the crate. "
-    "Finally, place the closed crate on the shelf."
+    "After that put the box into the chest and close the chest. "
+    "Finally, place the closed chest on the shelf."
 )
 
 
