@@ -82,8 +82,12 @@ class ModelTeams(Enum):
             realisator=Model.Local.Ollama.Qwen3.VANILLA_4B,
         )
 
-        QWEN_8B = ModelTeam(
+        QWEN_8B_LLAMA = ModelTeam(
             realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_8B,
+        )
+
+        QWEN_8B_OLLAMA = ModelTeam(
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
         )
 
         QWEN_30B = ModelTeam(

@@ -155,7 +155,7 @@ class Model(Enum):
                 )
 
                 VANILLA_8B = ModelSpec(
-                    name="Qwen3-8B",
+                    name="Qwen3-8B-LLAMA",
                     tag="qwen3_8b",
                     location=Location.LOCAL,
                     backend=Backend.LLAMACPP,
@@ -333,7 +333,7 @@ class Model(Enum):
                 )
 
                 VANILLA_8B = ModelSpec(
-                    name="Qwen3-8B",
+                    name="Qwen3-8B-OLLAMA",
                     tag="qwen3_8b",
                     location=Location.LOCAL,
                     backend=Backend.OLLAMA,

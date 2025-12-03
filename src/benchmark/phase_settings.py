@@ -41,43 +41,7 @@ class ResolvedRunnerConfig:
 # Curated phase definitions. Add or adjust entries here to generate multiple TODO lists.
 PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
-        phase="baseline-solo",
-        configs=[
-            CONFIGURATIONS["baseline-naive"],
-            CONFIGURATIONS["baseline-img"],
-            ],
-        levels=[
-            Levels.DETAILED_INSTRUCT.CARROT_EASY,
-            Levels.DETAILED_INSTRUCT.CARROT_HARD,
-            Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
-            Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
-
-            Levels.VAGUE_INSTRUCT.CARROT_EASY,
-            Levels.VAGUE_INSTRUCT.CARROT_HARD,
-            Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
-            Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
-            ],
-        model_teams=[
-            ModelTeams.Remote.MAGISTRAL_SMALL,
-            ModelTeams.Remote.GPT_OSS_120B,
-            ModelTeams.Remote.QWEN_235B,
-
-            ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_QWEN8B,
-
-            ModelTeams.Local.QWEN_4B,
-            ModelTeams.Local.QWEN_8B,
-            ModelTeams.Local.QWEN_30B,
-            ModelTeams.Local.QWEN_CODER30B,
-
-            ModelTeams.Local.GPT_OSS_20B,
-
-        ],
-        reruns=10,
-    ),
-
-     PhaseDefinition(
-        phase="baseline-mix",
+        phase="backend",
         configs=[
             CONFIGURATIONS["baseline-img"],
             ],
@@ -93,16 +57,75 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
             ],
         model_teams=[
-            ModelTeams.Hybrid.DEEPSEEK_LLAMA,
-            ModelTeams.Hybrid.MISTRAL_SMALL,
-            ModelTeams.Hybrid.NEMOTRON_LLAMA,
-
-            ModelTeams.Local.DOLPHIN_X_QWEN,
-            ModelTeams.Local.PHI4_X_QWEN,
-            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN8B,
+            ModelTeams.Local.QWEN_8B_LLAMA,
+            ModelTeams.Local.QWEN_8B_OLLAMA,
         ],
-        reruns=10,
+        reruns=5,
     ),
+
+    #PhaseDefinition(
+    #    phase="baseline-solo",
+    #    configs=[
+    #        CONFIGURATIONS["baseline-naive"],
+    #        CONFIGURATIONS["baseline-img"],
+    #        ],
+    #    levels=[
+    #        Levels.DETAILED_INSTRUCT.CARROT_EASY,
+    #        Levels.DETAILED_INSTRUCT.CARROT_HARD,
+    #        Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
+    #        Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+#
+    #        Levels.VAGUE_INSTRUCT.CARROT_EASY,
+    #        Levels.VAGUE_INSTRUCT.CARROT_HARD,
+    #        Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
+    #        Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+    #        ],
+    #    model_teams=[
+    #        ModelTeams.Remote.MAGISTRAL_SMALL,
+    #        ModelTeams.Remote.GPT_OSS_120B,
+    #        ModelTeams.Remote.QWEN_235B,
+#
+    #        ModelTeams.Local.GROQ_LLAMA8B,
+    #        ModelTeams.Local.NEMOTRON_QWEN8B,
+#
+    #        ModelTeams.Local.QWEN_4B,
+    #        ModelTeams.Local.QWEN_8B_LLAMA,
+    #        ModelTeams.Local.QWEN_30B,
+    #        ModelTeams.Local.QWEN_CODER30B,
+#
+    #        ModelTeams.Local.GPT_OSS_20B,
+#
+    #    ],
+    #    reruns=5,
+    #),
+#
+    #PhaseDefinition(
+    #    phase="baseline-mix",
+    #    configs=[
+    #        CONFIGURATIONS["baseline-img"],
+    #        ],
+    #    levels=[
+    #        Levels.DETAILED_INSTRUCT.CARROT_EASY,
+    #        Levels.DETAILED_INSTRUCT.CARROT_HARD,
+    #        Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
+    #        Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+#
+    #        Levels.VAGUE_INSTRUCT.CARROT_EASY,
+    #        Levels.VAGUE_INSTRUCT.CARROT_HARD,
+    #        Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
+    #        Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+    #        ],
+    #    model_teams=[
+    #        ModelTeams.Hybrid.DEEPSEEK_LLAMA,
+    #        ModelTeams.Hybrid.MISTRAL_SMALL,
+    #        ModelTeams.Hybrid.NEMOTRON_LLAMA,
+#
+    #        ModelTeams.Local.DOLPHIN_X_QWEN,
+    #        ModelTeams.Local.PHI4_X_QWEN,
+    #        ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN8B,
+    #    ],
+    #    reruns=5,
+    #),
 )
 
 # Map of hostname → runner configuration. Edit the keys to match your devices.
@@ -122,7 +145,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_4B,
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.QWEN_8B,
+            ModelTeams.Local.QWEN_8B_LLAMA,
         ],
         allowed_phases=["baseline-solo", "baseline-mix"],
     ),
@@ -135,7 +158,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.QWEN_8B,
+            ModelTeams.Local.QWEN_8B_LLAMA,
             ModelTeams.Local.QWEN_4B,
 
             ModelTeams.Local.GPT_OSS_20B,
@@ -154,7 +177,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.QWEN_8B,
+            ModelTeams.Local.QWEN_8B_LLAMA,
             ModelTeams.Local.QWEN_4B,
 
             ModelTeams.Local.PHI4_X_QWEN,
