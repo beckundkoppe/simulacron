@@ -66,6 +66,12 @@ def trycatch(action, success_msg, *, external: bool | None = None):
         current.RESULT.harderror_count += 1
 
 def check_id(readable_id: str):
+    # Accept dicts from tool calls (e.g., {"id": "chest_5", ...}) by extracting the id.
+    if isinstance(readable_id, dict):
+        readable_id = readable_id.get("id") or readable_id.get("readable_id") or str(readable_id)
+    elif not isinstance(readable_id, str):
+        readable_id = str(readable_id)
+
     for entity in World.entities:
         if entity.readable_id == readable_id:
             return entity
@@ -75,8 +81,9 @@ def check_id(readable_id: str):
     available_ids: list[str] = []
     if room:
         for ent in room.entities:
-            if ent and ent.readable_id:
-                available_ids.append(ent.readable_id)
+            rid = getattr(ent, "readable_id", None)
+            if rid:
+                available_ids.append(rid)
 
     raise HardException(
         f"No object named '{readable_id}' is available in your current room.",
