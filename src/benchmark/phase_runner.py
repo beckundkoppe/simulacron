@@ -228,7 +228,7 @@ def drop_failed_finish_commit(repo: Path, entry: str) -> None:
     subprocess.run(["git", "-C", str(repo), "reset", "--hard", "HEAD~1"], check=False)
 
 
-def cleanup_failed_finish(repo: Path, result_path: Path, entry: str) -> None:
+def cleanup_failed_finish(repo: Path, result_path: Path, raw_path: Path, entry: str) -> None:
     """
     Restore a clean state after failing to push a finished run so we can continue.
     """
@@ -237,6 +237,8 @@ def cleanup_failed_finish(repo: Path, result_path: Path, entry: str) -> None:
     # Ensure local artifacts do not hide unfinished work.
     if result_path.exists():
         result_path.unlink(missing_ok=True)
+    if raw_path.exists():
+        raw_path.unlink(missing_ok=True)
     safe_pull_rebase(repo)
 
 
@@ -343,17 +345,19 @@ def main():
         run = build_run(level_name, model_team, config_name, rerun_index)
         dispatcher.benchmark_single_rerun(run, rerun_index)
 
-        result_path = repo_root / dispatcher.folder / claimed_entry
+        results_base = Path(dispatcher.folder)
+        result_path = repo_root / results_base / claimed_entry
+        raw_path = repo_root / results_base / "raw" / f"{Path(claimed_entry).stem}_raw.txt"
         claim_file.unlink(missing_ok=True)
 
-        git_commit_if_needed(repo_root, [result_path, claim_file], f"finish {claimed_entry}")
+        git_commit_if_needed(repo_root, [result_path, raw_path, claim_file], f"finish {claimed_entry}")
         if not safe_pull_rebase(repo_root):
             print(f"Failed to pull before pushing finish for {claimed_entry}")
-            cleanup_failed_finish(repo_root, result_path, claimed_entry)
+            cleanup_failed_finish(repo_root, result_path, raw_path, claimed_entry)
             continue
         if not push_with_retry(repo_root, context=f"finish {claimed_entry}"):
             print(f"Giving up on pushing finish for {claimed_entry}; skipping to next entry.")
-            cleanup_failed_finish(repo_root, result_path, claimed_entry)
+            cleanup_failed_finish(repo_root, result_path, raw_path, claimed_entry)
             continue
 
 
