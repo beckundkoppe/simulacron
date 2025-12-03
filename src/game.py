@@ -34,7 +34,7 @@ def perceive_enviroment(observer: AgentEntity) -> str:
         },
         "your_pos": position_value
     }
-    data["your_inventory"] = observer.get_inventory()
+    data["your_inventory"] = observer.inventory_summary()
     data["your_perception"] = room.perceive(observer, DetailLevel.OMNISCIENT)
     return json.dumps(data)
 

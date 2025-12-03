@@ -154,19 +154,6 @@ class Entity:
         return False
 
     def on_interact(self, actor_entity, action: ActionTry) -> str:
-        if self not in actor_entity.get_inventory():
-            raise SoftException(
-                "You can only drop items that are in your inventory.",
-                console_message=(
-                    f"The object '{self.readable_id}' is not in your inventory."
-                ),
-                hint="Select an item from your inventory if you want to drop it.",
-                context={
-                    "entity": self.readable_id,
-                    "inventory": [e.readable_id for e in actor_entity.get_inventory()],
-                },
-            )
-
         self._ensure_same_room(actor_entity)
         self._ensure_in_range(actor_entity)
 
@@ -779,13 +766,15 @@ class AgentEntity(Entity):
         connector.enter_connect(self)
 
     def get_inventory(self):
-        o = []
-        for item in self.inventory:
-            data = {}
-            data["name"] = item.name
-            data["id"] = item.readable_id
-            o.append(data)
-        return o
+        return list(self.inventory)
+
+    def inventory_summary(self) -> list[dict[str, str]]:
+        """Lightweight, serializable view of the current inventory for perception."""
+        return [
+            {"name": item.name, "id": item.readable_id}
+            for item in self.inventory
+            if item is not None
+        ]
 
 def connect_rooms_with_door(room_a, pos_a, room_b, pos_b, description = None):
     # create shared door
