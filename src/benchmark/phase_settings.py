@@ -78,11 +78,16 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.DETAILED_INSTRUCT.CARROT_HARD,
             Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
             Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+            Levels.DETAILED_INSTRUCT.TOMATO_EASY,
+            Levels.DETAILED_INSTRUCT.TOMATO_HARD,
 
             Levels.VAGUE_INSTRUCT.CARROT_EASY,
             Levels.VAGUE_INSTRUCT.CARROT_HARD,
             Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+            Levels.VAGUE_INSTRUCT.TOMATO_EASY,
+            Levels.VAGUE_INSTRUCT.TOMATO_HARD,
+
             ],
         model_teams=[
             ModelTeams.Remote.MAGISTRAL_SMALL,
@@ -113,11 +118,15 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.DETAILED_INSTRUCT.CARROT_HARD,
             Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
             Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+            Levels.DETAILED_INSTRUCT.TOMATO_EASY,
+            Levels.DETAILED_INSTRUCT.TOMATO_HARD,
 
             Levels.VAGUE_INSTRUCT.CARROT_EASY,
             Levels.VAGUE_INSTRUCT.CARROT_HARD,
             Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+            Levels.VAGUE_INSTRUCT.TOMATO_EASY,
+            Levels.VAGUE_INSTRUCT.TOMATO_HARD,
             ],
         model_teams=[
             ModelTeams.Hybrid.DEEPSEEK_LLAMA,
@@ -129,6 +138,44 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
         ],
         reruns=5,
+    ),
+
+    PhaseDefinition(
+        phase="feature",
+        configs=[
+            CONFIGURATIONS["a-agent"],
+            CONFIGURATIONS["b-agent"],
+            CONFIGURATIONS["free-agent"],
+            CONFIGURATIONS["step-agent"],
+            CONFIGURATIONS["plan-agent"],
+            ],
+        levels=[
+            Levels.DETAILED_INSTRUCT.CARROT_EASY,
+            Levels.DETAILED_INSTRUCT.CARROT_HARD,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+            Levels.DETAILED_INSTRUCT.TOMATO_EASY,
+            Levels.DETAILED_INSTRUCT.TOMATO_HARD,
+            Levels.DETAILED_INSTRUCT.POTATO_EASY,
+            Levels.DETAILED_INSTRUCT.POTATO_HARD,
+            Levels.DETAILED_INSTRUCT.ONION_EASY,
+            Levels.DETAILED_INSTRUCT.ONION_HARD,
+
+            Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            Levels.VAGUE_INSTRUCT.CARROT_HARD,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+            Levels.VAGUE_INSTRUCT.TOMATO_EASY,
+            Levels.VAGUE_INSTRUCT.TOMATO_HARD,
+            Levels.VAGUE_INSTRUCT.POTATO_EASY,
+            Levels.VAGUE_INSTRUCT.POTATO_HARD,
+            Levels.VAGUE_INSTRUCT.ONION_EASY,
+            Levels.VAGUE_INSTRUCT.ONION_HARD,
+            ],
+        model_teams=[
+            ModelTeams.Remote.QWEN_235B,
+        ],
+        reruns=3,
     ),
 )
 

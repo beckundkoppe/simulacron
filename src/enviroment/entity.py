@@ -588,6 +588,34 @@ class AgentEntity(Entity):
         item._ensure_same_room(self)
         item._ensure_in_range(self)
 
+        if item is container:
+            raise SoftException(
+                "You cannot take an object from itself.",
+                console_message=(
+                    f"Invalid take_from call: '{item.readable_id}' was provided as both "
+                    "the item and the container."
+                ),
+                hint="Use the container id as the second argument, e.g. take apple_1 from box_1.",
+                context={
+                    "item": getattr(item, "readable_id", None),
+                    "container": getattr(container, "readable_id", None),
+                },
+            )
+
+        if not isinstance(container, ContainerEntity):
+            raise SoftException(
+                f"{getattr(container, 'readable_id', None) or 'target'} is not a container.",
+                console_message=(
+                    f"Cannot take '{item.readable_id}' from '{getattr(container, 'readable_id', None)}' "
+                    "because the target is not a container."
+                ),
+                hint="Choose a container object (like a box or table) as the source when using take_from.",
+                context={
+                    "item": getattr(item, "readable_id", None),
+                    "container": getattr(container, "readable_id", None),
+                },
+            )
+
         if not item.is_collectible:
             raise SoftException(
                 f"{item.readable_id} cannot be collected.",

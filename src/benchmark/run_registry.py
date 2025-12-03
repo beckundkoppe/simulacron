@@ -43,20 +43,100 @@ IMAGINATOR_AGENT = AgentConfiguration(
     memory_type=MemoryType.SIMPLE,
 )
 
+A_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.IMAGINATOR,
+    observe=ObserveType.ON,
+    reflect=ReflectType.ON,
+    memory_type=MemoryType.SUPER,
+)
+
+B_AGENT = AgentConfiguration(
+    plan=PlanType.FREE,
+    trial=TrialType.OFF,
+    action=ActionType.IMAGINATOR,
+    observe=ObserveType.ON,
+    reflect=ReflectType.ON,
+    memory_type=MemoryType.SUPER,
+)
+
+FREE_AGENT = AgentConfiguration(
+    plan=PlanType.FREE,
+    trial=TrialType.OFF,
+    action=ActionType.IMAGINATOR,
+    observe=ObserveType.ON,
+    reflect=ReflectType.ON,
+    memory_type=MemoryType.SUPER,
+)
+
+STEP_AGENT = AgentConfiguration(
+    plan=PlanType.STEP,
+    trial=TrialType.OFF,
+    action=ActionType.IMAGINATOR,
+    observe=ObserveType.ON,
+    reflect=ReflectType.ON,
+    memory_type=MemoryType.SUPER,
+)
+
+TREE_AGENT = AgentConfiguration(
+    plan=PlanType.DECOMPOSE,
+    trial=TrialType.OFF,
+    action=ActionType.IMAGINATOR,
+    observe=ObserveType.ON,
+    reflect=ReflectType.ON,
+    memory_type=MemoryType.SUPER,
+)
+
 CONFIGURATIONS: Dict[str, Configuration] = {
     "baseline-naive": Configuration(
-        agents=NAIVE_AGENT,
+        agent=NAIVE_AGENT,
         perception=PerceptionType.ALL,
         position=PositionType.RELATIVE,
         temperature=0.0,
         name="baseline-naive",
     ),
     "baseline-img": Configuration(
-        agents=IMAGINATOR_AGENT,
+        agent=IMAGINATOR_AGENT,
         perception=PerceptionType.ALL,
         position=PositionType.RELATIVE,
         temperature=0.0,
         name="baseline-img",
+    ),
+    "a-agent": Configuration(
+        agent=A_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="a-agent",
+    ),
+    "b-agent": Configuration(
+        agent=B_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="b-agent",
+    ),
+    "free-agent": Configuration(
+        agent=FREE_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="free-agent",
+    ),
+    "step-agent": Configuration(
+        agent=A_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="step-agent",
+    ),
+    "plan-agent": Configuration(
+        agent=A_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="plan-agent",
     ),
 }
 

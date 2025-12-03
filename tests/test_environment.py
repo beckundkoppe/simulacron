@@ -98,6 +98,27 @@ class TestEnvInteraction(unittest.TestCase):
         with self.assertRaises(HardException):
             self.agent.take_from(Entity("missing", Position(0, 0)), container)
 
+    def test_take_from_rejects_self_reference(self) -> None:
+        """Taking an item from itself surfaces a soft, user-facing error."""
+
+        item = Entity("item", Position(0.5, 0.5))
+        item.enter(self.room)
+
+        with self.assertRaises(SoftException):
+            self.agent.take_from(item, item)
+
+    def test_take_from_requires_container_target(self) -> None:
+        """Taking from a non-container returns a soft error instead of a crash."""
+
+        item = Entity("item", Position(0.5, 0.5))
+        item.enter(self.room)
+
+        table = Entity("table", Position(0.6, 0.5), is_collectible=False)
+        table.enter(self.room)
+
+        with self.assertRaises(SoftException):
+            self.agent.take_from(item, table)
+
     def test_advanced_container_locking_and_interaction_radius(self) -> None:
         """Lock/unlock/open flows respect range limits and required keys."""
 

@@ -35,7 +35,7 @@ class Agent:
         self.triggered_replan = None
         self.finished = False
 
-        if config.ACTIVE_CONFIG.agents.plan is not config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
             self.triggered_replan = "Main goal is not yet reached. Create an initial plan"
 
         debug.print_to_file(self.main_memory.get_history())
@@ -47,7 +47,7 @@ class Agent:
         setattr(result, field, getattr(result, field) + delta)
 
     def _create_main_memory(self, goal: str) -> Memory:
-        mem_type = getattr(config.ACTIVE_CONFIG.agents, "memory_type", None)
+        mem_type = getattr(config.ACTIVE_CONFIG.agent, "memory_type", None)
 
         if mem_type is config.MemoryType.SUPER:
             return SuperMemory(goal=goal, path="main_memory.txt")
@@ -65,14 +65,14 @@ class Agent:
             self.main_memory.save()
             self.had_action = False
 
-        if self.triggered_replan or config.ACTIVE_CONFIG.agents.trial is config.TrialType.OFF:
+        if self.triggered_replan or config.ACTIVE_CONFIG.agent.trial is config.TrialType.OFF:
             t0 = time.time()
             self._plan() # should set self.plan with a full Plan
             self._add_time("plan_time_s", time.time() - t0)
             self.main_memory.set_plan(self.plan)
             self.main_memory.save()
         
-        if config.ACTIVE_CONFIG.agents.plan is not config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
             pretty(bullet("PLAN: " + self.plan.to_string(), color=Color.MAGENTA))
 
         if not self.triggered_replan:
@@ -88,7 +88,7 @@ class Agent:
             self.main_memory.set_plan(self.plan)
             self.main_memory.save()
 
-        if config.ACTIVE_CONFIG.agents.trial is not config.TrialType.OFF:
+        if config.ACTIVE_CONFIG.agent.trial is not config.TrialType.OFF:
             pretty(bullet("TRIAL: " + self.plan.get_trial().to_string(), color=Color.RED))
 
         if not self.triggered_replan:
@@ -102,17 +102,17 @@ class Agent:
         current.ENTITY = None
 
     def _observe(self, perception: str):
-        if config.ACTIVE_CONFIG.agents.observe is config.ObserveType.OFF:
+        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.OFF:
             self.main_memory.append_message(Role.USER, perception, Type.OBSERVATION)
             return
 
-        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
             active_plan = "goal"
-        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.FREE:
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
             active_plan = "current plan step"
-        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.STEP:
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
             active_plan = "focused plan step"
-        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.DECOMPOSE:
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
             active_plan = "focused plan node"
         else:
             raise Exception()
@@ -122,17 +122,17 @@ class Agent:
         observation = observer.call(f"Perception: {perception}\nWhat do you observe? Make sure to verify facts. Respect facts, not assumptions. What is relevant for your {active_plan}? Only tell about new discouveries. (short)")
         self._add_time("img_time_s", time.time() - start)
 
-        if config.ACTIVE_CONFIG.agents.observe is config.ObserveType.ON:
+        if config.ACTIVE_CONFIG.agent.observe is config.ObserveType.ON:
             self.main_memory.append_message(Role.USER, observation, Type.OBSERVATION)
         else:
             pass
             #self._memorize(observation, Type.OBSERVATION)
 
     def _trial(self):
-        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
             return
         
-        if config.ACTIVE_CONFIG.agents.trial is config.TrialType.OFF:
+        if config.ACTIVE_CONFIG.agent.trial is config.TrialType.OFF:
             return
         
         #havent tried an idea yet
@@ -211,11 +211,11 @@ class Agent:
             )
 
         if not self.plan.get_trial().current_step():
-            if config.ACTIVE_CONFIG.agents.plan is config.PlanType.FREE:
+            if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
                 plan = "current plan"
-            elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.STEP:
+            elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
                 plan = "focused plan step"
-            elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.DECOMPOSE:
+            elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
                 plan = "focused plan node"
             else:
                 raise Exception()
@@ -226,10 +226,10 @@ class Agent:
     def _act(self, perception: str):
         prompt = "Give best next action to perform (short answer)."
 
-        if config.ACTIVE_CONFIG.agents.plan is not config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
             prompt += " Stick closely to the next step in the plan. But always tell the next action"
 
-        if config.ACTIVE_CONFIG.agents.action is config.ActionType.DIRECT:
+        if config.ACTIVE_CONFIG.agent.action is config.ActionType.DIRECT:
             realisator = ToolProvider.build("actor", self.realisator_model, memory=self.main_memory)
             register_tools(realisator, ToolGroup.ENV)
             start = time.time()
@@ -258,7 +258,7 @@ class Agent:
         for role, msg, msg_type in process_action_results():
             results += msg + "\n"
 
-        if config.ACTIVE_CONFIG.agents.reflect is config.ReflectType.OFF:
+        if config.ACTIVE_CONFIG.agent.reflect is config.ReflectType.OFF:
             self.main_memory.append_message(Role.USER, results, Type.FEEDBACK)
             return
 
@@ -279,16 +279,16 @@ class Agent:
             self._replan(self.triggered_replan)
             return
 
-        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.OFF:
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.OFF:
             return
 
-        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.FREE:
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
             plan = "current plan"
             active_plan_completed = f"{plan} completed and the goal reached"
-        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.STEP:
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
             plan = "focused plan step"
             active_plan_completed = f"{plan} completed"
-        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.DECOMPOSE:
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
             plan = "focused plan node"
             active_plan_completed = f"{plan} completed"
         else:
@@ -337,11 +337,11 @@ class Agent:
     def _replan(self, reason):
         print(f"Replanning because: {reason}")
 
-        if config.ACTIVE_CONFIG.agents.plan is config.PlanType.FREE:
+        if config.ACTIVE_CONFIG.agent.plan is config.PlanType.FREE:
             self.plan = self._plan_free(reason)
-        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.STEP:
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.STEP:
             self.plan = self._plan_steps(reason)
-        elif config.ACTIVE_CONFIG.agents.plan is config.PlanType.DECOMPOSE:
+        elif config.ACTIVE_CONFIG.agent.plan is config.PlanType.DECOMPOSE:
             self.plan = self._plan_tree(reason)
         else:
             raise Exception()
@@ -531,7 +531,7 @@ class Agent:
                 else " Retry using valid tool calls with explicit object IDs."
             )
 
-            if config.ACTIVE_CONFIG.agents.action is config.ActionType.IMG_RETRY:
+            if config.ACTIVE_CONFIG.agent.action is config.ActionType.IMG_RETRY:
                 self.main_memory.append_message(
                     Role.USER,
                     "Last step was not specified well. Please provide more explicit instructions",

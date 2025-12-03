@@ -61,7 +61,7 @@ class PositionType(Enum):
 
 @dataclass(frozen=True)
 class Configuration:
-    agents: AgentConfiguration
+    agent: AgentConfiguration
     perception: PerceptionType
     position: PositionType
     temperature: float
@@ -89,7 +89,7 @@ DEFAULT_AGENT_CONFIGURATION = AgentConfiguration(
 # benchmarking harness (e.g. unit tests) without having to bootstrap a full
 # benchmark run first.
 DEFAULT_CONFIGURATION = Configuration(
-    agents=DEFAULT_AGENT_CONFIGURATION,
+    agent=DEFAULT_AGENT_CONFIGURATION,
     perception=PerceptionType.ALL,
     position=PositionType.RELATIVE,
     temperature=0.0,
