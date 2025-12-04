@@ -84,7 +84,7 @@ def check_win() -> bool:
         if(ent.name == "table"):
             table = ent
     
-    assert len(peppers) != 3, "No peppers"
+    assert len(peppers) == 3, "No peppers"
     assert table != None, "No table"
     
     for pep in peppers:
