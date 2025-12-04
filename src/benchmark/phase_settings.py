@@ -143,9 +143,10 @@ PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
         phase="feature",
         configs=[
-            CONFIGURATIONS["a-agent"],
+            CONFIGURATIONS["baseline-img"],
+            #CONFIGURATIONS["a-agent"],
             CONFIGURATIONS["b-agent"],
-            CONFIGURATIONS["free-agent"],
+            #CONFIGURATIONS["free-agent"],
             CONFIGURATIONS["step-agent"],
             CONFIGURATIONS["plan-agent"],
             ],
@@ -155,30 +156,43 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.DETAILED_INSTRUCT.CARROT_HARD,
             Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
             Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
-            Levels.DETAILED_INSTRUCT.TOMATO_EASY,
-            Levels.DETAILED_INSTRUCT.TOMATO_HARD,
+            Levels.DETAILED_INSTRUCT.PEPPER_EASY,
+            Levels.DETAILED_INSTRUCT.PEPPER_HARD,
+            #Levels.DETAILED_INSTRUCT.TOMATO_EASY,
+            #Levels.DETAILED_INSTRUCT.TOMATO_HARD,
+            #Levels.DETAILED_INSTRUCT.SALAD_EASY,
+            #Levels.DETAILED_INSTRUCT.SALAD_HARD,
             Levels.DETAILED_INSTRUCT.POTATO_EASY,
             Levels.DETAILED_INSTRUCT.POTATO_HARD,
-            Levels.DETAILED_INSTRUCT.ONION_EASY,
-            Levels.DETAILED_INSTRUCT.ONION_HARD,
+            #Levels.DETAILED_INSTRUCT.ONION_EASY,
+            #Levels.DETAILED_INSTRUCT.ONION_HARD,
 
             Levels.VAGUE_INSTRUCT.CARROT_EASY,
             Levels.VAGUE_INSTRUCT.CARROT_HARD,
             Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
-            Levels.VAGUE_INSTRUCT.TOMATO_EASY,
-            Levels.VAGUE_INSTRUCT.TOMATO_HARD,
+            Levels.VAGUE_INSTRUCT.PEPPER_EASY,
+            Levels.VAGUE_INSTRUCT.PEPPER_HARD,
+            #Levels.VAGUE_INSTRUCT.TOMATO_EASY,
+            #Levels.VAGUE_INSTRUCT.TOMATO_HARD,
+            #Levels.DETAILED_INSTRUCT.SALAD_EASY,
+            #Levels.DETAILED_INSTRUCT.SALAD_HARD,
             Levels.VAGUE_INSTRUCT.POTATO_EASY,
             Levels.VAGUE_INSTRUCT.POTATO_HARD,
-            Levels.VAGUE_INSTRUCT.ONION_EASY,
-            Levels.VAGUE_INSTRUCT.ONION_HARD,
+            #Levels.VAGUE_INSTRUCT.ONION_EASY,
+            #Levels.VAGUE_INSTRUCT.ONION_HARD,
             ],
         model_teams=[
             ModelTeams.Remote.QWEN_235B,
+            ModelTeams.Remote.MAGISTRAL_SMALL,
+
             ModelTeams.Local.GPT_OSS_20B,
+            ModelTeams.Local.QWEN_CODER30B,
+
             ModelTeams.Local.QWEN_8B_OLLAMA,
+            #ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
-        reruns=3,
+        reruns=2,
     ),
 )
 
@@ -206,7 +220,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_4B_Q4_LLAMA,
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
@@ -228,7 +242,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             ModelTeams.Local.GPT_OSS_20B,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
     ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
@@ -252,7 +266,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix"],
+        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
     )
 }
 
