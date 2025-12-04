@@ -224,7 +224,7 @@ class Agent:
             print(f"Current trial {self.plan.get_trial().current_step()}")
     
     def _act(self, perception: str):
-        prompt = "Give best next action to perform (short answer)."
+        prompt = "Give best next action to perform (short answer, but explicit)."
 
         if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
             prompt += " Stick closely to the next step in the plan. But always tell the next action"
