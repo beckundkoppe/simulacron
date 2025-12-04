@@ -74,8 +74,8 @@ class ModelTeams(Enum):
             realisator=Model.Local.LlamaCpp.Llama3.LLAMA3_GROQ_8B_Q8,
         )
 
-        NEMOTRON_QWEN8B = ModelTeam(
-            realisator=Model.Local.LlamaCpp.Qwen3.NEMOTRON_14B_Q8,
+        NEMOTRON_8B = ModelTeam(
+            realisator=Model.Local.Ollama.Llama.NEMOTRON_8B,
         )
 
 ###################### qwen ######################

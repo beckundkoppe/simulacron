@@ -95,7 +95,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Remote.QWEN_235B,
 
             #ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
             ModelTeams.Local.QWEN_8B_OLLAMA,
@@ -197,7 +197,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_8B_LLAMA,
             ModelTeams.Local.QWEN_8B_OLLAMA,
@@ -216,7 +216,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_8B_LLAMA,
             ModelTeams.Local.QWEN_4B_LLAMA,
@@ -240,7 +240,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_QWEN8B,
+            ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_8B_LLAMA,
             ModelTeams.Local.QWEN_8B_OLLAMA,
