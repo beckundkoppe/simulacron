@@ -96,17 +96,20 @@ class OllamaServiceManager:
     @contextlib.contextmanager
     def ensure_running(self, needed: bool):
         """
-        Context manager to wrap a run. If ``needed`` is False, any instance we
-        spawned earlier will be stopped before yielding.
+        Context manager to wrap a run.
+
+        Auto-start/stop is disabled: if a run requires Ollama and no service is
+        reachable, we raise immediately so the caller can start it manually.
         """
         if not needed:
-            self.stop()
+            # No Ollama dependency for this run; do nothing.
             yield False
             return
 
-        started_here = self.start()
-        try:
-            yield started_here
-        finally:
-            if started_here:
-                self.stop()
+        if not self.is_running():
+            raise RuntimeError(
+                "Ollama must be running (ollama serve) before starting this run."
+            )
+
+        # Service is already up; leave it untouched.
+        yield False
