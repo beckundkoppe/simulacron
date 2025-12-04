@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Callable
 
 from enviroment.levels.data import LevelSpec
-from enviroment.levels import carrot, cucumber, salad, tomato, potato, onion
+from enviroment.levels import carrot, cucumber, pepper, salad, tomato, potato, onion
 
 class LevelType(Enum):
     SHORT           = "short horizon"
@@ -40,6 +40,9 @@ class Levels(Enum):
         CUCUMBER_EASY = Level("cucumber", True, True, 3, lambda d: cucumber.build_easy(d))
         CUCUMBER_HARD = Level("cucumber", False, True, 3, lambda d: cucumber.build_hard(d))
 
+        PEPPER_EASY = Level("pepper", True, True, 12, lambda d: pepper.build_easy(d))
+        PEPPER_HARD = Level("pepper", False, True, 12, lambda d: pepper.build_hard(d))
+
         SALAD_EASY = Level("salad", True, True, 24, lambda d: salad.build_easy(d))
         SALAD_HARD = Level("salad", False, True, 24, lambda d: salad.build_hard(d))
 
@@ -58,6 +61,9 @@ class Levels(Enum):
 
         CUCUMBER_EASY = Level("cucumber", True, False, 3, lambda d: cucumber.build_easy(d))
         CUCUMBER_HARD = Level("cucumber", False, False, 3, lambda d: cucumber.build_hard(d))
+
+        PEPPER_EASY = Level("pepper", True, False, 12, lambda d: pepper.build_easy(d))
+        PEPPER_HARD = Level("pepper", False, False, 12, lambda d: pepper.build_hard(d))
 
         SALAD_EASY = Level("salad", True, False, 24, lambda d: salad.build_easy(d))
         SALAD_HARD = Level("salad", False, False, 24, lambda d: salad.build_hard(d))

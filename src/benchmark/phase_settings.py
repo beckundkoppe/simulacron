@@ -78,15 +78,15 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.DETAILED_INSTRUCT.CARROT_HARD,
             Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
             Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
-            #Levels.DETAILED_INSTRUCT.TOMATO_EASY,
-            #Levels.DETAILED_INSTRUCT.TOMATO_HARD,
+            Levels.DETAILED_INSTRUCT.PEPPER_EASY,
+            Levels.DETAILED_INSTRUCT.PEPPER_HARD,
 
             Levels.VAGUE_INSTRUCT.CARROT_EASY,
             Levels.VAGUE_INSTRUCT.CARROT_HARD,
             Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
-            #Levels.VAGUE_INSTRUCT.TOMATO_EASY,
-            #Levels.VAGUE_INSTRUCT.TOMATO_HARD,
+            Levels.VAGUE_INSTRUCT.PEPPER_EASY,
+            Levels.VAGUE_INSTRUCT.PEPPER_HARD,
 
             ],
         model_teams=[
@@ -94,7 +94,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Remote.GPT_OSS_120B,
             ModelTeams.Remote.QWEN_235B,
 
-            #ModelTeams.Local.GROQ_LLAMA8B,
+            #ModelTeams.Local.GROQ_LLAMA8B, ### MANUELLER ABBRUCH
             ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
@@ -118,15 +118,15 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.DETAILED_INSTRUCT.CARROT_HARD,
             Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
             Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
-            #Levels.DETAILED_INSTRUCT.TOMATO_EASY,
-            #Levels.DETAILED_INSTRUCT.TOMATO_HARD,
+            Levels.DETAILED_INSTRUCT.PEPPER_EASY,
+            Levels.DETAILED_INSTRUCT.PEPPER_HARD,
 
             Levels.VAGUE_INSTRUCT.CARROT_EASY,
             Levels.VAGUE_INSTRUCT.CARROT_HARD,
             Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
-            #Levels.VAGUE_INSTRUCT.TOMATO_EASY,
-            #Levels.VAGUE_INSTRUCT.TOMATO_HARD,
+            Levels.VAGUE_INSTRUCT.PEPPER_EASY,
+            Levels.VAGUE_INSTRUCT.PEPPER_HARD,
             ],
         model_teams=[
             ModelTeams.Hybrid.DEEPSEEK_LLAMA,
@@ -135,7 +135,7 @@ PHASES: Sequence[PhaseDefinition] = (
 
             ModelTeams.Local.DOLPHIN_X_QWEN,
             ModelTeams.Local.PHI4_X_QWEN,
-            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
+            #ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN, ### MANUELLER ABBRUCH
         ],
         reruns=5,
     ),
@@ -234,7 +234,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
         allowed_model_teams=[
             ModelTeams.Local.QWEN_30B,
             ModelTeams.Local.QWEN_CODER30B,
-            #ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
+            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
 
             ModelTeams.Local.GPT_OSS_20B,
 
