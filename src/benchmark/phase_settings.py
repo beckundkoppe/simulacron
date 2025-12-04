@@ -234,7 +234,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
         allowed_model_teams=[
             ModelTeams.Local.QWEN_30B,
             ModelTeams.Local.QWEN_CODER30B,
-            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
+            #ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
 
             ModelTeams.Local.GPT_OSS_20B,
 
