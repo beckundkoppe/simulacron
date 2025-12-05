@@ -148,7 +148,6 @@ PHASES: Sequence[PhaseDefinition] = (
             CONFIGURATIONS["b-agent"],
             CONFIGURATIONS["free-agent"],
             CONFIGURATIONS["step-agent"],
-            CONFIGURATIONS["plan-agent"],
             CONFIGURATIONS["trial-agent"],
             ],
         levels=[
