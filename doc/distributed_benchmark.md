@@ -64,7 +64,7 @@ The command writes `results/phase/<phase>.txt`, where each line is a result file
 Model team tags (see `ModelTeams` in `benchmark/model_team.py`) are used in filenames, so adjusting a tag will require regenerating TODO files.
 
 ## 2) Run benchmarks on a device
-Each machine repeatedly pulls the TODO file, claims a runnable entry, executes it, and pushes the updated state. Per-device constraints come from the `RUNNER_CONFIGS` mapping in `benchmark/phase_settings.py`; `benchmark.phase_runner` picks the entry matching the machine hostname (or falls back to the default phase/model teams from `PHASES`). Model teams are tried in the order you list them (all runs for the first allowed team are claimed before moving to the next). You can optionally pass a phase name as the first CLI argument to `benchmark.phase_runner` to select among multiple per-host phases.
+Each machine repeatedly pulls the TODO file, claims a runnable entry, executes it, and pushes the updated state. Per-device constraints come from the `RUNNER_CONFIGS` mapping in `benchmark/phase_settings.py`; `benchmark.phase_runner` picks the entry matching a local runner hostname (read from `runner_hostname.txt` if present, otherwise the system hostname) or falls back to the default phase/model teams from `PHASES`. Model teams are tried in the order you list them (all runs for the first allowed team are claimed before moving to the next). You can optionally pass a phase name as the first CLI argument to `benchmark.phase_runner` to select among multiple per-host phases. Keep a different `runner_hostname.txt` in each checkout if you want to run multiple instances on the same machine without claim conflicts.
 
 ```bash
 # Runs until no eligible TODO entries remain, using the Python configuration only

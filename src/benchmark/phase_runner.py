@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import socket
 import subprocess
 import sys
 from pathlib import Path
 from typing import List, Tuple
 
 from benchmark.dispatcher import Dispatcher
-from benchmark.phase_settings import resolve_runner_config
+from benchmark.phase_settings import load_runner_hostname, resolve_runner_config
 from benchmark.run_registry import (
     build_run,
     filter_by_models,
@@ -273,11 +272,11 @@ def main():
     claims_folder = results_root / "runs/claims"
     results_folder = results_root / "runs"
     requested_phase = sys.argv[1] if len(sys.argv) > 1 else None
-    runner_config = resolve_runner_config(phase=requested_phase)
+    hostname = load_runner_hostname()
+    runner_config = resolve_runner_config(hostname=hostname, phase=requested_phase)
     phase = runner_config.phase
     phase_file = data_root / "phase" / f"{phase}.txt"
     allowed_model_teams = normalize_model_teams(None, runner_config.allowed_model_teams or [])
-    hostname = socket.gethostname()
 
     dispatcher = Dispatcher()
 

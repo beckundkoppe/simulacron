@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from socket import gethostname
 from typing import Dict, Sequence
 
@@ -9,6 +10,8 @@ from enviroment.levels.level import Level, Levels
 from llm.model import Model
 from benchmark.model_team import ModelTeam, ModelTeams
 from benchmark.run_registry import CONFIGURATIONS
+
+RUNNER_HOSTNAME_FILE = Path(__file__).resolve().parent.parent.parent / "runner_hostname.txt"
 
 
 @dataclass
@@ -171,10 +174,23 @@ DEFAULT_RUNNER_CONFIG = RunnerConfig(
 )
 
 
+def load_runner_hostname(override: str | None = None) -> str:
+    """
+    Return the hostname used for runner selection, optionally read from a local file.
+    """
+    if override:
+        return override
+    if RUNNER_HOSTNAME_FILE.exists():
+        content = RUNNER_HOSTNAME_FILE.read_text().strip()
+        if content:
+            return content
+    return gethostname()
+
+
 def resolve_runner_config(hostname: str | None = None, phase: str | None = None) -> ResolvedRunnerConfig:
     """Return the runner config for the given hostname (optional phase override)."""
 
-    host = hostname or gethostname()
+    host = load_runner_hostname(hostname)
     runner_config = RUNNER_CONFIGS.get(host, DEFAULT_RUNNER_CONFIG)
 
     allowed_models = runner_config.allowed_model_teams or DEFAULT_RUNNER_CONFIG.allowed_model_teams
