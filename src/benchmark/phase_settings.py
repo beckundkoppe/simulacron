@@ -130,8 +130,8 @@ PHASES: Sequence[PhaseDefinition] = (
             ],
         model_teams=[
             ModelTeams.Hybrid.DEEPSEEK_LLAMA,
-            ModelTeams.Hybrid.MISTRAL_SMALL,
-            ModelTeams.Hybrid.NEMOTRON_LLAMA,
+            #ModelTeams.Hybrid.MISTRAL_SMALL,
+            #ModelTeams.Hybrid.NEMOTRON_LLAMA,
 
             ModelTeams.Local.DOLPHIN_X_QWEN,
             ModelTeams.Local.PHI4_X_QWEN,
