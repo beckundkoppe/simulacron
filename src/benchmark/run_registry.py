@@ -88,6 +88,15 @@ TREE_AGENT = AgentConfiguration(
     memory_type=MemoryType.SUPER,
 )
 
+TRIAL_AGENT = AgentConfiguration(
+    plan=PlanType.DECOMPOSE,
+    trial=TrialType.ON,
+    action=ActionType.IMAGINATOR,
+    observe=ObserveType.ON,
+    reflect=ReflectType.ON,
+    memory_type=MemoryType.SUPER,
+)
+
 CONFIGURATIONS: Dict[str, Configuration] = {
     "baseline-naive": Configuration(
         agent=NAIVE_AGENT,
@@ -125,18 +134,18 @@ CONFIGURATIONS: Dict[str, Configuration] = {
         name="free-agent",
     ),
     "step-agent": Configuration(
-        agent=A_AGENT,
+        agent=STEP_AGENT,
         perception=PerceptionType.ALL,
         position=PositionType.RELATIVE,
         temperature=0.0,
         name="step-agent",
     ),
-    "plan-agent": Configuration(
-        agent=A_AGENT,
+    "trial-agent": Configuration(
+        agent=TRIAL_AGENT,
         perception=PerceptionType.ALL,
         position=PositionType.RELATIVE,
         temperature=0.0,
-        name="plan-agent",
+        name="trial-agent",
     ),
 }
 
