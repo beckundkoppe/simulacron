@@ -117,9 +117,13 @@ def cleanup_stale_claims(claims_folder: Path, results_folder: Path, todo_entries
     for claim_file in claims_folder.glob("*.claim"):
         entry = claim_file.stem
         result_file = results_folder / entry
-        # If the result exists or the entry is no longer in TODO, drop the claim.
-        if result_file.exists() or entry not in todo_set:
+        # Only drop claims we know belong to this phase (present in TODO) or already finished.
+        if result_file.exists():
             claim_file.unlink(missing_ok=True)
+            continue
+        if entry not in todo_set:
+            # Skip claims from other phases to avoid deleting their bookkeeping.
+            continue
 
 
 def find_local_claim(claims_folder: Path, hostname: str, todo_entries: List[str]) -> Tuple[str, Path] | None:
