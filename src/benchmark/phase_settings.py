@@ -151,17 +151,16 @@ PHASES: Sequence[PhaseDefinition] = (
             CONFIGURATIONS["trial-agent"],
             ],
         levels=[
-
             Levels.DETAILED_INSTRUCT.CARROT_EASY,
             Levels.DETAILED_INSTRUCT.CARROT_HARD,
             Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
             Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
             Levels.DETAILED_INSTRUCT.PEPPER_EASY,
             Levels.DETAILED_INSTRUCT.PEPPER_HARD,
+            Levels.DETAILED_INSTRUCT.SALAD_EASY,
+            Levels.DETAILED_INSTRUCT.SALAD_HARD,
             Levels.DETAILED_INSTRUCT.TOMATO_EASY,
             Levels.DETAILED_INSTRUCT.TOMATO_HARD,
-            #Levels.DETAILED_INSTRUCT.SALAD_EASY,
-            #Levels.DETAILED_INSTRUCT.SALAD_HARD,
             Levels.DETAILED_INSTRUCT.POTATO_EASY,
             Levels.DETAILED_INSTRUCT.POTATO_HARD,
             Levels.DETAILED_INSTRUCT.ONION_EASY,
@@ -173,10 +172,11 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
             Levels.VAGUE_INSTRUCT.PEPPER_EASY,
             Levels.VAGUE_INSTRUCT.PEPPER_HARD,
+        
+            Levels.DETAILED_INSTRUCT.SALAD_EASY,
+            Levels.DETAILED_INSTRUCT.SALAD_HARD,
             Levels.VAGUE_INSTRUCT.TOMATO_EASY,
             Levels.VAGUE_INSTRUCT.TOMATO_HARD,
-            #Levels.DETAILED_INSTRUCT.SALAD_EASY,
-            #Levels.DETAILED_INSTRUCT.SALAD_HARD,
             Levels.VAGUE_INSTRUCT.POTATO_EASY,
             Levels.VAGUE_INSTRUCT.POTATO_HARD,
             Levels.VAGUE_INSTRUCT.ONION_EASY,
@@ -193,6 +193,53 @@ PHASES: Sequence[PhaseDefinition] = (
             #ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
         reruns=2,
+    ),
+
+    PhaseDefinition(
+        phase="no-supermem",
+        configs=[
+            #CONFIGURATIONS["baseline-img"], best
+            ],
+        levels=[
+            #Levels.DETAILED_INSTRUCT.PEPPER_EASY,
+            #Levels.DETAILED_INSTRUCT.PEPPER_HARD,
+
+            #Levels.VAGUE_INSTRUCT.PEPPER_EASY,
+            #Levels.VAGUE_INSTRUCT.PEPPER_HARD,
+            ],
+        model_teams=[
+            #ModelTeams.Remote.MAGISTRAL_SMALL,
+            #ModelTeams.Local.QWEN_CODER30B,
+            #ModelTeams.Local.QWEN_8B_OLLAMA,
+        ],
+        reruns=2,
+    ),
+
+    PhaseDefinition(
+        phase="temperature",
+        configs=[
+            CONFIGURATIONS["best-02"],
+            CONFIGURATIONS["best-04"],
+            CONFIGURATIONS["best-06"],
+            CONFIGURATIONS["best-08"],
+            CONFIGURATIONS["best-10"],
+            ],
+        levels=[
+            #Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            #Levels.VAGUE_INSTRUCT.CARROT_HARD,
+
+            Levels.VAGUE_INSTRUCT.PEPPER_EASY,
+            Levels.VAGUE_INSTRUCT.PEPPER_HARD,
+
+            Levels.VAGUE_INSTRUCT.POTATO_EASY,
+            Levels.VAGUE_INSTRUCT.POTATO_HARD,
+            ],
+        model_teams=[
+            ModelTeams.Remote.MAGISTRAL_SMALL,
+            ModelTeams.Local.QWEN_CODER30B,
+            ModelTeams.Local.QWEN_8B_OLLAMA,
+        ],
+        reruns=10,
     ),
 )
 

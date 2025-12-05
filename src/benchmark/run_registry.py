@@ -147,6 +147,41 @@ CONFIGURATIONS: Dict[str, Configuration] = {
         temperature=0.0,
         name="trial-agent",
     ),
+    "best-02": Configuration(
+        agent=TRIAL_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.2,
+        name="best-02-agent",
+    ),
+    "best-04": Configuration(
+        agent=TRIAL_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.4,
+        name="best-04-agent",
+    ),
+    "best-06": Configuration(
+        agent=TRIAL_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.6,
+        name="best-06-agent",
+    ),
+    "best-08": Configuration(
+        agent=TRIAL_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.8,
+        name="best-08-agent",
+    ),
+    "best-10": Configuration(
+        agent=TRIAL_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=1.0,
+        name="best-10-agent",
+    ),
 }
 
 
