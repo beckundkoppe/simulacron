@@ -94,7 +94,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Remote.GPT_OSS_120B,
             ModelTeams.Remote.QWEN_235B,
 
-            #ModelTeams.Local.GROQ_LLAMA8B, ### MANUELLER ABBRUCH
+            ModelTeams.Local.GROQ_LLAMA8B, ### MANUELLER ABBRUCH
             ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
@@ -130,8 +130,8 @@ PHASES: Sequence[PhaseDefinition] = (
             ],
         model_teams=[
             ModelTeams.Hybrid.DEEPSEEK_LLAMA,
-            #ModelTeams.Hybrid.MISTRAL_SMALL,
-            #ModelTeams.Hybrid.NEMOTRON_LLAMA,
+            ModelTeams.Hybrid.MISTRAL_SMALL,
+            ModelTeams.Hybrid.NEMOTRON_LLAMA,
 
             ModelTeams.Local.DOLPHIN_X_QWEN,
             ModelTeams.Local.PHI4_X_QWEN,
@@ -190,7 +190,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Local.QWEN_CODER30B,
 
             ModelTeams.Local.QWEN_8B_OLLAMA,
-            #ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
         reruns=2,
     ),
