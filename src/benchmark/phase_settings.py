@@ -320,7 +320,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT5_NANO,
             ModelTeams.Remote.GPT5_MINI,
         ],
-        allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
+        allowed_phases=["openai"], #"backend", "baseline-solo", "baseline-mix", "feature"
     ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
