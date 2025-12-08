@@ -106,7 +106,7 @@ APPEND_RAW = None
 
 # Optional toggle for OpenAI Flex requests. Set to True/False to pass through,
 # or leave as None to omit the flag.
-OPENAI_FLEX: Optional[bool] = True
+OPENAI_FLEX: Optional[bool] = None
 
 
 @dataclass(frozen=True)
