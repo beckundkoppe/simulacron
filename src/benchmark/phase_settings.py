@@ -342,6 +342,41 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             "temperature",
         ],
     ),
+    "gonkxxx": RunnerConfig(
+        allowed_model_teams=[
+            ModelTeams.Local.DOLPHIN_X_QWEN,
+            ModelTeams.Local.PHI4_X_QWEN,
+
+            # simple <8B
+            ModelTeams.Local.GROQ_LLAMA8B,
+            ModelTeams.Local.NEMOTRON_8B,
+
+            ModelTeams.Local.QWEN_8B_LLAMA,
+            ModelTeams.Local.QWEN_4B_LLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_LLAMA,
+
+            ModelTeams.Local.QWEN_8B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_OLLAMA,
+            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
+
+            ModelTeams.Local.GPT_OSS_20B,
+
+            ModelTeams.Remote.GPT5_NANO,
+            ModelTeams.Remote.GPT5_MINI,
+            ModelTeams.Remote.GPT5_1,
+            ModelTeams.Remote.GPT4_1,
+            ModelTeams.Remote.GPTo3,
+        ],
+        allowed_phases=[
+            "openai",
+            "backend",
+            "baseline-mix",
+            "baseline-solo",
+            "feature",
+            "no-supermem",
+            "temperature",
+        ],
+    ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
             ModelTeams.Local.QWEN_30B,
