@@ -726,18 +726,70 @@ class Model(Enum):
             )
 
             # openai
-            #GPT4 = ModelSpec(
-            #    name="OpenAI-GPT-4",
-            #    tag="gpt4",
-            #    location=Location.REMOTE,
-            #    backend=Backend.OTHER,
-            #    agent_backend=AgentBackend.LANGCHAIN,
-            #    kind=ModelKind.HYBRID,
-            #    source=SourceRemote(
-            #        endpoint_url="https://api.openai.com/v1",
-            #        model_id="gpt-4",
-            #    ),
-            #)
+            GPT5_NANO = ModelSpec(
+                name="OpenAI-GPT5-nano",
+                tag="gpt-5-nano",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="https://api.openai.com/v1",
+                    model_id="gpt-5-nano-2025-08-07",
+                ),
+            )
+
+            GPT5_MINI = ModelSpec(
+                name="OpenAI-GPT5-mini",
+                tag="gpt-5-mini",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="https://api.openai.com/v1",
+                    model_id="gpt-5-mini-2025-08-07",
+                ),
+            )
+
+            GPT4_1 = ModelSpec(
+                name="OpenAI-GPT4.1",
+                tag="gpt-4.1",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="https://api.openai.com/v1",
+                    model_id="gpt-4.1-2025-04-14",
+                ),
+            )
+
+            GPT5_1 = ModelSpec(
+                name="OpenAI-GPT5.1",
+                tag="gpt-5.1",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="https://api.openai.com/v1",
+                    model_id="gpt-5.1-2025-11-13",
+                ),
+            )
+
+            GPTo3 = ModelSpec(
+                name="OpenAI-GPT-o3",
+                tag="gpt-03",
+                location=Location.REMOTE,
+                backend=Backend.OTHER,
+                agent_backend=AgentBackend.LANGCHAIN,
+                kind=ModelKind.HYBRID,
+                source=SourceRemote(
+                    endpoint_url="https://api.openai.com/v1",
+                    model_id="o3-2025-04-16",
+                ),
+            )
 #
             ## openai
             #GPT5 = ModelSpec(

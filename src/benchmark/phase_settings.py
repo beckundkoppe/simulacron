@@ -172,8 +172,8 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.VAGUE_INSTRUCT.PEPPER_EASY,
             Levels.VAGUE_INSTRUCT.PEPPER_HARD,
         
-            Levels.DETAILED_INSTRUCT.SALAD_EASY,
-            Levels.DETAILED_INSTRUCT.SALAD_HARD,
+            Levels.VAGUE_INSTRUCT.SALAD_EASY,
+            Levels.VAGUE_INSTRUCT.SALAD_HARD,
             Levels.VAGUE_INSTRUCT.TOMATO_EASY,
             Levels.VAGUE_INSTRUCT.TOMATO_HARD,
             Levels.VAGUE_INSTRUCT.POTATO_EASY,
@@ -190,6 +190,33 @@ PHASES: Sequence[PhaseDefinition] = (
 
             ModelTeams.Local.QWEN_8B_OLLAMA,
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
+        ],
+        reruns=2,
+    ),
+
+    PhaseDefinition(
+        phase="openai",
+        configs=[
+            CONFIGURATIONS["baseline-naive"],
+            ],
+        levels=[
+            Levels.DETAILED_INSTRUCT.TOMATO_EASY,
+            Levels.DETAILED_INSTRUCT.TOMATO_HARD,
+            Levels.DETAILED_INSTRUCT.POTATO_EASY,
+            Levels.DETAILED_INSTRUCT.POTATO_HARD,
+            Levels.DETAILED_INSTRUCT.ONION_EASY,
+            Levels.DETAILED_INSTRUCT.ONION_HARD,
+
+            Levels.VAGUE_INSTRUCT.TOMATO_EASY,
+            Levels.VAGUE_INSTRUCT.TOMATO_HARD,
+            Levels.VAGUE_INSTRUCT.POTATO_EASY,
+            Levels.VAGUE_INSTRUCT.POTATO_HARD,
+            Levels.VAGUE_INSTRUCT.ONION_EASY,
+            Levels.VAGUE_INSTRUCT.ONION_HARD,
+            ],
+        model_teams=[
+            ModelTeams.Remote.GPT5_NANO,
+            ModelTeams.Remote.GPT5_MINI,
         ],
         reruns=2,
     ),
@@ -265,7 +292,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_4B_Q4_LLAMA,
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
+        allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
@@ -287,7 +314,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             ModelTeams.Local.GPT_OSS_20B,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
+        allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
     ),
     "zedim-pc": RunnerConfig(
         allowed_model_teams=[
@@ -311,7 +338,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,
         ],
-        allowed_phases=["backend", "baseline-solo", "baseline-mix", "feature"],
+        allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
     )
 }
 

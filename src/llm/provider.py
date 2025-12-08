@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import copy
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import re
 from typing import List, Optional, Tuple
@@ -212,9 +213,50 @@ class LangchainRemoteProvider(LangchainProvider):
     def _init(self, name: str, model: Model, memory: Optional[Memory] = None):
         src = model.value.source
 
-        self.llm = ChatOpenAI(
+        def _load_openai_api_key() -> Optional[str]:
+            # Try explicit API key first.
+            if src.api_key:
+                return src.api_key
 
+            # Then environment variable.
+            env_key = os.getenv("OPENAI_API_KEY")
+            if env_key:
+                return env_key.strip()
+
+            # Finally, a local key.secret file (first non-empty/non-comment line).
+            key_file = Path("key.secret")
+            if not key_file.exists():
+                return None
+
+            for line in key_file.read_text().splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                if "=" in stripped:
+                    _, value = stripped.split("=", 1)
+                else:
+                    value = stripped
+                value = value.strip()
+                if value:
+                    return value
+
+            return None
+
+        api_key = src.api_key
+        is_openai_endpoint = "api.openai.com" in src.endpoint_url
+        if is_openai_endpoint:
+            api_key = _load_openai_api_key()
+
+            if api_key is None:
+                raise ValueError("OpenAI endpoint requires an API key. Set OPENAI_API_KEY or add one to key.secret.")
+
+        extra_body = None
+        if is_openai_endpoint and config.OPENAI_FLEX is not None:
+            extra_body = {"flex": config.OPENAI_FLEX}
+
+        self.llm = ChatOpenAI(
             model=src.model_id,
             base_url=src.endpoint_url,
-            api_key="none"
+            api_key=api_key or "none",
+            extra_body=extra_body,
         )

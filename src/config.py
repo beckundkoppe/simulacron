@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING
 
 class MemoryType(str, Enum):
     SIMPLE = "simple"
@@ -103,6 +103,10 @@ ACTIVE_CONFIG: Configuration = DEFAULT_CONFIGURATION
 
 # Flag indicating whether raw model output should be appended to logs.
 APPEND_RAW = None
+
+# Optional toggle for OpenAI Flex requests. Set to True/False to pass through,
+# or leave as None to omit the flag.
+OPENAI_FLEX: Optional[bool] = None
 
 
 @dataclass(frozen=True)

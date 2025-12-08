@@ -162,4 +162,24 @@ class ModelTeams(Enum):
             realisator=Model.Remote.MAGISTRAL_SMALL_24B,
         )
 
+        GPT4_1 = ModelTeam(
+            realisator=Model.Remote.GPT4_1,
+        )
+
+        GPTo3 = ModelTeam(
+            realisator=Model.Remote.GPTo3,
+        )
+
+        GPT5_1 = ModelTeam(
+            realisator=Model.Remote.GPT5_1,
+        )
+
+        GPT5_MINI = ModelTeam(
+            realisator=Model.Remote.GPT5_MINI,
+        )
+
+        GPT5_NANO = ModelTeam(
+            realisator=Model.Remote.GPT5_NANO,
+        )
+
 MODEL_TEAM_PRESETS: Sequence[ModelTeams] = tuple(ModelTeams)
