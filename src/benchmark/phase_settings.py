@@ -291,6 +291,9 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_4B_OLLAMA,
             ModelTeams.Local.QWEN_4B_Q4_LLAMA,
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
+
+            ModelTeams.Remote.GPT5_NANO,
+            ModelTeams.Remote.GPT5_MINI,
         ],
         allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
     ),
@@ -313,6 +316,9 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
 
             ModelTeams.Local.GPT_OSS_20B,
+
+            ModelTeams.Remote.GPT5_NANO,
+            ModelTeams.Remote.GPT5_MINI,
         ],
         allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
     ),
@@ -337,6 +343,9 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,
+
+            ModelTeams.Remote.GPT5_NANO,
+            ModelTeams.Remote.GPT5_MINI,
         ],
         allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
     )
