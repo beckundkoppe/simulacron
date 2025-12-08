@@ -94,7 +94,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Remote.GPT_OSS_120B,
             ModelTeams.Remote.QWEN_235B,
 
-            ModelTeams.Local.GROQ_LLAMA8B, ### MANUELLER ABBRUCH
+            #ModelTeams.Local.GROQ_LLAMA8B, ### MANUELLER ABBRUCH
             ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
