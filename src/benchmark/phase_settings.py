@@ -295,7 +295,15 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT5_NANO,
             ModelTeams.Remote.GPT5_MINI,
         ],
-        allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
+        allowed_phases=[
+            "openai",
+            #"backend",
+            #"baseline-mix",
+            #"baseline-solo",
+            #"feature",
+            #"no-supermem",
+            #"temperature",
+        ],
     ),
     # PC profile: allow remote imaginator with local realisator.
     "c3poxxx": RunnerConfig(
@@ -355,15 +363,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT5_NANO,
             ModelTeams.Remote.GPT5_MINI,
         ],
-        allowed_phases=[
-            "openai",
-            #"backend",
-            #"baseline-mix",
-            #"baseline-solo",
-            #"feature",
-            #"no-supermem",
-            #"temperature",
-        ],
+        allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
     )
 }
 
