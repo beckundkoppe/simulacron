@@ -117,11 +117,7 @@ class ModelTeams(Enum):
         )
 
         PHI4_X_QWEN = ModelTeam(
-<<<<<<< HEAD
             realisator=Model.Local.Ollama.Qwen3.VANILLA_4B_Q4,
-=======
-            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
->>>>>>> a398a6c1 (Work)
             imaginator=Model.Local.Ollama.PHI4_MINI_3_8B,
         )
 

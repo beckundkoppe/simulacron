@@ -95,13 +95,8 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Remote.GPT_OSS_120B,
             ModelTeams.Remote.QWEN_235B,
 
-<<<<<<< HEAD
             #ModelTeams.Local.GROQ_LLAMA8B, ### MANUELLER ABBRUCH
             ModelTeams.Local.NEMOTRON_8B,
-=======
-            ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_QWEN8B,
->>>>>>> a398a6c1 (Work)
 
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
             ModelTeams.Local.QWEN_8B_OLLAMA,
@@ -287,7 +282,6 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT_OSS_120B,
             ModelTeams.Remote.QWEN_235B,
 
-<<<<<<< HEAD
             ## simple <8B
             #ModelTeams.Local.GROQ_LLAMA8B,
             #ModelTeams.Local.NEMOTRON_8B,
@@ -310,13 +304,6 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             "feature",
             "no-supermem",
             "temperature",
-=======
-            # simple <8B
-            ModelTeams.Local.QWEN_4B,
-            ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.QWEN_8B,
->>>>>>> a398a6c1 (Work)
         ],
     ),
     # PC profile: allow remote imaginator with local realisator.
@@ -327,7 +314,6 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
-<<<<<<< HEAD
             ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_8B_LLAMA,
@@ -337,11 +323,6 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_8B_OLLAMA,
             ModelTeams.Local.QWEN_4B_OLLAMA,
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
-=======
-            ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.QWEN_8B,
-            ModelTeams.Local.QWEN_4B,
->>>>>>> a398a6c1 (Work)
 
             ModelTeams.Local.GPT_OSS_20B,
 
@@ -371,7 +352,6 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
-<<<<<<< HEAD
             ModelTeams.Local.NEMOTRON_8B,
 
             ModelTeams.Local.QWEN_8B_LLAMA,
@@ -381,12 +361,6 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Local.QWEN_4B_Q4_LLAMA,
             ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
 
-=======
-            ModelTeams.Local.NEMOTRON_QWEN8B,
-            ModelTeams.Local.QWEN_8B,
-            ModelTeams.Local.QWEN_4B,
-
->>>>>>> a398a6c1 (Work)
             ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,
 
