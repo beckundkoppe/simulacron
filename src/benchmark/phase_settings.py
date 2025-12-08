@@ -273,36 +273,36 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
     # Laptop profile: keep both imaginator and realisator local/small.
     "r2d2xxx": RunnerConfig(
         allowed_model_teams=[
-            ModelTeams.Hybrid.DEEPSEEK_LLAMA,
-            ModelTeams.Hybrid.MISTRAL_SMALL,
-            ModelTeams.Hybrid.NEMOTRON_LLAMA,
+            #ModelTeams.Hybrid.DEEPSEEK_LLAMA,
+            #ModelTeams.Hybrid.MISTRAL_SMALL,
+            #ModelTeams.Hybrid.NEMOTRON_LLAMA,
 
             ModelTeams.Remote.MAGISTRAL_SMALL,
             ModelTeams.Remote.GPT_OSS_120B,
             ModelTeams.Remote.QWEN_235B,
 
-            # simple <8B
-            ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_8B,
-
-            ModelTeams.Local.QWEN_8B_LLAMA,
-            ModelTeams.Local.QWEN_8B_OLLAMA,
-            ModelTeams.Local.QWEN_4B_LLAMA,
-            ModelTeams.Local.QWEN_4B_OLLAMA,
-            ModelTeams.Local.QWEN_4B_Q4_LLAMA,
-            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
-
-            ModelTeams.Remote.GPT5_NANO,
-            ModelTeams.Remote.GPT5_MINI,
+            ## simple <8B
+            #ModelTeams.Local.GROQ_LLAMA8B,
+            #ModelTeams.Local.NEMOTRON_8B,
+#
+            #ModelTeams.Local.QWEN_8B_LLAMA,
+            #ModelTeams.Local.QWEN_8B_OLLAMA,
+            #ModelTeams.Local.QWEN_4B_LLAMA,
+            #ModelTeams.Local.QWEN_4B_OLLAMA,
+            #ModelTeams.Local.QWEN_4B_Q4_LLAMA,
+            #ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
+#
+            #ModelTeams.Remote.GPT5_NANO,
+            #ModelTeams.Remote.GPT5_MINI,
         ],
         allowed_phases=[
             "openai",
-            #"backend",
-            #"baseline-mix",
-            #"baseline-solo",
-            #"feature",
-            #"no-supermem",
-            #"temperature",
+            "backend",
+            "baseline-mix",
+            "baseline-solo",
+            "feature",
+            "no-supermem",
+            "temperature",
         ],
     ),
     # PC profile: allow remote imaginator with local realisator.
@@ -330,12 +330,12 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
         ],
         allowed_phases=[
             "openai",
-            #"backend",
-            #"baseline-mix",
-            #"baseline-solo",
-            #"feature",
-            #"no-supermem",
-            #"temperature",
+            "backend",
+            "baseline-mix",
+            "baseline-solo",
+            "feature",
+            "no-supermem",
+            "temperature",
         ],
     ),
     "zedim-pc": RunnerConfig(

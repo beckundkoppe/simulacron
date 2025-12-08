@@ -204,6 +204,7 @@ class LangchainLocalProvider(LangchainProvider):
 
     def _init(self, name: str, model: Model, memory: Optional[Memory] = None):
         self.llm = Cache.get(model)
+        self.is_openai = model.value.is_openai
 
 class LangchainRemoteProvider(LangchainProvider):
     def __init__(self, name: str, model: Model, memory: Optional[Memory] = None):
@@ -212,6 +213,8 @@ class LangchainRemoteProvider(LangchainProvider):
 
     def _init(self, name: str, model: Model, memory: Optional[Memory] = None):
         src = model.value.source
+        
+        self.is_openai = model.value.is_openai
 
         def _load_openai_api_key() -> Optional[str]:
             # Try explicit API key first.

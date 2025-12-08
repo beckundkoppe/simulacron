@@ -18,11 +18,11 @@ def main():
         memory_type= MemoryType.SIMPLE,
     )
 
-    config = Configuration(agent_config, PerceptionType.ALL, PositionType.RELATIVE, temperature=0.0, name="openai-naive", seed=-1)
+    config = Configuration(agent_config, PerceptionType.ALL, PositionType.RELATIVE, temperature=0.0, name="test", seed=-1)
 
     model_team = ModelTeam(
-        #imaginator=Model.Local.Ollama.PHI4_MINI_3_8B,
-        realisator=Model.Remote.GPTo3,
+        realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+        #realisator=Model.Remote.MAGISTRAL_SMALL_24B,
         #realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
         #extra=Model.Local.Ollama.DOLPHIN3_8B,
     )

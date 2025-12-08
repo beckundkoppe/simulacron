@@ -56,6 +56,7 @@ class ModelSpec:
     agent_backend: AgentBackend
     kind: ModelKind
     source: Union[SourceFile, SourceLink, SourceHuggingface, SourceOllama, SourceRemote]
+    is_openai: bool = True
 
     def __hash__(self):
         return hash((self.name, self.tag, self.backend, self.kind))
@@ -670,6 +671,7 @@ class Model(Enum):
                     endpoint_url="http://127.0.0.1:11444/v1",
                     model_id="magistral:24b-small-2506-q8_0",
                 ),
+                is_openai = False,
             )
 
             NEMOTRON_SUPER_49B = ModelSpec(

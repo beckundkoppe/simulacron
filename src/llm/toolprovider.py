@@ -12,6 +12,7 @@ from llama_cpp_agent.llm_agent import LlamaCppAgent
 from llama_cpp_agent.providers.llama_cpp_python import LlamaCppPythonProvider
 from llama_cpp_agent.llm_output_settings import LlmStructuredOutputSettings
 from llama_cpp_agent.chat_history.basic_chat_history import BasicChatHistory, BasicChatHistoryStrategy, Roles
+from ollama._utils import convert_function_to_tool
 
 import debug
 from enviroment.resultbuffer import FormalError
@@ -138,17 +139,15 @@ class LangchainToolprovider(ToolProvider):
             self.instance = self.instance.bind_tools([])
             return
 
-        if(isinstance(self.instance, ChatOpenAI)):
-            general_tools = [
-                # requires _tool_meta from explicit @tool decoration
-                Tool.from_function(
-                    t,
-                    name=t._tool_meta["name"],
-                    description=t._tool_meta["description"],
-                )
-                for t in tools
-            ]
-            self.instance = self.llm.bind_tools(general_tools)
+        if(not self.is_openai):
+            #general_tools = [
+            #    # requires _tool_meta from explicit @tool decoration
+            #    convert_function_to_tool(
+            #        t
+            #    )
+            #    for t in tools
+            #]
+            self.instance = self.llm.bind_tools(tools)
         else:
             openai_tools: list[dict] = []
             for t in tools:
@@ -326,7 +325,7 @@ class LangchainToolprovider(ToolProvider):
                     valid_toolcall = True
 
             if(not valid_toolcall):
-                parsing_options = [ _parse_python_multicall, _parse_multi_call_syntax, ast.literal_eval, json.loads, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
+                parsing_options = [ _parse_python_multicall, _parse_multi_call_syntax, ast.literal_eval, json.loads, _parse_toolcall_dict, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
 
                 parsed_calls = None
                 for parse in parsing_options:
@@ -389,6 +388,23 @@ def _parse_heuristic_1(cmd: str):
     return [
         {"name": name, "args": parsed_args}
     ]
+
+#{"tool_call": "move_to_position", "x": 0.0, "y": 0.0}
+def _parse_toolcall_dict(cmd: Any):
+    """Handle dict-shaped tool calls where the tool name sits in 'tool_call' or 'name'."""
+    data = cmd
+    if isinstance(cmd, str):
+        data = json.loads(cmd)
+
+    if not isinstance(data, dict):
+        raise ValueError("toolcall dict must be a mapping")
+
+    func_name = data.get("tool_call") or data.get("name")
+    if not func_name:
+        raise ValueError("toolcall dict missing 'tool_call' or 'name'")
+
+    args = {k: v for k, v in data.items() if k not in ("tool_call", "name")}
+    return [{"name": func_name, "args": args}]
 
 #{"name":"interact_with_object","arguments":{ "object_id": "door_6", "operator": "GO_THROUGH" } }
 #{"name":"interact_with_object","args":{"object_id":"door_6","operator":"GO_THROUGH"}}
