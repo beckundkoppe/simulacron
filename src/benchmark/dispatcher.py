@@ -1,7 +1,6 @@
 import contextlib
 import json
 import os
-import socket
 import time
 import traceback
 from datetime import datetime
@@ -14,6 +13,7 @@ import current
 import game
 from benchmark.benchresult import PerformanceResult
 from benchmark.model_team import ModelTeam
+from benchmark.phase_settings import get_runner_hostname
 from benchmark.run import Run
 from enviroment.levels.level import Level
 from enviroment.world import World
@@ -74,7 +74,7 @@ class Dispatcher:
                 "status": "error",
                 "error": str(error),
                 "error_type": type(error).__name__,
-                "hostname": socket.gethostname(),
+                "hostname": get_runner_hostname(),
                 "traceback": traceback.format_exc(),
             }
             path.write_text(json.dumps(entry, ensure_ascii=False, indent=2))
@@ -114,7 +114,7 @@ class Dispatcher:
     def _start_with_result(self, run: Run) -> PerformanceResult:
         config.ACTIVE_CONFIG = run.configuration
         World.clear()
-        result = PerformanceResult(run, hostname=socket.gethostname())
+        result = PerformanceResult(run, hostname=get_runner_hostname())
         current.RESULT = result
         start_time = time.time()
         game.run_level(run.level, run.optimal_steps_multiplier, run.main_model, run.imaginator, run.extra_model)

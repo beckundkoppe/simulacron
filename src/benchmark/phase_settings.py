@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from socket import gethostname
 from typing import Dict, Sequence
 
@@ -412,11 +413,24 @@ DEFAULT_RUNNER_CONFIG = RunnerConfig(
     allowed_model_teams=PHASE_DEFINITION.model_teams, allowed_phases=[PHASE_DEFINITION.phase]
 )
 
+_RUNNER_HOSTNAME_FILE = Path(__file__).resolve().parent.parent.parent / "runner_hostname.txt"
+
+
+def get_runner_hostname() -> str:
+    """
+    Return the runner hostname, preferring an override file in the repo root.
+    """
+    if _RUNNER_HOSTNAME_FILE.exists():
+        override = _RUNNER_HOSTNAME_FILE.read_text().strip()
+        if override:
+            return override
+    return gethostname()
+
 
 def resolve_runner_config(hostname: str | None = None, phase: str | None = None) -> ResolvedRunnerConfig:
     """Return the runner config for the given hostname (optional phase override)."""
 
-    host = hostname or gethostname()
+    host = hostname or get_runner_hostname()
     runner_config = RUNNER_CONFIGS.get(host, DEFAULT_RUNNER_CONFIG)
 
     allowed_models = runner_config.allowed_model_teams or DEFAULT_RUNNER_CONFIG.allowed_model_teams

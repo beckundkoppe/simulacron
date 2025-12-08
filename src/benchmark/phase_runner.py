@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import socket
 import subprocess
 import sys
 from pathlib import Path
 from typing import List, Tuple
 
 from benchmark.dispatcher import Dispatcher
-from benchmark.phase_settings import resolve_runner_config
+from benchmark.phase_settings import get_runner_hostname, resolve_runner_config
 from benchmark.run_registry import (
     build_run,
     filter_by_models,
@@ -281,7 +280,7 @@ def main():
     phase = runner_config.phase
     phase_file = data_root / "phase" / f"{phase}.txt"
     allowed_model_teams = normalize_model_teams(None, runner_config.allowed_model_teams or [])
-    hostname = socket.gethostname()
+    hostname = get_runner_hostname()
 
     dispatcher = Dispatcher()
 

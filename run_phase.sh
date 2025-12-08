@@ -67,14 +67,13 @@ for phase in "${PHASES[@]}"; do
     echo "Running phase '${phase}'..."
     if ! python - "$phase" <<'PY'
 import sys
-from socket import gethostname
-from benchmark.phase_settings import resolve_runner_config
+from benchmark.phase_settings import get_runner_hostname, resolve_runner_config
 
 phase = sys.argv[1]
 try:
     resolve_runner_config(phase=phase)
 except KeyError as exc:
-    print(f"Skipping disallowed phase '{phase}' on host '{gethostname()}': {exc}")
+    print(f"Skipping disallowed phase '{phase}' on host '{get_runner_hostname()}': {exc}")
     sys.exit(1)
 PY
     then
