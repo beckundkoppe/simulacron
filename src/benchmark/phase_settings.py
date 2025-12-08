@@ -146,7 +146,6 @@ PHASES: Sequence[PhaseDefinition] = (
             CONFIGURATIONS["baseline-img"],
             CONFIGURATIONS["a-agent"],
             CONFIGURATIONS["b-agent"],
-            CONFIGURATIONS["free-agent"],
             CONFIGURATIONS["step-agent"],
             CONFIGURATIONS["trial-agent"],
             ],
@@ -225,17 +224,16 @@ PHASES: Sequence[PhaseDefinition] = (
             CONFIGURATIONS["best-10"],
             ],
         levels=[
-            #Levels.VAGUE_INSTRUCT.CARROT_EASY,
-            #Levels.VAGUE_INSTRUCT.CARROT_HARD,
-
-            Levels.VAGUE_INSTRUCT.PEPPER_EASY,
-            Levels.VAGUE_INSTRUCT.PEPPER_HARD,
+            Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            Levels.VAGUE_INSTRUCT.CARROT_HARD,
+            Levels.VAGUE_INSTRUCT.SALAD_EASY,
+            Levels.VAGUE_INSTRUCT.SALAD_HARD,
 
             Levels.VAGUE_INSTRUCT.POTATO_EASY,
             Levels.VAGUE_INSTRUCT.POTATO_HARD,
             ],
         model_teams=[
-            ModelTeams.Remote.MAGISTRAL_SMALL,
+            ModelTeams.Remote.QWEN_235B,
             ModelTeams.Local.QWEN_CODER30B,
             ModelTeams.Local.QWEN_8B_OLLAMA,
         ],

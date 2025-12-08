@@ -61,15 +61,6 @@ B_AGENT = AgentConfiguration(
     memory_type=MemoryType.SUPER,
 )
 
-FREE_AGENT = AgentConfiguration(
-    plan=PlanType.FREE,
-    trial=TrialType.OFF,
-    action=ActionType.IMAGINATOR,
-    observe=ObserveType.ON,
-    reflect=ReflectType.ON,
-    memory_type=MemoryType.SUPER,
-)
-
 STEP_AGENT = AgentConfiguration(
     plan=PlanType.STEP,
     trial=TrialType.OFF,
@@ -125,13 +116,6 @@ CONFIGURATIONS: Dict[str, Configuration] = {
         position=PositionType.RELATIVE,
         temperature=0.0,
         name="b-agent",
-    ),
-    "free-agent": Configuration(
-        agent=FREE_AGENT,
-        perception=PerceptionType.ALL,
-        position=PositionType.RELATIVE,
-        temperature=0.0,
-        name="free-agent",
     ),
     "step-agent": Configuration(
         agent=STEP_AGENT,
