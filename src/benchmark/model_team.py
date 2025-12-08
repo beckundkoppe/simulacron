@@ -78,6 +78,7 @@ class ModelTeams(Enum):
             realisator=Model.Local.Ollama.Llama.NEMOTRON_8B,
         )
 
+<<<<<<< HEAD
 ###################### qwen ######################
         QWEN_4B_Q4_LLAMA = ModelTeam(
             realisator=Model.Local.LlamaCpp.Qwen3.VANILLA_4B_Q4,
@@ -92,6 +93,9 @@ class ModelTeams(Enum):
         )
 
         QWEN_4B_OLLAMA = ModelTeam(
+=======
+        QWEN_4B = ModelTeam(
+>>>>>>> a398a6c1 (Work)
             realisator=Model.Local.Ollama.Qwen3.VANILLA_4B,
         )
 
@@ -117,7 +121,11 @@ class ModelTeams(Enum):
         )
 
         PHI4_X_QWEN = ModelTeam(
+<<<<<<< HEAD
             realisator=Model.Local.Ollama.Qwen3.VANILLA_4B_Q4,
+=======
+            realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+>>>>>>> a398a6c1 (Work)
             imaginator=Model.Local.Ollama.PHI4_MINI_3_8B,
         )
 

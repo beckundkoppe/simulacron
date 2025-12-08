@@ -325,7 +325,11 @@ class LangchainToolprovider(ToolProvider):
                     valid_toolcall = True
 
             if(not valid_toolcall):
+<<<<<<< HEAD
                 parsing_options = [ _parse_python_multicall, _parse_multi_call_syntax, ast.literal_eval, json.loads, _parse_toolcall_dict, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
+=======
+                parsing_options = [ _parse_python_multicall, _parse_multi_call_syntax, ast.literal_eval, json.loads, _parse_flexible_json, _parse_call_syntax, _parse_heuristic_1 ]
+>>>>>>> a398a6c1 (Work)
 
                 parsed_calls = None
                 for parse in parsing_options:
