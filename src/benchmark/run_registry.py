@@ -43,6 +43,15 @@ IMAGINATOR_AGENT = AgentConfiguration(
     memory_type=MemoryType.SIMPLE,
 )
 
+RETRY_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.IMG_RETRY,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.OFF,
+    memory_type=MemoryType.SIMPLE,
+)
+
 A_AGENT = AgentConfiguration(
     plan=PlanType.OFF,
     trial=TrialType.OFF,
@@ -102,6 +111,13 @@ CONFIGURATIONS: Dict[str, Configuration] = {
         position=PositionType.RELATIVE,
         temperature=0.0,
         name="baseline-img",
+    ),
+    "imginator-retry": Configuration(
+        agent=RETRY_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="imginator-retry",
     ),
     "a-agent": Configuration(
         agent=A_AGENT,
