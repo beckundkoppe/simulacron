@@ -65,5 +65,21 @@ echo "Starting phase runner for phases: ${PHASES[*]}"
 # Run from the results repo so results/phase and results/runs live there.
 for phase in "${PHASES[@]}"; do
     echo "Running phase '${phase}'..."
+    if ! python - "$phase" <<'PY'
+import sys
+from socket import gethostname
+from benchmark.phase_settings import resolve_runner_config
+
+phase = sys.argv[1]
+try:
+    resolve_runner_config(phase=phase)
+except KeyError as exc:
+    print(f"Skipping disallowed phase '{phase}' on host '{gethostname()}': {exc}")
+    sys.exit(1)
+PY
+    then
+        echo "Skipping phase '${phase}' (not allowed for this host)."
+        continue
+    fi
     python -m benchmark.phase_runner "$phase"
 done
