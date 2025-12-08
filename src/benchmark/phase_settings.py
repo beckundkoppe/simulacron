@@ -183,7 +183,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ],
         model_teams=[
             ModelTeams.Remote.QWEN_235B,
-            ModelTeams.Remote.MAGISTRAL_SMALL,
+            #ModelTeams.Remote.MAGISTRAL_SMALL,
 
             ModelTeams.Local.GPT_OSS_20B,
             ModelTeams.Local.QWEN_CODER30B,
@@ -273,9 +273,9 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
     # Laptop profile: keep both imaginator and realisator local/small.
     "r2d2xxx": RunnerConfig(
         allowed_model_teams=[
-            #ModelTeams.Hybrid.DEEPSEEK_LLAMA,
-            #ModelTeams.Hybrid.MISTRAL_SMALL,
-            #ModelTeams.Hybrid.NEMOTRON_LLAMA,
+            ModelTeams.Hybrid.DEEPSEEK_LLAMA,
+            ModelTeams.Hybrid.MISTRAL_SMALL,
+            ModelTeams.Hybrid.NEMOTRON_LLAMA,
 
             ModelTeams.Remote.MAGISTRAL_SMALL,
             ModelTeams.Remote.GPT_OSS_120B,
