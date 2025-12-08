@@ -141,7 +141,6 @@ PHASES: Sequence[PhaseDefinition] = (
 
             ModelTeams.Local.DOLPHIN_X_QWEN,
             ModelTeams.Local.PHI4_X_QWEN,
-<<<<<<< HEAD
             #ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN, ### MANUELLER ABBRUCH
         ],
         reruns=5,
@@ -270,9 +269,6 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Remote.QWEN_235B,
             ModelTeams.Local.QWEN_CODER30B,
             ModelTeams.Local.QWEN_8B_OLLAMA,
-=======
-            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN8B,
->>>>>>> a398a6c1 (Work)
         ],
         reruns=10,
     ),
