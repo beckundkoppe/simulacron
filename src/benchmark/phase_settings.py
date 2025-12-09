@@ -92,14 +92,14 @@ PHASES: Sequence[PhaseDefinition] = (
 
             ],
         model_teams=[
-            #ModelTeams.Remote.MAGISTRAL_SMALL,
+            #ModelTeams.Remote.MAGISTRAL_SMALL, #TODO
             ModelTeams.Remote.GPT_OSS_120B,
             ModelTeams.Remote.QWEN_235B,
 
             #ModelTeams.Local.GROQ_LLAMA8B, ### MANUELLER ABBRUCH
-            ModelTeams.Local.NEMOTRON_8B,
+            #ModelTeams.Local.NEMOTRON_8B, #TODO
 
-            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
+            #ModelTeams.Local.QWEN_4B_Q4_OLLAMA, #TODO
             ModelTeams.Local.QWEN_8B_OLLAMA,
             ModelTeams.Local.QWEN_30B,
             ModelTeams.Local.QWEN_CODER30B,
@@ -131,12 +131,12 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.VAGUE_INSTRUCT.PEPPER_HARD,
             ],
         model_teams=[
-            ModelTeams.Hybrid.DEEPSEEK_LLAMA,
-            ModelTeams.Hybrid.MISTRAL_SMALL,
-            ModelTeams.Hybrid.NEMOTRON_LLAMA,
+            #ModelTeams.Hybrid.DEEPSEEK_LLAMA,
+            #ModelTeams.Hybrid.MISTRAL_SMALL,
+            #ModelTeams.Hybrid.NEMOTRON_LLAMA,
 
-            ModelTeams.Local.DOLPHIN_X_QWEN,
-            ModelTeams.Local.PHI4_X_QWEN,
+            #ModelTeams.Local.DOLPHIN_X_QWEN,
+            #ModelTeams.Local.PHI4_X_QWEN,
             #ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN, ### MANUELLER ABBRUCH
         ],
         reruns=5,
@@ -145,11 +145,11 @@ PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
         phase="feature",
         configs=[
-            #CONFIGURATIONS["baseline-naive"],
-            #CONFIGURATIONS["baseline-img"],
-            #CONFIGURATIONS["imginator-retry"],
-            #CONFIGURATIONS["a-agent"],
-            #CONFIGURATIONS["b-agent"],
+            #CONFIGURATIONS["baseline-naive"], #TODO
+            #CONFIGURATIONS["baseline-img"], #TODO
+            #CONFIGURATIONS["imginator-retry"], #TODO
+            #CONFIGURATIONS["a-agent"], #TODO
+            #CONFIGURATIONS["b-agent"], #TODO
             CONFIGURATIONS["step-agent"],
             CONFIGURATIONS["tree-agent"],
             CONFIGURATIONS["trial-agent"],
@@ -188,7 +188,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ],
         model_teams=[
             ModelTeams.Remote.QWEN_235B,
-            #ModelTeams.Remote.MAGISTRAL_SMALL,
+            #ModelTeams.Remote.MAGISTRAL_SMALL, #TODO
 
             ModelTeams.Local.GPT_OSS_20B,
             ModelTeams.Local.QWEN_CODER30B,
@@ -277,25 +277,25 @@ PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
         phase="temperature",
         configs=[
-            CONFIGURATIONS["best-02"],
-            CONFIGURATIONS["best-04"],
-            CONFIGURATIONS["best-06"],
-            CONFIGURATIONS["best-08"],
-            CONFIGURATIONS["best-10"],
+            #CONFIGURATIONS["best-02"],
+            #CONFIGURATIONS["best-04"],
+            #CONFIGURATIONS["best-06"],
+            #CONFIGURATIONS["best-08"],
+            #CONFIGURATIONS["best-10"],
             ],
         levels=[
-            Levels.VAGUE_INSTRUCT.CARROT_EASY,
-            Levels.VAGUE_INSTRUCT.CARROT_HARD,
-            Levels.VAGUE_INSTRUCT.SALAD_EASY,
-            Levels.VAGUE_INSTRUCT.SALAD_HARD,
+            #Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            #Levels.VAGUE_INSTRUCT.CARROT_HARD,
+            #Levels.VAGUE_INSTRUCT.SALAD_EASY,
+            #Levels.VAGUE_INSTRUCT.SALAD_HARD,
 
-            Levels.VAGUE_INSTRUCT.POTATO_EASY,
-            Levels.VAGUE_INSTRUCT.POTATO_HARD,
+            #Levels.VAGUE_INSTRUCT.POTATO_EASY,
+            #Levels.VAGUE_INSTRUCT.POTATO_HARD,
             ],
         model_teams=[
-            ModelTeams.Remote.QWEN_235B,
-            ModelTeams.Local.QWEN_CODER30B,
-            ModelTeams.Local.QWEN_8B_OLLAMA,
+            #ModelTeams.Remote.QWEN_235B,
+            #ModelTeams.Local.QWEN_CODER30B,
+            #ModelTeams.Local.QWEN_8B_OLLAMA,
         ],
         reruns=10,
     ),
