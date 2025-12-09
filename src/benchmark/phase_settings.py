@@ -145,9 +145,11 @@ PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
         phase="feature",
         configs=[
-            CONFIGURATIONS["baseline-img"],
-            CONFIGURATIONS["a-agent"],
-            CONFIGURATIONS["b-agent"],
+            #CONFIGURATIONS["baseline-naive"],
+            #CONFIGURATIONS["baseline-img"],
+            #CONFIGURATIONS["imginator-retry"],
+            #CONFIGURATIONS["a-agent"],
+            #CONFIGURATIONS["b-agent"],
             CONFIGURATIONS["step-agent"],
             CONFIGURATIONS["tree-agent"],
             CONFIGURATIONS["trial-agent"],
