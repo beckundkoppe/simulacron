@@ -424,7 +424,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             "temperature",
         ],
     ),
-    "k2soxx": RunnerConfig(
+    "k2soxxx": RunnerConfig(
         allowed_model_teams=[
             ModelTeams.Remote.GPT5_NANO,
             ModelTeams.Remote.GPT5_MINI,
