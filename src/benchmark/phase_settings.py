@@ -92,7 +92,7 @@ PHASES: Sequence[PhaseDefinition] = (
 
             ],
         model_teams=[
-            ModelTeams.Remote.MAGISTRAL_SMALL,
+            #ModelTeams.Remote.MAGISTRAL_SMALL,
             ModelTeams.Remote.GPT_OSS_120B,
             ModelTeams.Remote.QWEN_235B,
 
