@@ -254,8 +254,8 @@ class LangchainRemoteProvider(LangchainProvider):
                 raise ValueError("OpenAI endpoint requires an API key. Set OPENAI_API_KEY or add one to key.secret.")
 
         extra_body = None
-        if is_openai_endpoint and config.OPENAI_FLEX is not None:
-            extra_body = {"flex": config.OPENAI_FLEX}
+        if is_openai_endpoint and config.OPENAI_FLEX:
+            extra_body = {"service_tier=": "flex"}
 
         self.llm = ChatOpenAI(
             model=src.model_id,
