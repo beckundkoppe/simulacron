@@ -194,7 +194,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ModelTeams.Local.QWEN_CODER30B,
 
             ModelTeams.Local.QWEN_8B_OLLAMA,
-            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
+            #ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
         ],
         reruns=2,
     ),
