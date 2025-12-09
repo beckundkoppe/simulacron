@@ -147,6 +147,13 @@ CONFIGURATIONS: Dict[str, Configuration] = {
         temperature=0.0,
         name="trial-agent",
     ),
+    "tree-agent": Configuration(
+        agent=TREE_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="tree-agent",
+    ),
     "best-02": Configuration(
         agent=TRIAL_AGENT,
         perception=PerceptionType.ALL,
