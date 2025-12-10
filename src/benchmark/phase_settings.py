@@ -69,11 +69,10 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="baseline-solo",
+        phase="model-baseline-solo",
         configs=[
             CONFIGURATIONS["baseline-naive"],
             CONFIGURATIONS["baseline-img"],
-            CONFIGURATIONS["imginator-retry"],
             ],
         levels=[
             Levels.DETAILED_INSTRUCT.CARROT_EASY,
@@ -111,7 +110,7 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="baseline-mix",
+        phase="model-baseline-mix",
         configs=[
             CONFIGURATIONS["baseline-img"],
             ],
@@ -140,6 +139,51 @@ PHASES: Sequence[PhaseDefinition] = (
             #ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN, ### MANUELLER ABBRUCH
         ],
         reruns=5,
+    ),
+
+    PhaseDefinition(
+        phase="imaginator",
+        configs=[
+            #CONFIGURATIONS["baseline-retry"],
+            CONFIGURATIONS["baseline-naive"],
+            CONFIGURATIONS["baseline-img"],
+            CONFIGURATIONS["imginator-retry"],
+            #CONFIGURATIONS["imginator-question"],
+            ],
+        levels=[
+            Levels.DETAILED_INSTRUCT.CARROT_EASY,
+            Levels.DETAILED_INSTRUCT.CARROT_HARD,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
+            Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+            Levels.DETAILED_INSTRUCT.PEPPER_EASY,
+            Levels.DETAILED_INSTRUCT.PEPPER_HARD,
+            Levels.DETAILED_INSTRUCT.SALAD_EASY,
+            Levels.DETAILED_INSTRUCT.SALAD_HARD,
+
+            Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            Levels.VAGUE_INSTRUCT.CARROT_HARD,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
+            Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+            Levels.VAGUE_INSTRUCT.PEPPER_EASY,
+            Levels.VAGUE_INSTRUCT.PEPPER_HARD,
+            Levels.VAGUE_INSTRUCT.SALAD_EASY,
+            Levels.VAGUE_INSTRUCT.SALAD_HARD,
+
+            ],
+        model_teams=[
+            ModelTeams.Remote.GPT_OSS_120B,
+            #ModelTeams.Remote.QWEN_235B,
+
+            #ModelTeams.Local.QWEN_4B_Q4_OLLAMA, #TODO
+            ModelTeams.Local.QWEN_8B_OLLAMA,
+            #ModelTeams.Local.QWEN_30B,
+            ModelTeams.Local.QWEN_CODER30B,
+
+            ModelTeams.Local.GPT_OSS_20B,
+
+            ModelTeams.Remote.GPT5_NANO,
+        ],
+        reruns=2,
     ),
 
     PhaseDefinition(
@@ -176,7 +220,6 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
             Levels.VAGUE_INSTRUCT.PEPPER_EASY,
             Levels.VAGUE_INSTRUCT.PEPPER_HARD,
-        
             Levels.VAGUE_INSTRUCT.SALAD_EASY,
             Levels.VAGUE_INSTRUCT.SALAD_HARD,
             Levels.VAGUE_INSTRUCT.TOMATO_EASY,
@@ -227,11 +270,14 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="openai",
+        phase="hard-levels",
         configs=[
             CONFIGURATIONS["baseline-naive"],
+            CONFIGURATIONS["baseline-img"],
             CONFIGURATIONS["imginator-retry"],
             CONFIGURATIONS["trial-agent"],
+            #CONFIGURATIONS["lea"],
+            #CONFIGURATIONS["lea-explore"],
             ],
         levels=[
             Levels.DETAILED_INSTRUCT.TOMATO_EASY,
@@ -255,7 +301,7 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="no-supermem",
+        phase="supermem",
         configs=[
             #CONFIGURATIONS["baseline-img"], best
             ],
