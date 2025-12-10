@@ -69,7 +69,7 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="model-baseline-solo",
+        phase="solo-baseline-easy",
         configs=[
             CONFIGURATIONS["baseline-naive"],
             CONFIGURATIONS["baseline-img"],
@@ -110,7 +110,7 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="model-baseline-mix",
+        phase="mix-baseline-easy",
         configs=[
             CONFIGURATIONS["baseline-img"],
             ],
@@ -142,58 +142,15 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="imaginator",
+        phase="feature-easy",
         configs=[
             #CONFIGURATIONS["baseline-retry"],
             CONFIGURATIONS["baseline-naive"],
             CONFIGURATIONS["baseline-img"],
             CONFIGURATIONS["imginator-retry"],
             #CONFIGURATIONS["imginator-question"],
-            ],
-        levels=[
-            Levels.DETAILED_INSTRUCT.CARROT_EASY,
-            Levels.DETAILED_INSTRUCT.CARROT_HARD,
-            Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
-            Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
-            Levels.DETAILED_INSTRUCT.PEPPER_EASY,
-            Levels.DETAILED_INSTRUCT.PEPPER_HARD,
-            Levels.DETAILED_INSTRUCT.SALAD_EASY,
-            Levels.DETAILED_INSTRUCT.SALAD_HARD,
-
-            Levels.VAGUE_INSTRUCT.CARROT_EASY,
-            Levels.VAGUE_INSTRUCT.CARROT_HARD,
-            Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
-            Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
-            Levels.VAGUE_INSTRUCT.PEPPER_EASY,
-            Levels.VAGUE_INSTRUCT.PEPPER_HARD,
-            Levels.VAGUE_INSTRUCT.SALAD_EASY,
-            Levels.VAGUE_INSTRUCT.SALAD_HARD,
-
-            ],
-        model_teams=[
-            ModelTeams.Remote.GPT_OSS_120B,
-            #ModelTeams.Remote.QWEN_235B,
-
-            #ModelTeams.Local.QWEN_4B_Q4_OLLAMA, #TODO
-            ModelTeams.Local.QWEN_8B_OLLAMA,
-            #ModelTeams.Local.QWEN_30B,
-            ModelTeams.Local.QWEN_CODER30B,
-
-            ModelTeams.Local.GPT_OSS_20B,
-
-            ModelTeams.Remote.GPT5_NANO,
-        ],
-        reruns=2,
-    ),
-
-    PhaseDefinition(
-        phase="feature",
-        configs=[
-            #CONFIGURATIONS["baseline-naive"], #TODO
-            #CONFIGURATIONS["baseline-img"], #TODO
-            #CONFIGURATIONS["imginator-retry"], #TODO
-            #CONFIGURATIONS["a-agent"], #TODO
-            #CONFIGURATIONS["b-agent"], #TODO
+            CONFIGURATIONS["a-agent"],
+            CONFIGURATIONS["b-agent"],
             CONFIGURATIONS["step-agent"],
             CONFIGURATIONS["tree-agent"],
             CONFIGURATIONS["trial-agent"],
@@ -207,12 +164,6 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.DETAILED_INSTRUCT.PEPPER_HARD,
             Levels.DETAILED_INSTRUCT.SALAD_EASY,
             Levels.DETAILED_INSTRUCT.SALAD_HARD,
-            Levels.DETAILED_INSTRUCT.TOMATO_EASY,
-            Levels.DETAILED_INSTRUCT.TOMATO_HARD,
-            Levels.DETAILED_INSTRUCT.POTATO_EASY,
-            Levels.DETAILED_INSTRUCT.POTATO_HARD,
-            Levels.DETAILED_INSTRUCT.ONION_EASY,
-            Levels.DETAILED_INSTRUCT.ONION_HARD,
 
             Levels.VAGUE_INSTRUCT.CARROT_EASY,
             Levels.VAGUE_INSTRUCT.CARROT_HARD,
@@ -222,6 +173,41 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.VAGUE_INSTRUCT.PEPPER_HARD,
             Levels.VAGUE_INSTRUCT.SALAD_EASY,
             Levels.VAGUE_INSTRUCT.SALAD_HARD,
+            ],
+        model_teams=[
+            ModelTeams.Remote.GPT_OSS_120B,
+            #ModelTeams.Remote.QWEN_235B,
+
+            #ModelTeams.Local.QWEN_4B_Q4_OLLAMA, #TODO
+            ModelTeams.Local.QWEN_8B_OLLAMA,
+            #ModelTeams.Local.QWEN_30B,
+            ModelTeams.Local.QWEN_CODER30B,
+
+            ModelTeams.Local.GPT_OSS_20B,
+        ],
+        reruns=2,
+    ),
+
+    PhaseDefinition(
+        phase="feature-hard",
+        configs=[
+            #CONFIGURATIONS["baseline-naive"], #TODO
+            #CONFIGURATIONS["baseline-img"], #TODO
+            #CONFIGURATIONS["imginator-retry"], #TODO
+            #CONFIGURATIONS["a-agent"], #TODO
+            #CONFIGURATIONS["b-agent"], #TODO
+            CONFIGURATIONS["step-agent"],
+            CONFIGURATIONS["tree-agent"],
+            CONFIGURATIONS["trial-agent"],
+            ],
+        levels=[
+            Levels.DETAILED_INSTRUCT.TOMATO_EASY,
+            Levels.DETAILED_INSTRUCT.TOMATO_HARD,
+            Levels.DETAILED_INSTRUCT.POTATO_EASY,
+            Levels.DETAILED_INSTRUCT.POTATO_HARD,
+            Levels.DETAILED_INSTRUCT.ONION_EASY,
+            Levels.DETAILED_INSTRUCT.ONION_HARD,
+
             Levels.VAGUE_INSTRUCT.TOMATO_EASY,
             Levels.VAGUE_INSTRUCT.TOMATO_HARD,
             Levels.VAGUE_INSTRUCT.POTATO_EASY,
@@ -230,10 +216,10 @@ PHASES: Sequence[PhaseDefinition] = (
             Levels.VAGUE_INSTRUCT.ONION_HARD,
             ],
         model_teams=[
-            ModelTeams.Remote.QWEN_235B,
+            #ModelTeams.Remote.QWEN_235B,
             ModelTeams.Remote.GPT_OSS_120B,
 
-            ModelTeams.Local.GPT_OSS_20B,
+            #ModelTeams.Local.GPT_OSS_20B,
             ModelTeams.Local.QWEN_CODER30B,
 
             ModelTeams.Local.QWEN_8B_OLLAMA,
@@ -243,7 +229,7 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="hard-baseline",
+        phase="baseline-hard",
         configs=[
             CONFIGURATIONS["baseline-naive"],
             ],
@@ -270,7 +256,7 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
-        phase="hard-levels",
+        phase="selected-feature-hard",
         configs=[
             CONFIGURATIONS["baseline-naive"],
             CONFIGURATIONS["baseline-img"],
@@ -323,6 +309,7 @@ PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
         phase="temperature",
         configs=[
+            #CONFIGURATIONS["baseline-naive"],
             #CONFIGURATIONS["best-02"],
             #CONFIGURATIONS["best-04"],
             #CONFIGURATIONS["best-06"],
@@ -331,12 +318,8 @@ PHASES: Sequence[PhaseDefinition] = (
             ],
         levels=[
             #Levels.VAGUE_INSTRUCT.CARROT_EASY,
-            #Levels.VAGUE_INSTRUCT.CARROT_HARD,
             #Levels.VAGUE_INSTRUCT.SALAD_EASY,
-            #Levels.VAGUE_INSTRUCT.SALAD_HARD,
-
             #Levels.VAGUE_INSTRUCT.POTATO_EASY,
-            #Levels.VAGUE_INSTRUCT.POTATO_HARD,
             ],
         model_teams=[
             #ModelTeams.Remote.QWEN_235B,
@@ -375,12 +358,14 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT5_MINI,
         ],
         allowed_phases=[
-            "openai",
             "backend",
-            "baseline-mix",
-            "baseline-solo",
-            "feature",
-            "no-supermem",
+            "solo-baseline-easy",
+            "mix-baseline-easy",
+            "feature-easy",
+            "feature-hard",
+            "baseline-hard",
+            "selected-feature-hard",
+            "supermem",
             "temperature",
         ],
     ),
@@ -409,12 +394,14 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT5_MINI,
         ],
         allowed_phases=[
-            "openai",
             "backend",
-            "baseline-mix",
-            "baseline-solo",
-            "feature",
-            "no-supermem",
+            "solo-baseline-easy",
+            "mix-baseline-easy",
+            "feature-easy",
+            "feature-hard",
+            "baseline-hard",
+            "selected-feature-hard",
+            "supermem",
             "temperature",
         ],
     ),
@@ -445,12 +432,14 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPTo3,
         ],
         allowed_phases=[
-            "openai",
             "backend",
-            "baseline-mix",
-            "baseline-solo",
-            "feature",
-            "no-supermem",
+            "solo-baseline-easy",
+            "mix-baseline-easy",
+            "feature-easy",
+            "feature-hard",
+            "baseline-hard",
+            "selected-feature-hard",
+            "supermem",
             "temperature",
         ],
     ),
@@ -463,12 +452,14 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPTo3,
         ],
         allowed_phases=[
-            "openai",
             "backend",
-            "baseline-mix",
-            "baseline-solo",
-            "feature",
-            "no-supermem",
+            "solo-baseline-easy",
+            "mix-baseline-easy",
+            "feature-easy",
+            "feature-hard",
+            "baseline-hard",
+            "selected-feature-hard",
+            "supermem",
             "temperature",
         ],
     ),
@@ -481,12 +472,14 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPTo3,
         ],
         allowed_phases=[
-            "openai",
             "backend",
-            "baseline-mix",
-            "baseline-solo",
-            "feature",
-            "no-supermem",
+            "solo-baseline-easy",
+            "mix-baseline-easy",
+            "feature-easy",
+            "feature-hard",
+            "baseline-hard",
+            "selected-feature-hard",
+            "supermem",
             "temperature",
         ],
     ),
@@ -515,7 +508,17 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT5_NANO,
             ModelTeams.Remote.GPT5_MINI,
         ],
-        allowed_phases=["openai", "backend", "baseline-solo", "baseline-mix", "feature"],
+        allowed_phases=[
+            "backend",
+            "solo-baseline-easy",
+            "mix-baseline-easy",
+            "feature-easy",
+            "feature-hard",
+            "baseline-hard",
+            "selected-feature-hard",
+            "supermem",
+            "temperature",
+        ],
     )
 }
 

@@ -115,7 +115,7 @@ def build_hard(detailed_instruction: bool) -> LevelSpec:
     ]
 
     distraction_names = [
-        "potato"
+        "potato",
         "carrot",
         #"onion",
         #"pepper",
