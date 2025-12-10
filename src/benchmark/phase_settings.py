@@ -188,7 +188,7 @@ PHASES: Sequence[PhaseDefinition] = (
             ],
         model_teams=[
             ModelTeams.Remote.QWEN_235B,
-            #ModelTeams.Remote.MAGISTRAL_SMALL, #TODO
+            ModelTeams.Remote.GPT_OSS_120B,
 
             ModelTeams.Local.GPT_OSS_20B,
             ModelTeams.Local.QWEN_CODER30B,
@@ -346,7 +346,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             ModelTeams.Remote.MAGISTRAL_SMALL,
             ModelTeams.Remote.GPT_OSS_120B,
-            ModelTeams.Remote.QWEN_235B,
+            #ModelTeams.Remote.QWEN_235B,
 
             ## simple <8B
             #ModelTeams.Local.GROQ_LLAMA8B,
