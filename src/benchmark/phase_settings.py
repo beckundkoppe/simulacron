@@ -202,18 +202,18 @@ PHASES: Sequence[PhaseDefinition] = (
             ],
         levels=[
             Levels.DETAILED_INSTRUCT.TOMATO_EASY,
-            Levels.DETAILED_INSTRUCT.TOMATO_HARD,
+            #Levels.DETAILED_INSTRUCT.TOMATO_HARD,
             Levels.DETAILED_INSTRUCT.POTATO_EASY,
-            Levels.DETAILED_INSTRUCT.POTATO_HARD,
+            #Levels.DETAILED_INSTRUCT.POTATO_HARD,
             Levels.DETAILED_INSTRUCT.ONION_EASY,
-            Levels.DETAILED_INSTRUCT.ONION_HARD,
+            #Levels.DETAILED_INSTRUCT.ONION_HARD,
 
             Levels.VAGUE_INSTRUCT.TOMATO_EASY,
-            Levels.VAGUE_INSTRUCT.TOMATO_HARD,
+            #Levels.VAGUE_INSTRUCT.TOMATO_HARD,
             Levels.VAGUE_INSTRUCT.POTATO_EASY,
-            Levels.VAGUE_INSTRUCT.POTATO_HARD,
+            #Levels.VAGUE_INSTRUCT.POTATO_HARD,
             Levels.VAGUE_INSTRUCT.ONION_EASY,
-            Levels.VAGUE_INSTRUCT.ONION_HARD,
+            #Levels.VAGUE_INSTRUCT.ONION_HARD,
             ],
         model_teams=[
             #ModelTeams.Remote.QWEN_235B,
@@ -413,15 +413,9 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
 
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
-            ModelTeams.Local.NEMOTRON_8B,
-
-            ModelTeams.Local.QWEN_8B_LLAMA,
-            ModelTeams.Local.QWEN_4B_LLAMA,
-            ModelTeams.Local.QWEN_4B_Q4_LLAMA,
-
+            ModelTeams.Local.NEMOTRON_NEMOTRON14B_X_QWEN,
             ModelTeams.Local.QWEN_8B_OLLAMA,
             ModelTeams.Local.QWEN_4B_OLLAMA,
-            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
 
             ModelTeams.Local.GPT_OSS_20B,
 
@@ -494,13 +488,8 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             # simple <8B
             ModelTeams.Local.GROQ_LLAMA8B,
             ModelTeams.Local.NEMOTRON_8B,
-
-            ModelTeams.Local.QWEN_8B_LLAMA,
             ModelTeams.Local.QWEN_8B_OLLAMA,
-            ModelTeams.Local.QWEN_4B_LLAMA,
             ModelTeams.Local.QWEN_4B_OLLAMA,
-            ModelTeams.Local.QWEN_4B_Q4_LLAMA,
-            ModelTeams.Local.QWEN_4B_Q4_OLLAMA,
 
             ModelTeams.Local.PHI4_X_QWEN,
             ModelTeams.Local.DOLPHIN_X_QWEN,
