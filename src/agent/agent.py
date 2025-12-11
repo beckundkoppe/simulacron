@@ -35,6 +35,11 @@ class Commitment:
     max_exec_steps: int
     reason: str = ""
 
+@dataclass
+class ActionCandidate:
+    call: str
+    reason: str = ""
+
 _BDI_POLICY_MESSAGE = (
     "You are the execution policy of an agent in a dynamic graph.\n"
     "You get a local graph view, a sub-goal and an execution context.\n\n"
@@ -64,10 +69,25 @@ class Agent:
             config.ActionType.BDI,
             config.ActionType.BDI_EXPLORATION,
         )
+        self.use_ranked_actions = config.ACTIVE_CONFIG.agent.action is config.ActionType.RANKED_ACTIONS
+        self.use_react = config.ACTIVE_CONFIG.agent.action is config.ActionType.REACT
         self.exploration_mode = False
         self.belief_state: Optional[BeliefState] = None
         self.current_commitment: Optional[Commitment] = None
         self.bdi_last_feedback: str = ""
+
+        if self.use_ranked_actions:
+            self.main_memory.append_message(
+                Role.SYSTEM,
+                "Ranked action loop active: propose multiple primitive tool calls with short justifications, pick the best, then execute only that choice.",
+                Type.GOAL,
+            )
+        if self.use_react:
+            self.main_memory.append_message(
+                Role.SYSTEM,
+                "ReAct loop active: think step-by-step using the latest perception and feedback, then pick exactly one primitive tool call to execute.",
+                Type.GOAL,
+            )
 
         self.had_action = False
         self.triggered_replan = None
@@ -755,12 +775,307 @@ class Agent:
             imagination_filter=imagination_filter,
         )
 
+    def _generate_ranked_actions(self, perception: str) -> list[ActionCandidate]:
+        allowed_ids = self._perception_ids(perception)
+        names, inventory_ids = self._perception_lookup(perception)
+        agent_pos, pos_by_id = self._parse_positions(perception)
+        allowed_serialized = ", ".join(sorted(set(allowed_ids))) if allowed_ids else "none-visible"
+
+        prompt = (
+            f"Goal: {self.goal}\n"
+            f"Perception: {perception}\n"
+            f"Allowed object ids: {allowed_serialized}\n"
+            "Generate 3 to 5 candidate primitive tool calls the agent could execute next to advance the goal.\n"
+            "Each candidate must include: call (exact primitive tool call) and reason (why this is useful). "
+            "Use only primitive calls: move_to_object <ID>, move_to_position <x> <y>, "
+            "take_from <WHAT_ID> <FROM_ID|FLOOR>, drop_to <WHAT_ID> <TO_ID|FLOOR>, "
+            "interact_with_object <ID> <OPERATOR>, interact_with_object_using_item <ID> <ITEM_ID> <OPERATOR>. "
+            "Only use IDs from Allowed object ids or the inventory. "
+            "Return compact JSON: {\"actions\": [{\"call\": \"...\", \"reason\": \"...\"}, ...]}. JSON only."
+        )
+
+        generator = Provider.build("ranked_action_options", self.imaginator_model, memory=self.main_memory)
+        start = time.time()
+        reply = generator.call(prompt)
+        self._add_time("plan_time_s", time.time() - start)
+
+        parsed = self._safe_json_parse(reply)
+        raw_actions: list[Any] = []
+        if isinstance(parsed, dict):
+            raw_actions = parsed.get("actions") or parsed.get("options") or parsed.get("candidates") or []
+        elif isinstance(parsed, list):
+            raw_actions = parsed
+
+        candidates: list[ActionCandidate] = []
+        for entry in raw_actions:
+            call_raw = ""
+            reason = ""
+            if isinstance(entry, dict):
+                call_raw = str(entry.get("call") or entry.get("action") or entry.get("toolcall") or "").strip()
+                reason = str(entry.get("reason") or entry.get("why") or "").strip()
+            elif isinstance(entry, str):
+                call_raw = entry.strip()
+
+            if not call_raw:
+                continue
+
+            normalized_list = self._deterministic_action_critic(
+                [call_raw],
+                allowed_ids=allowed_ids,
+                inventory_ids=inventory_ids,
+                names=names,
+                agent_pos=agent_pos,
+                pos_by_id=pos_by_id,
+            )
+            if not normalized_list:
+                continue
+
+            normalized_call = normalized_list[0]
+            if any(c.call == normalized_call for c in candidates):
+                continue
+
+            candidates.append(ActionCandidate(call=normalized_call, reason=reason))
+
+        return candidates
+
+    def _select_ranked_action(
+        self, candidates: list[ActionCandidate], perception: str, feedback: str
+    ) -> tuple[int, str]:
+        payload = [
+            {"index": idx, "call": candidate.call, "reason": candidate.reason}
+            for idx, candidate in enumerate(candidates)
+        ]
+        prompt = (
+            f"Goal: {self.goal}\n"
+            f"Perception: {perception}\n"
+            f"Recent feedback: {feedback or 'none'}\n"
+            f"Candidates: {json.dumps(payload, ensure_ascii=True)}\n"
+            "Choose the best next action. "
+            "Briefly simulate the immediate consequences (2-3 steps) to avoid dead-ends. "
+            "Reply as JSON {\"index\": <int>, \"why\": \"short rationale\"}. JSON only."
+        )
+
+        selector = Provider.build("ranked_action_selector", self.imaginator_model, memory=self.main_memory)
+        start = time.time()
+        reply = selector.call(prompt)
+        self._add_time("trial_time_s", time.time() - start)
+
+        parsed = self._safe_json_parse(reply)
+        idx = 0
+        reason = ""
+        if isinstance(parsed, dict):
+            try:
+                idx = int(parsed.get("index") if "index" in parsed else parsed.get("choice") or 0)
+            except (TypeError, ValueError):
+                idx = 0
+
+            reason_val = parsed.get("why") or parsed.get("reason") or parsed.get("note")
+            if isinstance(reason_val, str):
+                reason = reason_val.strip()
+
+        if idx < 0 or idx >= len(candidates):
+            idx = 0
+
+        return idx, reason
+
+    def _execute_ranked_action(self, call: str, perception: str, selection_reason: str) -> None:
+        context = (
+            f"{_BDI_POLICY_MESSAGE}\n"
+            f"Goal: {self.goal}\n"
+            f"Chosen action: {call}\n"
+            f"Choice rationale: {selection_reason or 'best fit for goal'}\n"
+            f"Perception: {perception}\n"
+            "Execute exactly the chosen tool calls, in order. "
+            "Respond only with tool calls. Do not invent extra steps."
+        )
+
+        realisator = ToolProvider.build("ranked_action_realisator", self.realisator_model, Memory(context))
+        register_tools(realisator, ToolGroup.ENV)
+
+        base_result_len = len(Resultbuffer.buffer)
+        start = time.time()
+        realisator.invoke(context)
+        self._add_time("action_time_s", time.time() - start)
+
+        has_error, errors = process_formal_errors(realisator.memory, collect=True)
+        performed_action = any(
+            isinstance(r, (ActionNotPossible, Success)) for r in Resultbuffer.buffer[base_result_len:]
+        )
+
+        if not performed_action and not has_error:
+            errors.append(
+                {
+                    "agent_message": "No tool call executed. Repeat the chosen action exactly as given.",
+                    "hint": "Return only tool calls with concrete object ids; avoid prose.",
+                    "context": None,
+                }
+            )
+            FormalError(
+                "Ranked action execution produced no tool calls.",
+                console_message="Ranked action execution produced no tool calls.",
+                hint="Return the selected tool call verbatim.",
+            )
+
+        if errors:
+            process_formal_errors(self.main_memory)
+
+    def _update_ranked_action_loop(self, perception: str) -> None:
+        self.main_memory.append_message(Role.USER, perception, Type.PERCEPTION)
+
+        feedback = self._bdi_collect_feedback()
+        candidates = self._generate_ranked_actions(perception)
+        if not candidates:
+            self.main_memory.append_message(
+                Role.USER,
+                "No valid action candidates available for the current perception.",
+                Type.FEEDBACK,
+            )
+            self.main_memory.save()
+            return
+
+        choice_idx, selection_reason = self._select_ranked_action(candidates, perception, feedback)
+        chosen = candidates[choice_idx]
+        log_reason = selection_reason or chosen.reason
+        self.main_memory.append_message(
+            Role.USER,
+            f"[RankedChoice] {chosen.call} | reason: {log_reason}",
+            Type.PLAN,
+        )
+
+        self._execute_ranked_action(chosen.call, perception, log_reason)
+        self.had_action = True
+        self.main_memory.save()
+
+    def _react_generate_action(self, perception: str, feedback: str) -> tuple[str, str]:
+        allowed_ids = self._perception_ids(perception)
+        names, inventory_ids = self._perception_lookup(perception)
+        agent_pos, pos_by_id = self._parse_positions(perception)
+        allowed_serialized = ", ".join(sorted(set(allowed_ids))) if allowed_ids else "none-visible"
+
+        prompt = (
+            f"Goal: {self.goal}\n"
+            f"Perception: {perception}\n"
+            f"Recent feedback: {feedback or 'none'}\n"
+            f"Allowed object ids: {allowed_serialized}\n"
+            "Follow vanilla ReAct: First write a short Thought on what to do next, then pick exactly one primitive tool call. "
+            "Allowed primitive tool calls: move_to_object <ID>, move_to_position <x> <y>, take_from <WHAT_ID> <FROM_ID|FLOOR>, "
+            "drop_to <WHAT_ID> <TO_ID|FLOOR>, interact_with_object <ID> <OPERATOR>, interact_with_object_using_item <ID> <ITEM_ID> <OPERATOR>. "
+            "Use only IDs from Allowed object ids or inventory. "
+            "Respond as compact JSON: {\"thought\": \"...\", \"action\": \"<toolcall>\"}. JSON only."
+        )
+
+        generator = Provider.build("react_reason", self.imaginator_model, memory=self.main_memory)
+        start = time.time()
+        reply = generator.call(prompt)
+        self._add_time("plan_time_s", time.time() - start)
+
+        parsed = self._safe_json_parse(reply)
+        thought = ""
+        action_raw = ""
+
+        if isinstance(parsed, dict):
+            thought = str(parsed.get("thought") or parsed.get("reasoning") or parsed.get("analysis") or "").strip()
+            action_raw = str(parsed.get("action") or parsed.get("toolcall") or parsed.get("call") or "").strip()
+
+        if not action_raw and isinstance(reply, str):
+            for line in reply.splitlines():
+                if "action" in line.lower():
+                    action_raw = line.split(":", 1)[-1].strip()
+                if "thought" in line.lower() and not thought:
+                    thought = line.split(":", 1)[-1].strip()
+
+        normalized = self._deterministic_action_critic(
+            [action_raw],
+            allowed_ids=allowed_ids,
+            inventory_ids=inventory_ids,
+            names=names,
+            agent_pos=agent_pos,
+            pos_by_id=pos_by_id,
+        )
+        action = normalized[0] if normalized else ""
+        return thought, action
+
+    def _execute_react_action(self, action: str, perception: str, thought: str) -> None:
+        context = (
+            f"{_BDI_POLICY_MESSAGE}\n"
+            f"Goal: {self.goal}\n"
+            f"Thought: {thought or 'n/a'}\n"
+            f"Action: {action}\n"
+            f"Perception: {perception}\n"
+            "Execute exactly the specified action using primitive tool calls. "
+            "Respond only with tool calls, no prose. If out of range, include the move first."
+        )
+
+        realisator = ToolProvider.build("react_realisator", self.realisator_model, Memory(context))
+        register_tools(realisator, ToolGroup.ENV)
+
+        base_result_len = len(Resultbuffer.buffer)
+        start = time.time()
+        realisator.invoke(context)
+        self._add_time("action_time_s", time.time() - start)
+
+        has_error, errors = process_formal_errors(realisator.memory, collect=True)
+        performed_action = any(
+            isinstance(r, (ActionNotPossible, Success)) for r in Resultbuffer.buffer[base_result_len:]
+        )
+
+        if not performed_action and not has_error:
+            errors.append(
+                {
+                    "agent_message": "No tool call executed. Repeat the chosen action exactly as given.",
+                    "hint": "Return only tool calls with explicit ids.",
+                    "context": None,
+                }
+            )
+            FormalError(
+                "ReAct execution produced no tool calls.",
+                console_message="ReAct execution produced no tool calls.",
+                hint="Return the selected tool call verbatim.",
+            )
+
+        if errors:
+            process_formal_errors(self.main_memory)
+
+    def _update_react_loop(self, perception: str) -> None:
+        self.main_memory.append_message(Role.USER, perception, Type.PERCEPTION)
+
+        feedback = self._bdi_collect_feedback()
+        thought, action = self._react_generate_action(perception, feedback)
+        if not action:
+            self.main_memory.append_message(
+                Role.USER,
+                "ReAct could not produce a valid action for the current perception.",
+                Type.FEEDBACK,
+            )
+            self.main_memory.save()
+            return
+
+        if thought:
+            self.main_memory.append_message(Role.USER, f"[ReAct Thought] {thought}", Type.REFLECT)
+        self.main_memory.append_message(Role.USER, f"[ReAct Action] {action}", Type.PLAN)
+
+        self._execute_react_action(action, perception, thought)
+        self.had_action = True
+        self.main_memory.save()
+
     def update(self, perception: str):
         current.AGENT = self
         current.ENTITY = self.entity
 
         if self.use_bdi:
             self._update_bdi_loop(perception)
+            current.AGENT = None
+            current.ENTITY = None
+            return
+
+        if self.use_ranked_actions:
+            self._update_ranked_action_loop(perception)
+            current.AGENT = None
+            current.ENTITY = None
+            return
+
+        if self.use_react:
+            self._update_react_loop(perception)
             current.AGENT = None
             current.ENTITY = None
             return
@@ -936,13 +1251,67 @@ class Agent:
         if config.ACTIVE_CONFIG.agent.plan is not config.PlanType.OFF:
             prompt += " Stick closely to the next step in the plan. But always tell the next action"
 
-        if config.ACTIVE_CONFIG.agent.action is config.ActionType.DIRECT:
+        if config.ACTIVE_CONFIG.agent.action in (config.ActionType.DIRECT, config.ActionType.DIRECT_RETRY):
             realisator = ToolProvider.build("actor", self.realisator_model, memory=self.main_memory)
             register_tools(realisator, ToolGroup.ENV)
-            start = time.time()
-            realisator.invoke(perception + ". " + prompt + "Use concise, executable actions. Your answer must only consist of toolcalls.")
-            self._add_time("real_time_s", time.time() - start)
-            process_formal_errors(self.main_memory)
+            attempts = 3 if config.ACTIVE_CONFIG.agent.action is config.ActionType.DIRECT_RETRY else 1
+            correction_suffix = ""
+            final_has_error = False
+            last_errors: list[dict] = []
+            base_result_len = len(Resultbuffer.buffer)
+
+            for attempt in range(attempts):
+                instruction = (
+                    perception
+                    + ". "
+                    + prompt
+                    + "Use concise, executable actions. Your answer must only consist of toolcalls."
+                )
+                if correction_suffix:
+                    instruction += f" {correction_suffix}"
+
+                start = time.time()
+                realisator.invoke(instruction)
+                self._add_time("real_time_s", time.time() - start)
+
+                has_error, errors = process_formal_errors(realisator.memory, collect=True)
+
+                performed_action = any(
+                    isinstance(r, (ActionNotPossible, Success)) for r in Resultbuffer.buffer[base_result_len:]
+                )
+                if not performed_action and not has_error:
+                    has_error = True
+                    errors.append(
+                        {
+                            "agent_message": "No tool call executed. Respond with explicit tool calls that carry out the action.",
+                            "hint": "Return only tool calls with concrete object IDs; avoid prose.",
+                            "context": None,
+                        }
+                    )
+
+                final_has_error = has_error
+                last_errors = errors
+
+                if not has_error:
+                    break
+
+                hint_texts = [e.get("hint") for e in errors if e.get("hint")]
+                agent_msgs = [e.get("agent_message") for e in errors if e.get("agent_message")]
+                combined = "; ".join(hint_texts or agent_msgs)
+                correction_suffix = (
+                    f"Retry with these corrections: {combined}. Keep tool calls minimal."
+                    if combined
+                    else "Retry using valid tool calls with explicit object IDs."
+                )
+
+            if final_has_error:
+                FormalError(
+                    "Direct action generation failed after multiple retries.",
+                    console_message="Direct action generation failed after multiple retries.",
+                    hint="Review the latest hints and return minimal tool calls with valid IDs.",
+                )
+
+            process_formal_errors()  # clear any remaining formal errors
         else:
             tc_prompt =  """
             Give exactly the toolcalls that arise from the planned action.

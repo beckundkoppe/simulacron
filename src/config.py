@@ -21,9 +21,12 @@ class TrialType(Enum):
 
 class ActionType(Enum):
     DIRECT = auto()         # no extra step just realisation
+    DIRECT_RETRY = auto()   # direct tool calls with automatic retries on formal errors
     IMAGINATOR = auto()     # imaginator -> realisator
     IMG_RETRY = auto()      # += realisator has 3 retries
     IMG_QUESTION = auto()   # += img-real cycle has 3 retries
+    REACT = auto()          # vanilla ReAct loop with thought -> action
+    RANKED_ACTIONS = auto() # imaginator proposes/justifies multiple actions, then choose one
     BDI = auto()            # belief-desire-intention loop
     BDI_EXPLORATION = auto()# BDI loop with self-directed exploration
 
