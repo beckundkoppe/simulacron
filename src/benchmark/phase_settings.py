@@ -189,6 +189,45 @@ PHASES: Sequence[PhaseDefinition] = (
     ),
 
     PhaseDefinition(
+        phase="lea-feature",
+        configs=[
+            CONFIGURATIONS["baseline-naive"],
+            CONFIGURATIONS["baseline-img"],
+            CONFIGURATIONS["imginator-retry"],
+
+            CONFIGURATIONS["step-agent"],
+            CONFIGURATIONS["tree-agent"],
+            CONFIGURATIONS["trial-agent"],
+
+            CONFIGURATIONS["lea-agent"],
+            CONFIGURATIONS["leac-agent"],
+            ],
+        levels=[
+            #Levels.DETAILED_INSTRUCT.CARROT_EASY,
+            #Levels.DETAILED_INSTRUCT.CARROT_HARD,
+            #Levels.DETAILED_INSTRUCT.CUCUMBER_EASY,
+            #Levels.DETAILED_INSTRUCT.CUCUMBER_HARD,
+            Levels.DETAILED_INSTRUCT.PEPPER_EASY,
+            Levels.DETAILED_INSTRUCT.PEPPER_HARD,
+            Levels.DETAILED_INSTRUCT.SALAD_EASY,
+            Levels.DETAILED_INSTRUCT.SALAD_HARD,
+
+            #Levels.VAGUE_INSTRUCT.CARROT_EASY,
+            #Levels.VAGUE_INSTRUCT.CARROT_HARD,
+            #Levels.VAGUE_INSTRUCT.CUCUMBER_EASY,
+            #Levels.VAGUE_INSTRUCT.CUCUMBER_HARD,
+            Levels.VAGUE_INSTRUCT.PEPPER_EASY,
+            Levels.VAGUE_INSTRUCT.PEPPER_HARD,
+            Levels.VAGUE_INSTRUCT.SALAD_EASY,
+            Levels.VAGUE_INSTRUCT.SALAD_HARD,
+            ],
+        model_teams=[
+            ModelTeams.Remote.GPT_OSS_120B,
+        ],
+        reruns=2,
+    ),
+
+    PhaseDefinition(
         phase="feature-hard",
         configs=[
             #CONFIGURATIONS["baseline-naive"], #TODO
@@ -358,6 +397,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT5_MINI,
         ],
         allowed_phases=[
+            "lea-feature",
             "backend",
             "solo-baseline-easy",
             "mix-baseline-easy",
@@ -394,6 +434,7 @@ RUNNER_CONFIGS: Dict[str, RunnerConfig] = {
             ModelTeams.Remote.GPT5_MINI,
         ],
         allowed_phases=[
+            "lea-feature",
             "backend",
             "solo-baseline-easy",
             "mix-baseline-easy",

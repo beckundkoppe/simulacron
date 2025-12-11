@@ -97,6 +97,24 @@ TRIAL_AGENT = AgentConfiguration(
     memory_type=MemoryType.SUPER,
 )
 
+LEA_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.BDI,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.OFF,
+    memory_type=MemoryType.SIMPLE,
+)
+
+LEAC_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.BDI,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.ON,
+    memory_type=MemoryType.SIMPLE,
+)
+
 CONFIGURATIONS: Dict[str, Configuration] = {
     "baseline-naive": Configuration(
         agent=NAIVE_AGENT,
@@ -153,6 +171,20 @@ CONFIGURATIONS: Dict[str, Configuration] = {
         position=PositionType.RELATIVE,
         temperature=0.0,
         name="tree-agent",
+    ),
+    "lea-agent": Configuration(
+        agent=LEA_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="lea-agent",
+    ),
+    "leac-agent": Configuration(
+        agent=LEAC_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="leac-agent",
     ),
     "best-02": Configuration(
         agent=TRIAL_AGENT,

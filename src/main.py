@@ -10,20 +10,20 @@ def main():
     dispatcher = Dispatcher()
 
     agent_config = AgentConfiguration(
-        plan       = PlanType.DECOMPOSE,
-        observe    = ObserveType.ON,
-        trial      = TrialType.ON,
-        action     = ActionType.IMAGINATOR,
+        plan       = PlanType.OFF,
+        observe    = ObserveType.OFF,
+        trial      = TrialType.OFF,
+        action     = ActionType.BDI,
         reflect    = ReflectType.ON,
-        memory_type= MemoryType.SUPER,
+        memory_type= MemoryType.SIMPLE,
     )
 
     config = Configuration(agent_config, PerceptionType.ALL, PositionType.RELATIVE, temperature=0.0, name="test", seed=-1)
 
     model_team = ModelTeam(
-        realisator=Model.Remote.GPT5_MINI,
+        #realisator=Model.Remote.GPT5_MINI,
         #realisator=Model.Remote.MAGISTRAL_SMALL_24B,
-        #realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
+        realisator=Model.Local.Ollama.Qwen3.VANILLA_8B,
         #extra=Model.Local.Ollama.DOLPHIN3_8B,
     )
 

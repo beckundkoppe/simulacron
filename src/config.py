@@ -24,6 +24,8 @@ class ActionType(Enum):
     IMAGINATOR = auto()     # imaginator -> realisator
     IMG_RETRY = auto()      # += realisator has 3 retries
     IMG_QUESTION = auto()   # += img-real cycle has 3 retries
+    BDI = auto()            # belief-desire-intention loop
+    BDI_EXPLORATION = auto()# BDI loop with self-directed exploration
 
 
 class ObserveType(Enum):
