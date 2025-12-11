@@ -34,6 +34,15 @@ NAIVE_AGENT = AgentConfiguration(
     memory_type=MemoryType.SIMPLE,
 )
 
+NAIVE_RETRY_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.DIRECT_RETRY,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.OFF,
+    memory_type=MemoryType.SIMPLE,
+)
+
 IMAGINATOR_AGENT = AgentConfiguration(
     plan=PlanType.OFF,
     trial=TrialType.OFF,
@@ -97,6 +106,24 @@ TRIAL_AGENT = AgentConfiguration(
     memory_type=MemoryType.SUPER,
 )
 
+RANKING_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.RANKED_ACTIONS,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.OFF,
+    memory_type=MemoryType.SIMPLE,
+)
+
+REACT_AGENT = AgentConfiguration(
+    plan=PlanType.OFF,
+    trial=TrialType.OFF,
+    action=ActionType.REACT,
+    observe=ObserveType.OFF,
+    reflect=ReflectType.OFF,
+    memory_type=MemoryType.SIMPLE,
+)
+
 LEA_AGENT = AgentConfiguration(
     plan=PlanType.OFF,
     trial=TrialType.OFF,
@@ -122,6 +149,13 @@ CONFIGURATIONS: Dict[str, Configuration] = {
         position=PositionType.RELATIVE,
         temperature=0.0,
         name="baseline-naive",
+    ),
+    "baseline-retry": Configuration(
+        agent=NAIVE_RETRY_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="baseline-retry",
     ),
     "baseline-img": Configuration(
         agent=IMAGINATOR_AGENT,
@@ -171,6 +205,20 @@ CONFIGURATIONS: Dict[str, Configuration] = {
         position=PositionType.RELATIVE,
         temperature=0.0,
         name="tree-agent",
+    ),
+    "ranking-agent": Configuration(
+        agent=RANKING_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="ranking-agent",
+    ),
+    "react-agent": Configuration(
+        agent=REACT_AGENT,
+        perception=PerceptionType.ALL,
+        position=PositionType.RELATIVE,
+        temperature=0.0,
+        name="react-agent",
     ),
     "lea-agent": Configuration(
         agent=LEA_AGENT,

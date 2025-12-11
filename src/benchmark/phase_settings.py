@@ -149,8 +149,8 @@ PHASES: Sequence[PhaseDefinition] = (
             CONFIGURATIONS["baseline-img"],
             CONFIGURATIONS["imginator-retry"],
             #CONFIGURATIONS["imginator-question"],
-            #CONFIGURATIONS["a-agent"],
-            #CONFIGURATIONS["b-agent"],
+            CONFIGURATIONS["a-agent"],
+            CONFIGURATIONS["b-agent"],
             CONFIGURATIONS["step-agent"],
             CONFIGURATIONS["tree-agent"],
             CONFIGURATIONS["trial-agent"],
@@ -191,6 +191,7 @@ PHASES: Sequence[PhaseDefinition] = (
     PhaseDefinition(
         phase="lea-feature",
         configs=[
+            CONFIGURATIONS["baseline-retry"],
             CONFIGURATIONS["baseline-naive"],
             CONFIGURATIONS["baseline-img"],
             CONFIGURATIONS["imginator-retry"],
@@ -201,6 +202,8 @@ PHASES: Sequence[PhaseDefinition] = (
 
             CONFIGURATIONS["lea-agent"],
             CONFIGURATIONS["leac-agent"],
+            CONFIGURATIONS["ranking-agent"],
+            CONFIGURATIONS["react-agent"],
             ],
         levels=[
             #Levels.DETAILED_INSTRUCT.CARROT_EASY,
